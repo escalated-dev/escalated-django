@@ -1,0 +1,234 @@
+import logging
+
+from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+
+from escalated.conf import get_setting
+
+logger = logging.getLogger("escalated")
+
+
+class NotificationService:
+    """
+    Sends notifications through configured channels (email, webhook).
+    """
+
+    @staticmethod
+    def notify_ticket_created(ticket):
+        """Send notification when a new ticket is created."""
+        channels = get_setting("NOTIFICATION_CHANNELS")
+
+        if "email" in channels:
+            NotificationService._send_email(
+                subject=f"[{ticket.reference}] New ticket: {ticket.subject}",
+                template="escalated/emails/new_ticket.html",
+                context={"ticket": ticket},
+                recipient=NotificationService._get_requester_email(ticket),
+            )
+
+        NotificationService._fire_webhook("ticket.created", {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "subject": ticket.subject,
+            "priority": ticket.priority,
+        })
+
+    @staticmethod
+    def notify_reply_added(ticket, reply):
+        """Send notification when a reply is added."""
+        channels = get_setting("NOTIFICATION_CHANNELS")
+
+        if "email" in channels:
+            # Notify the requester if an agent replied
+            requester_email = NotificationService._get_requester_email(ticket)
+            if requester_email and reply.author != ticket.requester:
+                NotificationService._send_email(
+                    subject=f"[{ticket.reference}] New reply on: {ticket.subject}",
+                    template="escalated/emails/reply.html",
+                    context={"ticket": ticket, "reply": reply},
+                    recipient=requester_email,
+                )
+
+            # Notify assigned agent if customer replied
+            if ticket.assigned_to and reply.author != ticket.assigned_to:
+                agent_email = getattr(ticket.assigned_to, "email", None)
+                if agent_email:
+                    NotificationService._send_email(
+                        subject=f"[{ticket.reference}] Customer reply on: {ticket.subject}",
+                        template="escalated/emails/reply.html",
+                        context={"ticket": ticket, "reply": reply},
+                        recipient=agent_email,
+                    )
+
+        NotificationService._fire_webhook("reply.created", {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "reply_id": reply.pk,
+            "is_internal": reply.is_internal_note,
+        })
+
+    @staticmethod
+    def notify_ticket_assigned(ticket, agent):
+        """Send notification to an agent when they are assigned a ticket."""
+        channels = get_setting("NOTIFICATION_CHANNELS")
+
+        if "email" in channels:
+            agent_email = getattr(agent, "email", None)
+            if agent_email:
+                NotificationService._send_email(
+                    subject=f"[{ticket.reference}] Ticket assigned to you: {ticket.subject}",
+                    template="escalated/emails/assigned.html",
+                    context={"ticket": ticket, "agent": agent},
+                    recipient=agent_email,
+                )
+
+        NotificationService._fire_webhook("ticket.assigned", {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "agent_id": agent.pk,
+        })
+
+    @staticmethod
+    def notify_status_changed(ticket, old_status, new_status):
+        """Send notification when ticket status changes."""
+        channels = get_setting("NOTIFICATION_CHANNELS")
+
+        if "email" in channels:
+            requester_email = NotificationService._get_requester_email(ticket)
+            if requester_email:
+                NotificationService._send_email(
+                    subject=f"[{ticket.reference}] Status updated: {ticket.subject}",
+                    template="escalated/emails/status_changed.html",
+                    context={
+                        "ticket": ticket,
+                        "old_status": old_status,
+                        "new_status": new_status,
+                    },
+                    recipient=requester_email,
+                )
+
+        NotificationService._fire_webhook("ticket.status_changed", {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "old_status": old_status,
+            "new_status": new_status,
+        })
+
+    @staticmethod
+    def notify_sla_breach(ticket, breach_type):
+        """Send notification when an SLA is breached."""
+        channels = get_setting("NOTIFICATION_CHANNELS")
+
+        if "email" in channels and ticket.assigned_to:
+            agent_email = getattr(ticket.assigned_to, "email", None)
+            if agent_email:
+                NotificationService._send_email(
+                    subject=f"[SLA BREACH] [{ticket.reference}] {breach_type}: {ticket.subject}",
+                    template="escalated/emails/sla_breach.html",
+                    context={"ticket": ticket, "breach_type": breach_type},
+                    recipient=agent_email,
+                )
+
+        NotificationService._fire_webhook("sla.breached", {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "breach_type": breach_type,
+        })
+
+    @staticmethod
+    def notify_ticket_escalated(ticket, reason):
+        """Send notification when a ticket is escalated."""
+        channels = get_setting("NOTIFICATION_CHANNELS")
+
+        if "email" in channels and ticket.assigned_to:
+            agent_email = getattr(ticket.assigned_to, "email", None)
+            if agent_email:
+                NotificationService._send_email(
+                    subject=f"[ESCALATED] [{ticket.reference}] {ticket.subject}",
+                    template="escalated/emails/escalated.html",
+                    context={"ticket": ticket, "reason": reason},
+                    recipient=agent_email,
+                )
+
+        NotificationService._fire_webhook("ticket.escalated", {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "reason": reason,
+        })
+
+    @staticmethod
+    def notify_ticket_resolved(ticket):
+        """Send notification when a ticket is resolved."""
+        channels = get_setting("NOTIFICATION_CHANNELS")
+
+        if "email" in channels:
+            requester_email = NotificationService._get_requester_email(ticket)
+            if requester_email:
+                NotificationService._send_email(
+                    subject=f"[{ticket.reference}] Resolved: {ticket.subject}",
+                    template="escalated/emails/resolved.html",
+                    context={"ticket": ticket},
+                    recipient=requester_email,
+                )
+
+        NotificationService._fire_webhook("ticket.resolved", {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+        })
+
+    # ----- Internal helpers -----
+
+    @staticmethod
+    def _get_requester_email(ticket):
+        """Extract the email from the ticket's requester (GenericForeignKey)."""
+        try:
+            requester = ticket.requester
+            if requester:
+                return getattr(requester, "email", None)
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def _send_email(subject, template, context, recipient):
+        """Send an HTML email using Django's mail system."""
+        if not recipient:
+            return
+
+        try:
+            html_body = render_to_string(template, context)
+            send_mail(
+                subject=subject,
+                message="",  # Plain text fallback
+                from_email=getattr(
+                    settings, "DEFAULT_FROM_EMAIL", "support@escalated.dev"
+                ),
+                recipient_list=[recipient],
+                html_message=html_body,
+                fail_silently=True,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send email to {recipient}: {e}")
+
+    @staticmethod
+    def _fire_webhook(event, payload):
+        """POST event data to the configured webhook URL."""
+        webhook_url = get_setting("WEBHOOK_URL")
+        if not webhook_url:
+            return
+
+        try:
+            import requests
+
+            requests.post(
+                webhook_url,
+                json={"event": event, "data": payload},
+                timeout=10,
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "escalated-django/0.1.0",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Failed to fire webhook for {event}: {e}")

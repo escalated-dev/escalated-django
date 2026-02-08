@@ -1,0 +1,3 @@
+recursive-include escalated/templates *
+recursive-include escalated/static *
+recursive-include resources *

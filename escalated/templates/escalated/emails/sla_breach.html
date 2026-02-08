@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLA Breach Alert</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #dc2626; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+        .content { background: #fef2f2; padding: 20px; border: 1px solid #fecaca; }
+        .footer { padding: 15px 20px; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+        .alert-box { background: white; border: 2px solid #dc2626; border-radius: 8px; padding: 16px; margin: 16px 0; }
+        .reference { font-family: monospace; font-weight: bold; color: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 style="margin: 0;">SLA Breach Alert</h2>
+    </div>
+    <div class="content">
+        <div class="alert-box">
+            <p style="margin-top: 0;"><strong>An SLA has been breached on ticket <span class="reference">{{ ticket.reference }}</span></strong></p>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 6px 0; font-weight: 600; width: 140px;">Breach Type:</td>
+                    <td>{{ breach_type|title }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; font-weight: 600;">Subject:</td>
+                    <td>{{ ticket.subject }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; font-weight: 600;">Priority:</td>
+                    <td>{{ ticket.get_priority_display }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; font-weight: 600;">Status:</td>
+                    <td>{{ ticket.get_status_display }}</td>
+                </tr>
+                {% if ticket.assigned_to %}
+                <tr>
+                    <td style="padding: 6px 0; font-weight: 600;">Assigned To:</td>
+                    <td>{{ ticket.assigned_to.get_full_name }}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+
+        <p><strong>Immediate action is required.</strong> Please review this ticket and take appropriate action.</p>
+    </div>
+    <div class="footer">
+        <p>This is an automated SLA monitoring alert from the support system.</p>
+    </div>
+</body>
+</html>
