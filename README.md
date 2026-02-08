@@ -66,6 +66,18 @@ Visit `/support` — you're live.
 
 Escalated uses Inertia.js with Vue 3. The frontend components are provided by the [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated) npm package.
 
+### Tailwind Content
+
+Add the Escalated package to your Tailwind `content` config so its classes aren't purged:
+
+```js
+// tailwind.config.js
+content: [
+    // ... your existing paths
+    './node_modules/@escalated-dev/escalated/src/**/*.vue',
+],
+```
+
 ### Page Resolver
 
 Add the Escalated pages to your Inertia page resolver:
