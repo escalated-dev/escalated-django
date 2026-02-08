@@ -64,6 +64,13 @@ class TicketSerializer:
             "updated_at": _format_dt(ticket.updated_at),
         }
 
+        # Guest ticket fields
+        data["is_guest"] = ticket.is_guest
+        data["guest_name"] = ticket.guest_name
+        data["guest_email"] = ticket.guest_email
+        data["requester_name"] = ticket.requester_name
+        data["requester_email"] = ticket.requester_email
+
         # Include requester info
         try:
             requester = ticket.requester
@@ -255,3 +262,24 @@ class AttachmentSerializer:
     @staticmethod
     def serialize_list(attachments):
         return [AttachmentSerializer.serialize(a) for a in attachments]
+
+
+class EscalatedSettingSerializer:
+    @staticmethod
+    def serialize(setting):
+        return {
+            "id": setting.pk,
+            "key": setting.key,
+            "value": setting.value,
+            "created_at": _format_dt(setting.created_at),
+            "updated_at": _format_dt(setting.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(settings_qs):
+        return [EscalatedSettingSerializer.serialize(s) for s in settings_qs]
+
+    @staticmethod
+    def serialize_as_dict(settings_qs):
+        """Serialize settings as a key-value dict for frontend use."""
+        return {s.key: s.value for s in settings_qs}

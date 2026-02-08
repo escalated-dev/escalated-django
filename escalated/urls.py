@@ -1,6 +1,6 @@
 from django.urls import path
 
-from escalated.views import customer, agent, admin
+from escalated.views import customer, agent, admin, guest
 
 app_name = "escalated"
 
@@ -58,6 +58,17 @@ admin_patterns = [
     path("admin/canned-responses/create/", admin.canned_responses_create, name="admin_canned_responses_create"),
     path("admin/canned-responses/<int:response_id>/edit/", admin.canned_responses_edit, name="admin_canned_responses_edit"),
     path("admin/canned-responses/<int:response_id>/delete/", admin.canned_responses_delete, name="admin_canned_responses_delete"),
+    # Settings
+    path("admin/settings/", admin.settings_index, name="admin_settings"),
+    path("admin/settings/update/", admin.settings_update, name="admin_settings_update"),
 ]
 
-urlpatterns = customer_patterns + agent_patterns + admin_patterns
+# Guest-facing URLs (no authentication required)
+guest_patterns = [
+    path("guest/create/", guest.ticket_create, name="guest_ticket_create"),
+    path("guest/store/", guest.ticket_store, name="guest_ticket_store"),
+    path("guest/<str:token>/", guest.ticket_show, name="guest_ticket_show"),
+    path("guest/<str:token>/reply/", guest.ticket_reply, name="guest_ticket_reply"),
+]
+
+urlpatterns = customer_patterns + agent_patterns + admin_patterns + guest_patterns

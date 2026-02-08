@@ -207,6 +207,14 @@ class Ticket(models.Model):
         related_name="tickets",
     )
 
+    # Guest ticket fields (for unauthenticated users)
+    guest_name = models.CharField(max_length=255, null=True, blank=True)
+    guest_email = models.EmailField(null=True, blank=True)
+    guest_token = models.CharField(
+        max_length=64, null=True, blank=True, unique=True,
+        help_text="Unique token for guest ticket access",
+    )
+
     subject = models.CharField(max_length=500)
     description = models.TextField()
     status = models.CharField(
@@ -291,6 +299,38 @@ class Ticket(models.Model):
     @property
     def is_closed(self):
         return self.status == self.Status.CLOSED
+
+    @property
+    def is_guest(self):
+        """Check if this is a guest ticket (no authenticated requester)."""
+        return self.requester_content_type is None and self.guest_token is not None
+
+    @property
+    def requester_name(self):
+        """Get the requester's name (works for both authenticated and guest)."""
+        if self.is_guest:
+            return self.guest_name or "Guest"
+        try:
+            user = self.requester
+            if user:
+                name = getattr(user, "get_full_name", lambda: str(user))()
+                return name or str(user)
+        except Exception:
+            pass
+        return "Unknown"
+
+    @property
+    def requester_email(self):
+        """Get the requester's email (works for both authenticated and guest)."""
+        if self.is_guest:
+            return self.guest_email or ""
+        try:
+            user = self.requester
+            if user:
+                return getattr(user, "email", "")
+        except Exception:
+            pass
+        return ""
 
     @property
     def sla_first_response_remaining(self):
@@ -476,3 +516,58 @@ class TicketActivity(models.Model):
 
     def __str__(self):
         return f"{self.type} on {self.ticket.reference}"
+
+
+class EscalatedSetting(models.Model):
+    """Key-value settings store for Escalated configuration."""
+
+    key = models.CharField(max_length=255, unique=True)
+    value = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("settings")
+
+    def __str__(self):
+        return f"{self.key} = {self.value}"
+
+    @classmethod
+    def get(cls, key, default=None):
+        """Get a setting value by key."""
+        try:
+            return cls.objects.get(key=key).value
+        except cls.DoesNotExist:
+            return default
+
+    @classmethod
+    def set(cls, key, value):
+        """Set a setting value by key."""
+        obj, _ = cls.objects.update_or_create(
+            key=key, defaults={"value": str(value) if value is not None else None}
+        )
+        return obj
+
+    @classmethod
+    def get_bool(cls, key, default=False):
+        """Get a boolean setting."""
+        val = cls.get(key)
+        if val is None:
+            return default
+        return val in ("1", "true", "True", "yes")
+
+    @classmethod
+    def get_int(cls, key, default=0):
+        """Get an integer setting."""
+        val = cls.get(key)
+        if val is None:
+            return default
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return default
+
+    @classmethod
+    def guest_tickets_enabled(cls):
+        """Check if guest tickets are enabled."""
+        return cls.get_bool("guest_tickets_enabled", default=True)

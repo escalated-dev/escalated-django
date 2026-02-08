@@ -14,6 +14,7 @@ from escalated.models import (
     SlaPolicy,
     EscalationRule,
     CannedResponse,
+    EscalatedSetting,
 )
 from escalated.permissions import is_admin
 from escalated.serializers import (
@@ -23,6 +24,7 @@ from escalated.serializers import (
     SlaPolicySerializer,
     EscalationRuleSerializer,
     CannedResponseSerializer,
+    EscalatedSettingSerializer,
 )
 
 
@@ -622,3 +624,56 @@ def canned_responses_delete(request, response_id):
         pass
 
     return redirect("escalated:admin_canned_responses_index")
+
+
+# ---------------------------------------------------------------------------
+# Settings
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def settings_index(request):
+    """Display and manage Escalated settings."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    all_settings = EscalatedSetting.objects.all()
+
+    return render(request, "Escalated/Admin/Settings", props={
+        "settings": EscalatedSettingSerializer.serialize_as_dict(all_settings),
+    })
+
+
+@login_required
+def settings_update(request):
+    """Update Escalated settings."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    # Boolean settings (sent as "1"/"0" or absent)
+    bool_keys = ["guest_tickets_enabled", "allow_customer_close"]
+    for key in bool_keys:
+        value = "1" if request.POST.get(key) in ("1", "true", "on") else "0"
+        EscalatedSetting.set(key, value)
+
+    # Integer settings
+    int_keys = [
+        "auto_close_resolved_after_days",
+        "max_attachments_per_reply",
+        "max_attachment_size_kb",
+    ]
+    for key in int_keys:
+        raw = request.POST.get(key)
+        if raw is not None:
+            try:
+                value = str(max(0, int(raw)))
+                EscalatedSetting.set(key, value)
+            except (ValueError, TypeError):
+                pass
+
+    return redirect("escalated:admin_settings")
