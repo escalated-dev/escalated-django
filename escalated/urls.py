@@ -33,6 +33,16 @@ agent_patterns = [
 # Admin-facing URLs
 admin_patterns = [
     path("admin/reports/", admin.reports, name="admin_reports"),
+    # Tickets
+    path("admin/tickets/", admin.tickets_index, name="admin_tickets_index"),
+    path("admin/tickets/<int:ticket_id>/", admin.tickets_show, name="admin_tickets_show"),
+    path("admin/tickets/<int:ticket_id>/reply/", admin.tickets_reply, name="admin_tickets_reply"),
+    path("admin/tickets/<int:ticket_id>/note/", admin.tickets_note, name="admin_tickets_note"),
+    path("admin/tickets/<int:ticket_id>/assign/", admin.tickets_assign, name="admin_tickets_assign"),
+    path("admin/tickets/<int:ticket_id>/status/", admin.tickets_status, name="admin_tickets_status"),
+    path("admin/tickets/<int:ticket_id>/priority/", admin.tickets_priority, name="admin_tickets_priority"),
+    path("admin/tickets/<int:ticket_id>/tags/", admin.tickets_tags, name="admin_tickets_tags"),
+    path("admin/tickets/<int:ticket_id>/department/", admin.tickets_department, name="admin_tickets_department"),
     # Departments
     path("admin/departments/", admin.departments_index, name="admin_departments_index"),
     path("admin/departments/create/", admin.departments_create, name="admin_departments_create"),

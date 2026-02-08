@@ -16,16 +16,20 @@ from escalated.models import (
     CannedResponse,
     EscalatedSetting,
 )
-from escalated.permissions import is_admin
+from escalated.permissions import is_admin, is_agent
 from escalated.serializers import (
     TicketSerializer,
+    ReplySerializer,
     TagSerializer,
     DepartmentSerializer,
     SlaPolicySerializer,
     EscalationRuleSerializer,
     CannedResponseSerializer,
     EscalatedSettingSerializer,
+    ActivitySerializer,
+    AttachmentSerializer,
 )
+from escalated.services.ticket_service import TicketService
 
 
 def _require_admin(request):
@@ -90,6 +94,342 @@ def reports(request):
         "by_priority": by_priority,
         "by_status": by_status,
     })
+
+
+# ---------------------------------------------------------------------------
+# Tickets (List + Detail + Actions)
+# ---------------------------------------------------------------------------
+
+
+def _get_agents():
+    """Return list of users who are agents or admins."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    users = User.objects.filter(is_active=True)
+    return [
+        {"id": u.pk, "name": u.get_full_name() or u.username, "email": u.email}
+        for u in users
+        if is_agent(u) or is_admin(u)
+    ]
+
+
+@login_required
+def tickets_index(request):
+    """List all tickets with filters for admin."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    tickets = Ticket.objects.select_related(
+        "assigned_to", "department"
+    ).prefetch_related("tags")
+
+    # Apply filters
+    status = request.GET.get("status")
+    if status:
+        tickets = tickets.filter(status=status)
+
+    priority = request.GET.get("priority")
+    if priority:
+        tickets = tickets.filter(priority=priority)
+
+    assigned = request.GET.get("assigned")
+    if assigned == "unassigned":
+        tickets = tickets.filter(assigned_to__isnull=True)
+    elif assigned:
+        tickets = tickets.filter(assigned_to_id=assigned)
+
+    department = request.GET.get("department")
+    if department:
+        tickets = tickets.filter(department_id=department)
+
+    tag = request.GET.get("tag")
+    if tag:
+        tickets = tickets.filter(tags__slug=tag)
+
+    search = request.GET.get("search")
+    if search:
+        tickets = tickets.search(search)
+
+    sort = request.GET.get("sort", "-created_at")
+    allowed_sorts = [
+        "created_at", "-created_at", "priority", "-priority",
+        "updated_at", "-updated_at",
+    ]
+    if sort in allowed_sorts:
+        tickets = tickets.order_by(sort)
+
+    paginator = Paginator(tickets, 25)
+    page = paginator.get_page(request.GET.get("page", 1))
+
+    return render(request, "Escalated/Admin/Tickets/Index", props={
+        "tickets": TicketSerializer.serialize_list(page.object_list),
+        "pagination": {
+            "current_page": page.number,
+            "total_pages": paginator.num_pages,
+            "total_count": paginator.count,
+            "has_next": page.has_next(),
+            "has_previous": page.has_previous(),
+        },
+        "filters": {
+            "status": status,
+            "priority": priority,
+            "assigned": assigned,
+            "department": department,
+            "tag": tag,
+            "search": search,
+            "sort": sort,
+        },
+        "departments": DepartmentSerializer.serialize_list(
+            Department.objects.filter(is_active=True)
+        ),
+        "tags": TagSerializer.serialize_list(Tag.objects.all()),
+        "agents": _get_agents(),
+    })
+
+
+@login_required
+def tickets_show(request, ticket_id):
+    """Show a ticket with all details for admin."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    try:
+        ticket = Ticket.objects.select_related(
+            "assigned_to", "department", "sla_policy"
+        ).prefetch_related(
+            "tags",
+            "replies__author",
+            "replies__attachments",
+            "activities",
+            "attachments",
+        ).get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    replies = ticket.replies.filter(is_deleted=False).select_related("author")
+    activities = ticket.activities.all()[:50]
+
+    canned_responses = CannedResponse.objects.filter(
+        Q(is_shared=True) | Q(created_by=request.user)
+    )
+
+    return render(request, "Escalated/Admin/Tickets/Show", props={
+        "ticket": TicketSerializer.serialize(ticket),
+        "replies": ReplySerializer.serialize_list(replies),
+        "activities": [ActivitySerializer.serialize(a) for a in activities],
+        "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
+        "agents": _get_agents(),
+        "departments": DepartmentSerializer.serialize_list(
+            Department.objects.filter(is_active=True)
+        ),
+        "tags": TagSerializer.serialize_list(Tag.objects.all()),
+        "canned_responses": CannedResponseSerializer.serialize_list(canned_responses),
+        "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
+        "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+    })
+
+
+@login_required
+def tickets_reply(request, ticket_id):
+    """Admin reply to a ticket."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    body = request.POST.get("body", "").strip()
+    if not body:
+        return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+    service = TicketService()
+    reply = service.reply(ticket, request.user, {"body": body})
+
+    files = request.FILES.getlist("attachments")
+    if files:
+        from escalated.services.attachment_service import AttachmentService
+        from escalated.conf import get_setting
+        for f in files[:get_setting("MAX_ATTACHMENTS")]:
+            try:
+                AttachmentService.attach(reply, f)
+            except Exception:
+                pass
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+
+@login_required
+def tickets_note(request, ticket_id):
+    """Add an internal note to a ticket (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    body = request.POST.get("body", "").strip()
+    if not body:
+        return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+    service = TicketService()
+    service.add_note(ticket, request.user, body)
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+
+@login_required
+def tickets_assign(request, ticket_id):
+    """Assign a ticket to an agent (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    agent_id = request.POST.get("agent_id")
+    if not agent_id:
+        service = TicketService()
+        service.unassign(ticket, request.user)
+    else:
+        try:
+            agent = User.objects.get(pk=agent_id)
+        except User.DoesNotExist:
+            return HttpResponseNotFound("Agent not found")
+
+        service = TicketService()
+        service.assign(ticket, request.user, agent)
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+
+@login_required
+def tickets_status(request, ticket_id):
+    """Change ticket status (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    new_status = request.POST.get("status")
+    valid_statuses = [s.value for s in Ticket.Status]
+    if new_status not in valid_statuses:
+        return HttpResponseForbidden("Invalid status.")
+
+    service = TicketService()
+    service.change_status(ticket, request.user, new_status)
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+
+@login_required
+def tickets_priority(request, ticket_id):
+    """Change ticket priority (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    new_priority = request.POST.get("priority")
+    valid_priorities = [p.value for p in Ticket.Priority]
+    if new_priority not in valid_priorities:
+        return HttpResponseForbidden("Invalid priority.")
+
+    service = TicketService()
+    service.change_priority(ticket, request.user, new_priority)
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+
+@login_required
+def tickets_tags(request, ticket_id):
+    """Add or remove tags from a ticket (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    service = TicketService()
+
+    add_tags = request.POST.getlist("add_tags")
+    if add_tags:
+        service.add_tags(ticket, request.user, [int(t) for t in add_tags])
+
+    remove_tags = request.POST.getlist("remove_tags")
+    if remove_tags:
+        service.remove_tags(ticket, request.user, [int(t) for t in remove_tags])
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+
+@login_required
+def tickets_department(request, ticket_id):
+    """Change ticket department (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    department_id = request.POST.get("department_id")
+    try:
+        department = Department.objects.get(pk=department_id)
+    except Department.DoesNotExist:
+        return HttpResponseNotFound("Department not found")
+
+    service = TicketService()
+    service.change_department(ticket, request.user, department)
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
 
 
 # ---------------------------------------------------------------------------
@@ -675,5 +1015,10 @@ def settings_update(request):
                 EscalatedSetting.set(key, value)
             except (ValueError, TypeError):
                 pass
+
+    # String settings
+    prefix = request.POST.get("ticket_reference_prefix", "").strip()
+    if prefix and prefix.isalnum() and len(prefix) <= 10:
+        EscalatedSetting.set("ticket_reference_prefix", prefix)
 
     return redirect("escalated:admin_settings")

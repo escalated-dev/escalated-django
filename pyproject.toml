@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "escalated-django"
-version = "0.1.6"
+version = "0.1.7"
 description = "Embeddable support ticket system for Django"
 readme = "README.md"
 license = {text = "MIT"}

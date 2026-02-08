@@ -276,8 +276,9 @@ class Ticket(models.Model):
     @classmethod
     def generate_reference(cls):
         """Generate a unique ticket reference like ESC-A1B2C3."""
+        prefix = EscalatedSetting.get("ticket_reference_prefix", "ESC")
         while True:
-            ref = f"ESC-{uuid.uuid4().hex[:6].upper()}"
+            ref = f"{prefix}-{uuid.uuid4().hex[:6].upper()}"
             if not cls.objects.filter(reference=ref).exists():
                 return ref
 
