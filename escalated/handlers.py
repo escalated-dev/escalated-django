@@ -5,8 +5,10 @@ from django.utils import timezone
 
 from escalated.signals import (
     ticket_created,
+    ticket_updated,
     ticket_status_changed,
     ticket_assigned,
+    ticket_priority_changed,
     reply_created,
     sla_breached,
     ticket_resolved,
@@ -164,3 +166,32 @@ def on_ticket_escalated(sender, ticket, user, reason, **kwargs):
 
     NotificationService.notify_ticket_escalated(ticket, reason)
     logger.warning(f"Ticket {ticket.reference} escalated: {reason}")
+
+
+@receiver(ticket_updated)
+def on_ticket_updated(sender, ticket, user, changes, **kwargs):
+    """Log ticket update and fire webhook."""
+    from escalated.services.notification_service import NotificationService
+
+    NotificationService._fire_webhook("ticket.updated", {
+        "ticket_id": ticket.pk,
+        "reference": ticket.reference,
+        "changes": {k: v["new"] for k, v in changes.items()},
+    })
+    logger.info(f"Ticket {ticket.reference} updated: {list(changes.keys())}")
+
+
+@receiver(ticket_priority_changed)
+def on_ticket_priority_changed(sender, ticket, user, old_priority, new_priority, **kwargs):
+    """Log priority change and fire webhook."""
+    from escalated.services.notification_service import NotificationService
+
+    NotificationService._fire_webhook("ticket.priority_changed", {
+        "ticket_id": ticket.pk,
+        "reference": ticket.reference,
+        "old_priority": old_priority,
+        "new_priority": new_priority,
+    })
+    logger.info(
+        f"Ticket {ticket.reference} priority changed: {old_priority} -> {new_priority}"
+    )

@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from inertia import render
 
 from escalated.conf import get_setting
-from escalated.models import Ticket, Department, Reply, EscalatedSetting
+from escalated.models import Ticket, Department, EscalatedSetting
 from escalated.serializers import (
     TicketSerializer,
     ReplySerializer,
@@ -151,30 +151,22 @@ def ticket_reply(request, token):
     if not body:
         return redirect("escalated:guest_ticket_show", token=token)
 
-    # Create reply without author (guest reply)
-    Reply.objects.create(
-        ticket=ticket,
-        author=None,
-        body=body,
-        type=Reply.Type.REPLY,
-    )
+    # Use the driver to create the reply so signals fire and notifications are sent
+    from escalated.drivers import get_driver
 
-    # Update ticket status if needed
-    if ticket.status == Ticket.Status.WAITING_ON_CUSTOMER:
-        ticket.status = Ticket.Status.OPEN
-        ticket.save(update_fields=["status", "updated_at"])
+    driver = get_driver()
+    reply_data = {"body": body, "is_internal_note": False}
+    reply_obj = driver.add_reply(ticket, None, reply_data)
 
     # Handle file attachments
     files = request.FILES.getlist("attachments")
     if files:
         from escalated.services.attachment_service import AttachmentService
 
-        reply = ticket.replies.order_by("-created_at").first()
-        if reply:
-            for f in files[:get_setting("MAX_ATTACHMENTS")]:
-                try:
-                    AttachmentService.attach(reply, f)
-                except Exception:
-                    pass
+        for f in files[:get_setting("MAX_ATTACHMENTS")]:
+            try:
+                AttachmentService.attach(reply_obj, f)
+            except Exception:
+                pass
 
     return redirect("escalated:guest_ticket_show", token=token)
