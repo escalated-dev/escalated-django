@@ -17,6 +17,8 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 - **Email notifications** — Configurable per-event notifications with webhook support
 - **Department routing** — Organize agents into departments with auto-assignment (round-robin)
 - **Tagging system** — Categorize tickets with colored tags
+- **Guest tickets** — Anonymous ticket submission with magic-link access via guest token
+- **Inbound email** — Create and reply to tickets via email (Mailgun, Postmark, AWS SES, IMAP)
 - **Inertia.js + Vue 3 UI** — Shared frontend via [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated)
 
 ## Requirements
@@ -265,6 +267,64 @@ def on_ticket_resolved(sender, ticket, user, **kwargs):
 ```
 
 Available signals: `ticket_created`, `ticket_updated`, `ticket_status_changed`, `ticket_assigned`, `ticket_unassigned`, `ticket_priority_changed`, `ticket_escalated`, `ticket_resolved`, `ticket_closed`, `ticket_reopened`, `reply_created`, `internal_note_added`, `sla_breached`, `sla_warning`, `tag_added`, `tag_removed`, `department_changed`.
+
+## Inbound Email
+
+Create and reply to tickets from incoming emails. Supports **Mailgun**, **Postmark**, **AWS SES** webhooks, and **IMAP** polling.
+
+### Enable
+
+```python
+# settings.py
+ESCALATED = {
+    "INBOUND_EMAIL_ENABLED": True,
+    "INBOUND_EMAIL_ADAPTER": "mailgun",   # mailgun, postmark, ses, imap
+    "INBOUND_EMAIL_ADDRESS": "support@yourapp.com",
+
+    # Mailgun
+    "MAILGUN_SIGNING_KEY": os.environ.get("ESCALATED_MAILGUN_SIGNING_KEY"),
+
+    # Postmark
+    "POSTMARK_INBOUND_TOKEN": os.environ.get("ESCALATED_POSTMARK_INBOUND_TOKEN"),
+
+    # AWS SES
+    "SES_REGION": "us-east-1",
+    "SES_TOPIC_ARN": os.environ.get("ESCALATED_SES_TOPIC_ARN"),
+
+    # IMAP
+    "IMAP_HOST": os.environ.get("ESCALATED_IMAP_HOST"),
+    "IMAP_PORT": 993,
+    "IMAP_ENCRYPTION": "ssl",
+    "IMAP_USERNAME": os.environ.get("ESCALATED_IMAP_USERNAME"),
+    "IMAP_PASSWORD": os.environ.get("ESCALATED_IMAP_PASSWORD"),
+    "IMAP_MAILBOX": "INBOX",
+}
+```
+
+### Webhook URLs
+
+| Provider | URL |
+|----------|-----|
+| Mailgun | `POST /support/inbound/mailgun/` |
+| Postmark | `POST /support/inbound/postmark/` |
+| AWS SES | `POST /support/inbound/ses/` |
+
+### IMAP Polling
+
+```bash
+python manage.py poll_imap              # Single run
+python manage.py poll_imap --continuous # Daemon mode
+```
+
+### Features
+
+- Thread detection via subject reference and `In-Reply-To` / `References` headers
+- Guest tickets for unknown senders with auto-derived display names
+- Auto-reopen resolved/closed tickets on email reply
+- Duplicate detection via `Message-ID` headers
+- Attachment handling with configurable size and count limits
+- Audit logging of every inbound email
+- All settings configurable from admin panel with env fallback
 
 ## Also Available For
 
