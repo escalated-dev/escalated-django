@@ -32,26 +32,32 @@ class CloudDriver:
         }
         return self.api.create_ticket(payload)
 
-    def update_ticket(self, ticket_id, user, data):
+    def update_ticket(self, ticket, user, data):
+        ticket_id = ticket.pk if hasattr(ticket, "pk") else ticket
         return self.api.update_ticket(ticket_id, data)
 
-    def transition_status(self, ticket_id, user, new_status):
+    def transition_status(self, ticket, user, new_status):
+        ticket_id = ticket.pk if hasattr(ticket, "pk") else ticket
         return self.api.transition_status(ticket_id, new_status)
 
-    def assign_ticket(self, ticket_id, user, agent_id):
+    def assign_ticket(self, ticket, user, agent):
+        ticket_id = ticket.pk if hasattr(ticket, "pk") else ticket
+        agent_id = agent.pk if hasattr(agent, "pk") else agent
         return self.api.assign_ticket(ticket_id, agent_id)
 
-    def unassign_ticket(self, ticket_id, user):
+    def unassign_ticket(self, ticket, user):
+        ticket_id = ticket.pk if hasattr(ticket, "pk") else ticket
         return self.api.unassign_ticket(ticket_id)
 
-    def add_reply(self, ticket_id, user, data):
+    def add_reply(self, ticket, user, data):
+        ticket_id = ticket.pk if hasattr(ticket, "pk") else ticket
         payload = {
             "body": data["body"],
             "is_internal_note": data.get("is_internal_note", False),
-            "author_id": user.pk,
+            "author_id": user.pk if user else None,
             "author_name": getattr(
                 user, "get_full_name", lambda: str(user)
-            )(),
+            )() if user else "Guest",
             "metadata": data.get("metadata"),
         }
         return self.api.add_reply(ticket_id, payload)
@@ -62,14 +68,19 @@ class CloudDriver:
     def list_tickets(self, filters=None):
         return self.api.list_tickets(params=filters)
 
-    def add_tags(self, ticket_id, user, tag_ids):
+    def add_tags(self, ticket, user, tag_ids):
+        ticket_id = ticket.pk if hasattr(ticket, "pk") else ticket
         return self.api.add_tags(ticket_id, tag_ids)
 
-    def remove_tags(self, ticket_id, user, tag_ids):
+    def remove_tags(self, ticket, user, tag_ids):
+        ticket_id = ticket.pk if hasattr(ticket, "pk") else ticket
         return self.api.remove_tags(ticket_id, tag_ids)
 
-    def change_department(self, ticket_id, user, department_id):
+    def change_department(self, ticket, user, department):
+        ticket_id = ticket.pk if hasattr(ticket, "pk") else ticket
+        department_id = department.pk if hasattr(department, "pk") else department
         return self.api.change_department(ticket_id, department_id)
 
-    def change_priority(self, ticket_id, user, new_priority):
+    def change_priority(self, ticket, user, new_priority):
+        ticket_id = ticket.pk if hasattr(ticket, "pk") else ticket
         return self.api.change_priority(ticket_id, new_priority)

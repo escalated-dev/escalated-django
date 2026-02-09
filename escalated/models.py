@@ -572,3 +572,80 @@ class EscalatedSetting(models.Model):
     def guest_tickets_enabled(cls):
         """Check if guest tickets are enabled."""
         return cls.get_bool("guest_tickets_enabled", default=True)
+
+
+class InboundEmail(models.Model):
+    """Tracks inbound emails received via webhook or IMAP polling."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        PROCESSED = "processed", "Processed"
+        FAILED = "failed", "Failed"
+        SPAM = "spam", "Spam"
+
+    message_id = models.CharField(max_length=500, unique=True, null=True, blank=True)
+    from_email = models.CharField(max_length=500)
+    from_name = models.CharField(max_length=500, null=True, blank=True)
+    to_email = models.CharField(max_length=500)
+    subject = models.CharField(max_length=1000)
+    body_text = models.TextField(null=True, blank=True)
+    body_html = models.TextField(null=True, blank=True)
+    raw_headers = models.TextField(null=True, blank=True)
+
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inbound_emails",
+    )
+    reply = models.ForeignKey(
+        Reply,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inbound_emails",
+    )
+
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    adapter = models.CharField(max_length=50)
+    error_message = models.TextField(null=True, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("inbound_emails")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["from_email"]),
+            models.Index(fields=["message_id"]),
+        ]
+
+    def __str__(self):
+        return f"InboundEmail({self.from_email} -> {self.to_email}: {self.subject[:50]})"
+
+    def mark_processed(self, ticket, reply=None):
+        """Mark this inbound email as successfully processed."""
+        self.status = self.Status.PROCESSED
+        self.ticket = ticket
+        self.reply = reply
+        self.processed_at = timezone.now()
+        self.save(update_fields=[
+            "status", "ticket", "reply", "processed_at", "updated_at",
+        ])
+
+    def mark_failed(self, error_message):
+        """Mark this inbound email as failed."""
+        self.status = self.Status.FAILED
+        self.error_message = error_message
+        self.save(update_fields=["status", "error_message", "updated_at"])
+
+    def mark_spam(self):
+        """Mark this inbound email as spam."""
+        self.status = self.Status.SPAM
+        self.save(update_fields=["status", "updated_at"])

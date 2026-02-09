@@ -205,7 +205,7 @@ class LocalDriver:
         )
 
         # Update ticket status based on who is replying
-        if not is_internal:
+        if not is_internal and user is not None:
             ct = ContentType.objects.get_for_model(user)
             is_requester = (
                 ticket.requester_content_type == ct
@@ -226,6 +226,10 @@ class LocalDriver:
                     self.transition_status(
                         ticket, user, Ticket.Status.WAITING_ON_CUSTOMER
                     )
+        elif not is_internal and user is None:
+            # Guest reply — treat like a customer reply
+            if ticket.status == Ticket.Status.WAITING_ON_CUSTOMER:
+                self.transition_status(ticket, None, Ticket.Status.OPEN)
 
         # Fire signals
         if is_internal:

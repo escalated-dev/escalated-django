@@ -1,6 +1,6 @@
 from django.urls import path
 
-from escalated.views import customer, agent, admin, guest
+from escalated.views import customer, agent, admin, guest, inbound
 
 app_name = "escalated"
 
@@ -81,4 +81,15 @@ guest_patterns = [
     path("guest/<str:token>/reply/", guest.ticket_reply, name="guest_ticket_reply"),
 ]
 
-urlpatterns = customer_patterns + agent_patterns + admin_patterns + guest_patterns
+# Inbound email webhook (no authentication — external services POST here)
+inbound_patterns = [
+    path("inbound/<str:adapter_name>/", inbound.inbound_webhook, name="inbound_webhook"),
+]
+
+urlpatterns = (
+    customer_patterns
+    + agent_patterns
+    + admin_patterns
+    + guest_patterns
+    + inbound_patterns
+)

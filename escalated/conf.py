@@ -25,6 +25,24 @@ DEFAULTS = {
     },
     "NOTIFICATION_CHANNELS": ["email"],
     "WEBHOOK_URL": None,
+    # Inbound email settings
+    "INBOUND_EMAIL_ENABLED": False,
+    "INBOUND_EMAIL_ADAPTER": "mailgun",
+    "INBOUND_EMAIL_ADDRESS": "support@example.com",
+    # Mailgun
+    "MAILGUN_SIGNING_KEY": None,
+    # Postmark
+    "POSTMARK_INBOUND_TOKEN": None,
+    # AWS SES
+    "SES_REGION": "us-east-1",
+    "SES_TOPIC_ARN": None,
+    # IMAP
+    "IMAP_HOST": None,
+    "IMAP_PORT": 993,
+    "IMAP_ENCRYPTION": "ssl",
+    "IMAP_USERNAME": None,
+    "IMAP_PASSWORD": None,
+    "IMAP_MAILBOX": "INBOX",
 }
 
 

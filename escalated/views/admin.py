@@ -996,7 +996,11 @@ def settings_update(request):
         return HttpResponseForbidden("Method not allowed")
 
     # Boolean settings (sent as "1"/"0" or absent)
-    bool_keys = ["guest_tickets_enabled", "allow_customer_close"]
+    bool_keys = [
+        "guest_tickets_enabled",
+        "allow_customer_close",
+        "inbound_email_enabled",
+    ]
     for key in bool_keys:
         value = "1" if request.POST.get(key) in ("1", "true", "on") else "0"
         EscalatedSetting.set(key, value)
@@ -1006,6 +1010,7 @@ def settings_update(request):
         "auto_close_resolved_after_days",
         "max_attachments_per_reply",
         "max_attachment_size_kb",
+        "imap_port",
     ]
     for key in int_keys:
         raw = request.POST.get(key)
@@ -1020,5 +1025,24 @@ def settings_update(request):
     prefix = request.POST.get("ticket_reference_prefix", "").strip()
     if prefix and prefix.isalnum() and len(prefix) <= 10:
         EscalatedSetting.set("ticket_reference_prefix", prefix)
+
+    # Inbound email string settings
+    inbound_str_keys = [
+        "inbound_email_adapter",
+        "inbound_email_address",
+        "mailgun_signing_key",
+        "postmark_inbound_token",
+        "ses_region",
+        "ses_topic_arn",
+        "imap_host",
+        "imap_encryption",
+        "imap_username",
+        "imap_password",
+        "imap_mailbox",
+    ]
+    for key in inbound_str_keys:
+        raw = request.POST.get(key)
+        if raw is not None:
+            EscalatedSetting.set(key, raw.strip())
 
     return redirect("escalated:admin_settings")
