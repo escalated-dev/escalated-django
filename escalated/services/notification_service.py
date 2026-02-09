@@ -1,3 +1,6 @@
+import hashlib
+import hmac
+import json
 import logging
 
 from django.conf import settings
@@ -213,7 +216,7 @@ class NotificationService:
 
     @staticmethod
     def _fire_webhook(event, payload):
-        """POST event data to the configured webhook URL."""
+        """POST event data to the configured webhook URL with optional HMAC-SHA256 signing."""
         webhook_url = get_setting("WEBHOOK_URL")
         if not webhook_url:
             return
@@ -221,14 +224,30 @@ class NotificationService:
         try:
             import requests
 
+            body = {"event": event, "data": payload}
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "escalated-django/0.1.0",
+            }
+
+            # Add HMAC-SHA256 signature if a webhook secret is configured
+            secret = get_setting("WEBHOOK_SECRET") or getattr(
+                settings, "ESCALATED_WEBHOOK_SECRET", None
+            )
+            if secret:
+                body_bytes = json.dumps(body, default=str).encode("utf-8")
+                signature = hmac.new(
+                    secret.encode("utf-8"),
+                    body_bytes,
+                    hashlib.sha256,
+                ).hexdigest()
+                headers["X-Escalated-Signature"] = signature
+
             requests.post(
                 webhook_url,
-                json={"event": event, "data": payload},
+                json=body,
                 timeout=10,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "escalated-django/0.1.0",
-                },
+                headers=headers,
             )
         except Exception as e:
             logger.error(f"Failed to fire webhook for {event}: {e}")

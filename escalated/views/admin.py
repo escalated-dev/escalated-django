@@ -1,3 +1,5 @@
+import re as re_module
+
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Avg, F
@@ -39,6 +41,30 @@ def _require_admin(request):
     if not is_admin(request.user):
         return HttpResponseForbidden("Admin access required.")
     return None
+
+
+# Keys whose values should be masked in the settings response
+_SENSITIVE_SETTING_KEYS = {
+    "mailgun_signing_key",
+    "postmark_inbound_token",
+    "imap_password",
+}
+
+
+def _mask_secret(value: str) -> str:
+    """Mask a secret value, showing only the first 3 characters."""
+    if not value:
+        return ''
+    if len(value) <= 6:
+        return '*' * len(value)
+    return value[:3] + '*' * min(len(value) - 3, 12)
+
+
+def _is_masked_value(value: str | None) -> bool:
+    """Return True if the value looks like a masked secret (e.g. 'abc************')."""
+    if not value:
+        return False
+    return bool(re_module.match(r'^.{0,3}\*{3,}$', value))
 
 
 # ---------------------------------------------------------------------------
@@ -979,9 +1005,15 @@ def settings_index(request):
         return check
 
     all_settings = EscalatedSetting.objects.all()
+    settings_dict = EscalatedSettingSerializer.serialize_as_dict(all_settings)
+
+    # Mask sensitive values before sending to frontend
+    for key in _SENSITIVE_SETTING_KEYS:
+        if key in settings_dict and settings_dict[key]:
+            settings_dict[key] = _mask_secret(settings_dict[key])
 
     return render(request, "Escalated/Admin/Settings", props={
-        "settings": EscalatedSettingSerializer.serialize_as_dict(all_settings),
+        "settings": settings_dict,
     })
 
 
@@ -1043,6 +1075,10 @@ def settings_update(request):
     for key in inbound_str_keys:
         raw = request.POST.get(key)
         if raw is not None:
-            EscalatedSetting.set(key, raw.strip())
+            stripped = raw.strip()
+            # Skip saving sensitive fields that still contain masked values
+            if key in _SENSITIVE_SETTING_KEYS and _is_masked_value(stripped):
+                continue
+            EscalatedSetting.set(key, stripped)
 
     return redirect("escalated:admin_settings")

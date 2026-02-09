@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import secrets
 
@@ -29,6 +30,75 @@ class InboundEmailService:
     6. Handle attachments
     7. Update InboundEmail record with result
     """
+
+    ALLOWED_TAGS = {
+        'p', 'br', 'b', 'strong', 'i', 'em', 'u', 'a', 'ul', 'ol', 'li',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img', 'hr', 'div', 'span',
+        'sub', 'sup',
+    }
+
+    BLOCKED_EXTENSIONS = {
+        'exe', 'bat', 'cmd', 'com', 'msi', 'scr', 'pif', 'vbs', 'vbe',
+        'js', 'jse', 'wsf', 'wsh', 'ps1', 'psm1', 'psd1', 'reg',
+        'cpl', 'hta', 'inf', 'lnk', 'sct', 'shb', 'sys', 'drv',
+        'php', 'phtml', 'php3', 'php4', 'php5', 'phar',
+        'sh', 'bash', 'csh', 'ksh', 'pl', 'py', 'rb',
+        'dll', 'so', 'dylib',
+    }
+
+    @staticmethod
+    def _sanitize_html(html: str | None) -> str | None:
+        """Sanitize HTML to remove dangerous tags, event handlers, and protocols."""
+        if not html or not html.strip():
+            return html
+
+        allowed = InboundEmailService.ALLOWED_TAGS
+
+        def replace_tag(match):
+            tag_name = match.group(1).strip().split()[0].lower().lstrip('/')
+            if tag_name in allowed:
+                return match.group(0)
+            return ''
+
+        clean = re.sub(r'<(/?\s*[a-zA-Z][a-zA-Z0-9]*(?:\s[^>]*)?)>', replace_tag, html)
+
+        # Remove event handler attributes
+        clean = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', clean, flags=re.IGNORECASE)
+        clean = re.sub(r'\s+on\w+\s*=\s*\S+', '', clean, flags=re.IGNORECASE)
+
+        # Remove javascript: protocol
+        clean = re.sub(
+            r'\b(href|src|action)\s*=\s*["\']?\s*javascript\s*:',
+            r'\1="', clean, flags=re.IGNORECASE,
+        )
+
+        # Remove data: URLs except data:image
+        clean = re.sub(
+            r'\b(href|src|action)\s*=\s*["\']?\s*data\s*:(?!image/)',
+            r'\1="', clean, flags=re.IGNORECASE,
+        )
+
+        # Remove style with expression()
+        clean = re.sub(
+            r'style\s*=\s*["\'][^"\']*expression\s*\([^"\']*["\']',
+            '', clean, flags=re.IGNORECASE,
+        )
+        clean = re.sub(
+            r'style\s*=\s*["\'][^"\']*url\s*\(\s*["\']?\s*javascript:[^"\']*["\']',
+            '', clean, flags=re.IGNORECASE,
+        )
+
+        return clean
+
+    @staticmethod
+    def _get_sanitized_body(message) -> str:
+        """Return the best available body, sanitizing HTML if no plain text is available."""
+        if message.body_text:
+            return message.body_text
+        if message.body_html:
+            return InboundEmailService._sanitize_html(message.body_html) or ''
+        return ''
 
     @staticmethod
     def process(message: InboundMessage, adapter_name: str = "unknown") -> InboundEmail:
@@ -62,7 +132,7 @@ class InboundEmailService:
             to_email=message.to_email,
             subject=message.subject,
             body_text=message.body_text,
-            body_html=message.body_html,
+            body_html=InboundEmailService._sanitize_html(message.body_html),
             raw_headers="\n".join(
                 f"{k}: {v}" for k, v in message.headers.items()
             ) if message.headers else None,
@@ -196,7 +266,7 @@ class InboundEmailService:
     @staticmethod
     def _add_reply(driver, ticket, user, message: InboundMessage):
         """Add a reply to an existing ticket."""
-        body = message.body_text or message.body_html or "(empty email body)"
+        body = InboundEmailService._get_sanitized_body(message) or "(empty email body)"
 
         reply_data = {
             "body": body,
@@ -218,7 +288,7 @@ class InboundEmailService:
         If the sender is a registered user, create a normal ticket.
         If not, create a guest ticket.
         """
-        body = message.body_text or message.body_html or "(empty email body)"
+        body = InboundEmailService._get_sanitized_body(message) or "(empty email body)"
         subject = message.subject or "(no subject)"
 
         if user is not None:
@@ -281,6 +351,20 @@ class InboundEmailService:
                     f"skipping remaining attachments"
                 )
                 break
+
+            # Block dangerous file extensions
+            filename = att.get('filename', '')
+            _, extension = os.path.splitext(filename)
+            extension = extension.lower().lstrip('.')
+            if extension and extension in InboundEmailService.BLOCKED_EXTENSIONS:
+                logger.info(
+                    f'Escalated: Blocked dangerous inbound attachment.',
+                    extra={
+                        'filename': filename,
+                        'extension': extension,
+                    },
+                )
+                continue
 
             try:
                 # Adapter may provide a Django UploadedFile (Mailgun)

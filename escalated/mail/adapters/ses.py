@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import re
+from urllib.parse import urlparse
 
 from escalated.conf import get_setting
 from escalated.mail.adapters.base import BaseAdapter
@@ -48,16 +49,21 @@ class SESAdapter(BaseAdapter):
             logger.warning("SES adapter: invalid JSON in request body")
             return False
 
-        # Verify Topic ARN if configured
+        # Verify Topic ARN — reject if not configured
         expected_arn = get_setting("SES_TOPIC_ARN")
-        if expected_arn:
-            topic_arn = data.get("TopicArn", "")
-            if topic_arn != expected_arn:
-                logger.warning(
-                    f"SES adapter: Topic ARN mismatch. "
-                    f"Expected '{expected_arn}', got '{topic_arn}'"
-                )
-                return False
+        if not expected_arn:
+            logger.warning(
+                "Escalated: SES Topic ARN not configured — rejecting request."
+            )
+            return False
+
+        topic_arn = data.get("TopicArn", "")
+        if topic_arn != expected_arn:
+            logger.warning(
+                f"SES adapter: Topic ARN mismatch. "
+                f"Expected '{expected_arn}', got '{topic_arn}'"
+            )
+            return False
 
         return True
 
@@ -128,17 +134,20 @@ class SESAdapter(BaseAdapter):
             attachments=[],  # SES SNS notifications don't include attachments inline
         )
 
-    @staticmethod
-    def _handle_subscription_confirmation(data):
+    def _handle_subscription_confirmation(self, data):
         """
         Auto-confirm an SNS subscription by fetching the SubscribeURL.
 
         This allows the webhook endpoint to be registered with SNS
         automatically when it first receives the confirmation request.
+        Only fetches URLs that point to legitimate Amazon SNS endpoints.
         """
         subscribe_url = data.get("SubscribeURL")
-        if not subscribe_url:
-            logger.warning("SNS SubscriptionConfirmation missing SubscribeURL")
+        if not subscribe_url or not self._is_valid_sns_url(subscribe_url):
+            logger.warning(
+                "SNS SubscriptionConfirmation has missing or invalid "
+                f"SubscribeURL: {subscribe_url!r}"
+            )
             return
 
         try:
@@ -148,6 +157,20 @@ class SESAdapter(BaseAdapter):
             logger.info(f"SNS subscription confirmed: {data.get('TopicArn', '')}")
         except Exception as exc:
             logger.error(f"Failed to confirm SNS subscription: {exc}")
+
+    @staticmethod
+    def _is_valid_sns_url(url: str) -> bool:
+        """Validate that a URL points to a legitimate Amazon SNS endpoint."""
+        try:
+            parsed = urlparse(url)
+            return bool(
+                parsed.scheme == 'https'
+                and re.match(
+                    r'^sns\.[a-z0-9-]+\.amazonaws\.com$', parsed.hostname or ''
+                )
+            )
+        except Exception:
+            return False
 
     @staticmethod
     def _parse_from(from_header: str) -> tuple:

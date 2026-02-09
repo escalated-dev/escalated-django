@@ -1,3 +1,4 @@
+import hmac as hmac_module
 import json
 import logging
 
@@ -40,8 +41,12 @@ class PostmarkAdapter(BaseAdapter):
         """
         expected_token = get_setting("POSTMARK_INBOUND_TOKEN")
         if not expected_token:
-            # No token configured — allow all requests (rely on URL secrecy)
-            return True
+            # No token configured — reject request for security
+            logger.warning(
+                "Escalated: Postmark inbound token not configured — "
+                "rejecting request."
+            )
+            return False
 
         # Postmark can include the token as a query param or header
         request_token = request.headers.get("X-Postmark-Inbound-Token", "")
@@ -52,7 +57,7 @@ class PostmarkAdapter(BaseAdapter):
             logger.warning("Postmark webhook missing inbound token")
             return False
 
-        return request_token == expected_token
+        return hmac_module.compare_digest(request_token, expected_token)
 
     def parse_request(self, request) -> InboundMessage:
         """Parse a Postmark inbound webhook JSON payload into an InboundMessage."""
