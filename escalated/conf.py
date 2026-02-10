@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 
 
@@ -43,6 +45,9 @@ DEFAULTS = {
     "IMAP_USERNAME": None,
     "IMAP_PASSWORD": None,
     "IMAP_MAILBOX": "INBOX",
+    # Plugin system settings
+    "PLUGINS_ENABLED": True,
+    "PLUGINS_PATH": None,  # Defaults to <BASE_DIR>/plugins/escalated at runtime
 }
 
 
@@ -57,6 +62,14 @@ def get_setting(name):
     # Special case: USER_MODEL defaults to AUTH_USER_MODEL
     if name == "USER_MODEL" and value is None:
         value = settings.AUTH_USER_MODEL
+
+    # Special case: PLUGINS_PATH defaults to BASE_DIR/plugins/escalated
+    if name == "PLUGINS_PATH" and value is None:
+        base_dir = getattr(settings, "BASE_DIR", None)
+        if base_dir:
+            value = os.path.join(str(base_dir), "plugins", "escalated")
+        else:
+            value = os.path.join(os.getcwd(), "plugins", "escalated")
 
     # Deep-merge dicts (one level) for SLA settings
     if name == "SLA" and isinstance(value, dict):
