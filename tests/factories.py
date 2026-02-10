@@ -94,9 +94,6 @@ class TicketFactory(factory.django.DjangoModelFactory):
     priority = Ticket.Priority.MEDIUM
     channel = "web"
 
-    class Params:
-        requester = None
-
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
         requester = kwargs.pop("requester", None)

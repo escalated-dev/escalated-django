@@ -220,6 +220,7 @@ class LocalDriver:
             else:
                 if ticket.status in [
                     Ticket.Status.OPEN,
+                    Ticket.Status.IN_PROGRESS,
                     Ticket.Status.WAITING_ON_AGENT,
                     Ticket.Status.REOPENED,
                 ]:

@@ -57,7 +57,7 @@ class SlaService:
         and fires signals.
         """
         if not ticket.is_open:
-            return
+            return False
 
         now = timezone.now()
         breached = False
