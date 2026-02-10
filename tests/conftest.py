@@ -19,6 +19,11 @@ def pytest_configure():
         DEFAULT_AUTO_FIELD="django.db.models.BigAutoField",
         AUTH_USER_MODEL="auth.User",
         ROOT_URLCONF="escalated.urls",
+        CACHES={
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            }
+        },
         ESCALATED={
             "MODE": "self_hosted",
             "TABLE_PREFIX": "escalated_",
@@ -33,6 +38,10 @@ def pytest_configure():
             },
             "NOTIFICATION_CHANNELS": [],  # Disable notifications in tests
             "WEBHOOK_URL": None,
+            "API_ENABLED": True,
+            "API_RATE_LIMIT": 60,
+            "API_TOKEN_EXPIRY_DAYS": None,
+            "API_PREFIX": "support/api/v1",
         },
         TEMPLATES=[
             {
@@ -69,6 +78,8 @@ from tests.factories import (
     SlaPolicyFactory,
     EscalationRuleFactory,
     CannedResponseFactory,
+    MacroFactory,
+    ApiTokenFactory,
 )
 
 
@@ -123,3 +134,20 @@ def canned_response(db, agent_user):
 @pytest.fixture
 def escalation_rule(db):
     return EscalationRuleFactory()
+
+
+@pytest.fixture
+def macro(db, agent_user):
+    return MacroFactory(created_by=agent_user)
+
+
+@pytest.fixture
+def api_token(db, agent_user):
+    """Create an API token for an agent. The `plain_text` attr holds the raw string."""
+    return ApiTokenFactory(user=agent_user)
+
+
+@pytest.fixture
+def admin_api_token(db, admin_user):
+    """Create an API token for an admin. The `plain_text` attr holds the raw string."""
+    return ApiTokenFactory(user=admin_user)

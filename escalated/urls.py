@@ -1,5 +1,6 @@
-from django.urls import path
+from django.urls import path, include
 
+from escalated.conf import get_setting
 from escalated.views import customer, agent, admin, guest, inbound
 
 app_name = "escalated"
@@ -110,3 +111,16 @@ urlpatterns = (
     + guest_patterns
     + inbound_patterns
 )
+
+# Conditionally include API URLs when API is enabled
+if get_setting("API_ENABLED"):
+    from escalated.api_urls import api_patterns, admin_api_token_patterns
+
+    api_prefix = get_setting("API_PREFIX").strip("/")
+
+    urlpatterns += [
+        path(f"{api_prefix}/", include((api_patterns, "escalated_api"))),
+    ]
+
+    # Admin API token management (under the main admin prefix)
+    urlpatterns += admin_api_token_patterns

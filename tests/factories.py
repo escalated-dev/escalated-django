@@ -1,8 +1,12 @@
+import hashlib
+import secrets
+
 import factory
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 
 from escalated.models import (
+    ApiToken,
     Ticket,
     Reply,
     Tag,
@@ -10,6 +14,7 @@ from escalated.models import (
     SlaPolicy,
     EscalationRule,
     CannedResponse,
+    Macro,
 )
 
 
@@ -141,3 +146,56 @@ class CannedResponseFactory(factory.django.DjangoModelFactory):
     category = "general"
     created_by = factory.SubFactory(UserFactory)
     is_shared = True
+
+
+class MacroFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Macro
+
+    name = factory.Sequence(lambda n: f"Macro {n}")
+    description = factory.Faker("sentence")
+    actions = factory.LazyFunction(lambda: [{"type": "set_status", "value": "open"}])
+    is_shared = True
+    order = factory.Sequence(lambda n: n)
+    created_by = factory.SubFactory(UserFactory)
+
+
+class ApiTokenFactory(factory.django.DjangoModelFactory):
+    """
+    Factory that creates an ApiToken with a known plain-text value.
+
+    Usage:
+        token = ApiTokenFactory(user=some_user)
+        # token.plain_text is the raw token string
+        # token is the ApiToken model instance
+    """
+
+    class Meta:
+        model = ApiToken
+        exclude = ["user", "plain_text"]
+
+    user = factory.SubFactory(UserFactory)
+    plain_text = factory.LazyFunction(lambda: secrets.token_hex(32))
+    name = factory.Sequence(lambda n: f"Test Token {n}")
+    token = factory.LazyAttribute(
+        lambda o: hashlib.sha256(o.plain_text.encode()).hexdigest()
+    )
+    abilities = factory.LazyFunction(lambda: ["*"])
+    expires_at = None
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        plain_text = kwargs.pop("plain_text", secrets.token_hex(32))
+
+        if user:
+            ct = ContentType.objects.get_for_model(user)
+            kwargs["tokenable_content_type"] = ct
+            kwargs["tokenable_object_id"] = user.pk
+
+        kwargs["token"] = hashlib.sha256(plain_text.encode()).hexdigest()
+
+        instance = super()._create(model_class, *args, **kwargs)
+        # Attach the plain_text for test usage
+        instance.plain_text = plain_text
+        return instance
