@@ -64,6 +64,18 @@ class NotificationService:
                         recipient=agent_email,
                     )
 
+            # Notify followers (except the author and assignee, already notified)
+            NotificationService._notify_followers(
+                ticket,
+                reply.author,
+                subject=f"[{ticket.reference}] New reply on: {ticket.subject}",
+                template="escalated/emails/reply.html",
+                context={"ticket": ticket, "reply": reply},
+                exclude_user_ids=[
+                    ticket.assigned_to_id,
+                ] if ticket.assigned_to_id else [],
+            )
+
         NotificationService._fire_webhook("reply.created", {
             "ticket_id": ticket.pk,
             "reference": ticket.reference,
@@ -110,6 +122,19 @@ class NotificationService:
                     },
                     recipient=requester_email,
                 )
+
+            # Notify followers of status changes
+            NotificationService._notify_followers(
+                ticket,
+                causer=None,
+                subject=f"[{ticket.reference}] Status updated: {ticket.subject}",
+                template="escalated/emails/status_changed.html",
+                context={
+                    "ticket": ticket,
+                    "old_status": old_status,
+                    "new_status": new_status,
+                },
+            )
 
         NotificationService._fire_webhook("ticket.status_changed", {
             "ticket_id": ticket.pk,
@@ -181,6 +206,39 @@ class NotificationService:
         })
 
     # ----- Internal helpers -----
+
+    @staticmethod
+    def _notify_followers(ticket, causer, subject, template, context, exclude_user_ids=None):
+        """
+        Send email notifications to all followers of a ticket.
+
+        Args:
+            ticket: The ticket whose followers to notify.
+            causer: The user who caused the event (excluded from notifications).
+            subject: Email subject line.
+            template: Email template name.
+            context: Template context dict.
+            exclude_user_ids: Additional user IDs to exclude (e.g. assignee).
+        """
+        exclude_ids = set(exclude_user_ids or [])
+        if causer is not None:
+            exclude_ids.add(causer.pk)
+
+        try:
+            followers = ticket.followers.all()
+            for follower in followers:
+                if follower.pk in exclude_ids:
+                    continue
+                follower_email = getattr(follower, "email", None)
+                if follower_email:
+                    NotificationService._send_email(
+                        subject=subject,
+                        template=template,
+                        context=context,
+                        recipient=follower_email,
+                    )
+        except Exception as e:
+            logger.error(f"Failed to notify followers for ticket {ticket.reference}: {e}")
 
     @staticmethod
     def _get_requester_email(ticket):

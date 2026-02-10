@@ -106,6 +106,7 @@ class ReplySerializer:
             "author": _user_dict(reply.author),
             "body": reply.body,
             "is_internal_note": reply.is_internal_note,
+            "is_pinned": reply.is_pinned,
             "type": reply.type,
             "type_display": reply.get_type_display(),
             "metadata": reply.metadata,
@@ -283,3 +284,41 @@ class EscalatedSettingSerializer:
     def serialize_as_dict(settings_qs):
         """Serialize settings as a key-value dict for frontend use."""
         return {s.key: s.value for s in settings_qs}
+
+
+class MacroSerializer:
+    @staticmethod
+    def serialize(macro):
+        return {
+            "id": macro.pk,
+            "name": macro.name,
+            "description": macro.description,
+            "actions": macro.actions,
+            "is_shared": macro.is_shared,
+            "order": macro.order,
+            "created_by": _user_dict(macro.created_by),
+            "created_at": _format_dt(macro.created_at),
+            "updated_at": _format_dt(macro.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(macros):
+        return [MacroSerializer.serialize(m) for m in macros]
+
+
+class SatisfactionRatingSerializer:
+    @staticmethod
+    def serialize(rating):
+        data = {
+            "id": rating.pk,
+            "ticket_id": rating.ticket_id,
+            "rating": rating.rating,
+            "comment": rating.comment,
+            "created_at": _format_dt(rating.created_at),
+        }
+        try:
+            rater = rating.rated_by
+            data["rated_by"] = _user_dict(rater) if rater else None
+        except Exception:
+            data["rated_by"] = None
+        return data

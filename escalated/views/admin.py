@@ -1,9 +1,12 @@
+import json
 import re as re_module
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Avg, F
-from django.http import HttpResponseForbidden, HttpResponseNotFound
+from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.text import slugify
@@ -17,6 +20,9 @@ from escalated.models import (
     EscalationRule,
     CannedResponse,
     EscalatedSetting,
+    Macro,
+    Reply,
+    SatisfactionRating,
 )
 from escalated.permissions import is_admin, is_agent
 from escalated.serializers import (
@@ -30,8 +36,12 @@ from escalated.serializers import (
     EscalatedSettingSerializer,
     ActivitySerializer,
     AttachmentSerializer,
+    MacroSerializer,
+    SatisfactionRatingSerializer,
 )
 from escalated.services.ticket_service import TicketService
+
+User = get_user_model()
 
 
 def _require_admin(request):
@@ -108,6 +118,16 @@ def reports(request):
         for s in Ticket.Status
     }
 
+    # CSAT stats
+    csat_ratings = SatisfactionRating.objects.filter(
+        created_at__gte=thirty_days_ago
+    )
+    avg_csat = csat_ratings.aggregate(avg_rating=Avg("rating"))["avg_rating"]
+    total_ratings = csat_ratings.count()
+    csat_breakdown = {}
+    for r in range(1, 6):
+        csat_breakdown[str(r)] = csat_ratings.filter(rating=r).count()
+
     return render(request, "Escalated/Admin/Reports", props={
         "stats": {
             "total_tickets": total_tickets,
@@ -119,6 +139,11 @@ def reports(request):
         "by_department": by_department,
         "by_priority": by_priority,
         "by_status": by_status,
+        "csat": {
+            "average": round(avg_csat, 1) if avg_csat else None,
+            "total": total_ratings,
+            "breakdown": csat_breakdown,
+        },
     })
 
 
@@ -177,6 +202,11 @@ def tickets_index(request):
     if search:
         tickets = tickets.search(search)
 
+    # Following filter
+    following = request.GET.get("following")
+    if following:
+        tickets = tickets.filter(ticket_followers__user=request.user)
+
     sort = request.GET.get("sort", "-created_at")
     allowed_sorts = [
         "created_at", "-created_at", "priority", "-priority",
@@ -205,6 +235,7 @@ def tickets_index(request):
             "tag": tag,
             "search": search,
             "sort": sort,
+            "following": following,
         },
         "departments": DepartmentSerializer.serialize_list(
             Department.objects.filter(is_active=True)
@@ -241,6 +272,23 @@ def tickets_show(request, ticket_id):
         Q(is_shared=True) | Q(created_by=request.user)
     )
 
+    # Macros available to this user (shared + own)
+    macros = Macro.objects.filter(
+        Q(is_shared=True) | Q(created_by=request.user)
+    ).order_by("order")
+
+    # Pinned notes
+    pinned_notes = ticket.replies.filter(
+        is_deleted=False, is_internal_note=True, is_pinned=True
+    ).select_related("author")
+
+    # Satisfaction rating
+    try:
+        satisfaction_rating = ticket.satisfaction_rating
+        satisfaction_data = SatisfactionRatingSerializer.serialize(satisfaction_rating)
+    except SatisfactionRating.DoesNotExist:
+        satisfaction_data = None
+
     return render(request, "Escalated/Admin/Tickets/Show", props={
         "ticket": TicketSerializer.serialize(ticket),
         "replies": ReplySerializer.serialize_list(replies),
@@ -252,8 +300,13 @@ def tickets_show(request, ticket_id):
         ),
         "tags": TagSerializer.serialize_list(Tag.objects.all()),
         "canned_responses": CannedResponseSerializer.serialize_list(canned_responses),
+        "macros": MacroSerializer.serialize_list(macros),
         "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
         "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+        "is_following": ticket.is_followed_by(request.user.pk),
+        "followers_count": ticket.followers_count,
+        "pinned_notes": ReplySerializer.serialize_list(pinned_notes),
+        "satisfaction_rating": satisfaction_data,
     })
 
 
@@ -1082,3 +1135,318 @@ def settings_update(request):
             EscalatedSetting.set(key, stripped)
 
     return redirect("escalated:admin_settings")
+
+
+# ---------------------------------------------------------------------------
+# Bulk Actions (Admin)
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def tickets_bulk_action(request):
+    """Perform bulk actions on multiple tickets (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        body = request.POST
+
+    action = body.get("action", "")
+    ticket_ids = body.get("ticket_ids", [])
+    value = body.get("value")
+
+    if not action or not ticket_ids:
+        return redirect("escalated:admin_tickets_index")
+
+    service = TicketService()
+    user = request.user
+    success_count = 0
+
+    tickets = Ticket.objects.filter(pk__in=ticket_ids)
+
+    for ticket in tickets:
+        try:
+            if action == "assign":
+                if value:
+                    try:
+                        agent = User.objects.get(pk=int(value))
+                        service.assign(ticket, user, agent)
+                    except User.DoesNotExist:
+                        continue
+                else:
+                    service.unassign(ticket, user)
+            elif action == "status":
+                valid_statuses = [s.value for s in Ticket.Status]
+                if value in valid_statuses:
+                    service.change_status(ticket, user, value)
+            elif action == "priority":
+                valid_priorities = [p.value for p in Ticket.Priority]
+                if value in valid_priorities:
+                    service.change_priority(ticket, user, value)
+            elif action == "tag":
+                tag_ids = value if isinstance(value, list) else [value]
+                service.add_tags(ticket, user, [int(t) for t in tag_ids])
+            elif action == "close":
+                service.close(ticket, user)
+            elif action == "delete":
+                ticket.delete()
+            else:
+                continue
+            success_count += 1
+        except Exception:
+            pass
+
+    return redirect("escalated:admin_tickets_index")
+
+
+# ---------------------------------------------------------------------------
+# Apply Macro (Admin)
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def tickets_apply_macro(request, ticket_id):
+    """Apply a macro to a ticket (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    macro_id = request.POST.get("macro_id")
+    if not macro_id:
+        return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+    try:
+        macro = Macro.objects.filter(
+            Q(is_shared=True) | Q(created_by=request.user)
+        ).get(pk=macro_id)
+    except Macro.DoesNotExist:
+        return HttpResponseNotFound("Macro not found")
+
+    from escalated.services.macro_service import MacroService
+    macro_service = MacroService()
+    macro_service.apply(macro, ticket, request.user)
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+
+# ---------------------------------------------------------------------------
+# Follow / Unfollow (Admin)
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def tickets_follow(request, ticket_id):
+    """Toggle follow/unfollow on a ticket (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    user_id = request.user.pk
+
+    if ticket.is_followed_by(user_id):
+        ticket.unfollow(user_id)
+    else:
+        ticket.follow(user_id)
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+
+# ---------------------------------------------------------------------------
+# Presence Indicators (Admin)
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def tickets_presence(request, ticket_id):
+    """Report presence on a ticket and return other viewers (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    user_id = request.user.pk
+    user_name = request.user.get_full_name() or request.user.username
+    cache_key = f"escalated.presence.{ticket.pk}.{user_id}"
+
+    # Store this user's presence with 30s TTL
+    cache.set(cache_key, {"id": user_id, "name": user_name}, 30)
+
+    # Track active user IDs for this ticket (with 120s TTL)
+    list_key = f"escalated.presence_list.{ticket.pk}"
+    active_ids = cache.get(list_key, [])
+    if user_id not in active_ids:
+        active_ids.append(user_id)
+    cache.set(list_key, active_ids, 120)
+
+    # Collect viewers (other users who are still present)
+    viewers = []
+    for uid in active_ids:
+        if uid != user_id:
+            viewer_data = cache.get(f"escalated.presence.{ticket.pk}.{uid}")
+            if viewer_data:
+                viewers.append(viewer_data)
+
+    return JsonResponse({"viewers": viewers})
+
+
+# ---------------------------------------------------------------------------
+# Pin / Unpin Reply (Admin)
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def tickets_pin_reply(request, ticket_id, reply_id):
+    """Toggle pin on an internal note (admin)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    try:
+        reply = Reply.objects.get(pk=reply_id, ticket=ticket)
+    except Reply.DoesNotExist:
+        return HttpResponseNotFound("Reply not found")
+
+    if not reply.is_internal_note:
+        return HttpResponseForbidden("Only internal notes can be pinned.")
+
+    reply.is_pinned = not reply.is_pinned
+    reply.save(update_fields=["is_pinned", "updated_at"])
+
+    return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
+
+
+# ---------------------------------------------------------------------------
+# Macros CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def macros_index(request):
+    """List all macros."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    macros = Macro.objects.select_related("created_by").order_by("order")
+    return render(request, "Escalated/Admin/Macros/Index", props={
+        "macros": MacroSerializer.serialize_list(macros),
+    })
+
+
+@login_required
+def macros_create(request):
+    """Create a new macro."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if not name:
+            return render(request, "Escalated/Admin/Macros/Create", props={
+                "errors": {"name": "Name is required."},
+            })
+
+        try:
+            actions = json.loads(request.POST.get("actions", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            actions = []
+
+        Macro.objects.create(
+            name=name,
+            description=request.POST.get("description", ""),
+            actions=actions,
+            is_shared=request.POST.get("is_shared", "true") == "true",
+            order=int(request.POST.get("order", 0)),
+            created_by=request.user,
+        )
+        return redirect("escalated:admin_macros_index")
+
+    return render(request, "Escalated/Admin/Macros/Create", props={})
+
+
+@login_required
+def macros_edit(request, macro_id):
+    """Edit an existing macro."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    try:
+        macro = Macro.objects.get(pk=macro_id)
+    except Macro.DoesNotExist:
+        return HttpResponseNotFound("Macro not found")
+
+    if request.method == "POST":
+        macro.name = request.POST.get("name", macro.name)
+        macro.description = request.POST.get("description", macro.description)
+        macro.is_shared = request.POST.get("is_shared", "true") == "true"
+        macro.order = int(request.POST.get("order", macro.order))
+
+        try:
+            macro.actions = json.loads(request.POST.get("actions", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        macro.save()
+        return redirect("escalated:admin_macros_index")
+
+    return render(request, "Escalated/Admin/Macros/Edit", props={
+        "macro": MacroSerializer.serialize(macro),
+    })
+
+
+@login_required
+def macros_delete(request, macro_id):
+    """Delete a macro."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        macro = Macro.objects.get(pk=macro_id)
+        macro.delete()
+    except Macro.DoesNotExist:
+        pass
+
+    return redirect("escalated:admin_macros_index")

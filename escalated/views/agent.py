@@ -1,12 +1,23 @@
+import json
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
-from django.http import HttpResponseForbidden, HttpResponseNotFound
+from django.db.models import Count, Q, Avg
+from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from inertia import render
 
-from escalated.models import Ticket, Tag, Department, CannedResponse
+from escalated.models import (
+    Ticket,
+    Tag,
+    Department,
+    CannedResponse,
+    Macro,
+    Reply,
+    SatisfactionRating,
+)
 from escalated.permissions import is_agent, is_admin, can_view_ticket, can_update_ticket
 from escalated.serializers import (
     TicketSerializer,
@@ -16,6 +27,8 @@ from escalated.serializers import (
     CannedResponseSerializer,
     ActivitySerializer,
     AttachmentSerializer,
+    MacroSerializer,
+    SatisfactionRatingSerializer,
 )
 from escalated.services.ticket_service import TicketService
 
@@ -41,6 +54,15 @@ def dashboard(request):
     user = request.user
     my_tickets = Ticket.objects.assigned_to(user.pk)
 
+    # CSAT stats
+    avg_csat = SatisfactionRating.objects.aggregate(
+        avg_rating=Avg("rating")
+    )["avg_rating"]
+    total_ratings = SatisfactionRating.objects.count()
+    resolved_with_rating = SatisfactionRating.objects.filter(
+        ticket__status__in=[Ticket.Status.RESOLVED, Ticket.Status.CLOSED]
+    ).count()
+
     stats = {
         "total_open": Ticket.objects.open().count(),
         "my_open": my_tickets.open().count(),
@@ -54,6 +76,9 @@ def dashboard(request):
             s.value: Ticket.objects.filter(status=s.value).count()
             for s in Ticket.Status
         },
+        "avg_csat_rating": round(avg_csat, 1) if avg_csat else None,
+        "total_ratings": total_ratings,
+        "resolved_with_rating_count": resolved_with_rating,
     }
 
     recent_tickets = my_tickets.open().select_related(
@@ -106,6 +131,11 @@ def ticket_list(request):
     if search:
         tickets = tickets.search(search)
 
+    # Following filter
+    following = request.GET.get("following")
+    if following:
+        tickets = tickets.filter(ticket_followers__user=request.user)
+
     sort = request.GET.get("sort", "-created_at")
     allowed_sorts = [
         "created_at", "-created_at", "priority", "-priority",
@@ -134,6 +164,7 @@ def ticket_list(request):
             "tag": tag,
             "search": search,
             "sort": sort,
+            "following": following,
         },
         "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
         "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
@@ -179,6 +210,23 @@ def ticket_show(request, ticket_id):
         Q(is_shared=True) | Q(created_by=request.user)
     )
 
+    # Macros available to this agent (shared + own)
+    macros = Macro.objects.filter(
+        Q(is_shared=True) | Q(created_by=request.user)
+    ).order_by("order")
+
+    # Pinned notes
+    pinned_notes = ticket.replies.filter(
+        is_deleted=False, is_internal_note=True, is_pinned=True
+    ).select_related("author")
+
+    # Satisfaction rating
+    try:
+        satisfaction_rating = ticket.satisfaction_rating
+        satisfaction_data = SatisfactionRatingSerializer.serialize(satisfaction_rating)
+    except SatisfactionRating.DoesNotExist:
+        satisfaction_data = None
+
     return render(request, "Escalated/Agent/Tickets/Show", props={
         "ticket": TicketSerializer.serialize(ticket),
         "replies": ReplySerializer.serialize_list(replies),
@@ -193,9 +241,14 @@ def ticket_show(request, ticket_id):
         ),
         "tags": TagSerializer.serialize_list(Tag.objects.all()),
         "canned_responses": CannedResponseSerializer.serialize_list(canned_responses),
+        "macros": MacroSerializer.serialize_list(macros),
         "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
         "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
         "can_update": can_update_ticket(request.user, ticket),
+        "is_following": ticket.is_followed_by(request.user.pk),
+        "followers_count": ticket.followers_count,
+        "pinned_notes": ReplySerializer.serialize_list(pinned_notes),
+        "satisfaction_rating": satisfaction_data,
     })
 
 
@@ -424,5 +477,220 @@ def ticket_department(request, ticket_id):
 
     service = TicketService()
     service.change_department(ticket, request.user, department)
+
+    return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
+
+
+# ---------------------------------------------------------------------------
+# Bulk Actions
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_bulk_action(request):
+    """Perform bulk actions on multiple tickets."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        body = request.POST
+
+    action = body.get("action", "")
+    ticket_ids = body.get("ticket_ids", [])
+    value = body.get("value")
+
+    if not action or not ticket_ids:
+        return redirect("escalated:agent_ticket_list")
+
+    service = TicketService()
+    user = request.user
+    success_count = 0
+
+    tickets = Ticket.objects.filter(pk__in=ticket_ids)
+
+    for ticket in tickets:
+        try:
+            if action == "assign":
+                if value:
+                    try:
+                        agent = User.objects.get(pk=int(value))
+                        service.assign(ticket, user, agent)
+                    except User.DoesNotExist:
+                        continue
+                else:
+                    service.unassign(ticket, user)
+            elif action == "status":
+                valid_statuses = [s.value for s in Ticket.Status]
+                if value in valid_statuses:
+                    service.change_status(ticket, user, value)
+            elif action == "priority":
+                valid_priorities = [p.value for p in Ticket.Priority]
+                if value in valid_priorities:
+                    service.change_priority(ticket, user, value)
+            elif action == "tag":
+                tag_ids = value if isinstance(value, list) else [value]
+                service.add_tags(ticket, user, [int(t) for t in tag_ids])
+            elif action == "close":
+                service.close(ticket, user)
+            elif action == "delete":
+                ticket.delete()
+            else:
+                continue
+            success_count += 1
+        except Exception:
+            pass
+
+    return redirect("escalated:agent_ticket_list")
+
+
+# ---------------------------------------------------------------------------
+# Apply Macro
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_apply_macro(request, ticket_id):
+    """Apply a macro to a ticket."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    macro_id = request.POST.get("macro_id")
+    if not macro_id:
+        return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
+
+    try:
+        macro = Macro.objects.filter(
+            Q(is_shared=True) | Q(created_by=request.user)
+        ).get(pk=macro_id)
+    except Macro.DoesNotExist:
+        return HttpResponseNotFound("Macro not found")
+
+    from escalated.services.macro_service import MacroService
+    macro_service = MacroService()
+    macro_service.apply(macro, ticket, request.user)
+
+    return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
+
+
+# ---------------------------------------------------------------------------
+# Follow / Unfollow
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_follow(request, ticket_id):
+    """Toggle follow/unfollow on a ticket."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    user_id = request.user.pk
+
+    if ticket.is_followed_by(user_id):
+        ticket.unfollow(user_id)
+    else:
+        ticket.follow(user_id)
+
+    return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
+
+
+# ---------------------------------------------------------------------------
+# Presence Indicators
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_presence(request, ticket_id):
+    """Report presence on a ticket and return other viewers."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    user_id = request.user.pk
+    user_name = request.user.get_full_name() or request.user.username
+    cache_key = f"escalated.presence.{ticket.pk}.{user_id}"
+
+    # Store this user's presence with 30s TTL
+    cache.set(cache_key, {"id": user_id, "name": user_name}, 30)
+
+    # Track active user IDs for this ticket (with 120s TTL)
+    list_key = f"escalated.presence_list.{ticket.pk}"
+    active_ids = cache.get(list_key, [])
+    if user_id not in active_ids:
+        active_ids.append(user_id)
+    cache.set(list_key, active_ids, 120)
+
+    # Collect viewers (other users who are still present)
+    viewers = []
+    for uid in active_ids:
+        if uid != user_id:
+            viewer_data = cache.get(f"escalated.presence.{ticket.pk}.{uid}")
+            if viewer_data:
+                viewers.append(viewer_data)
+
+    return JsonResponse({"viewers": viewers})
+
+
+# ---------------------------------------------------------------------------
+# Pin / Unpin Reply
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_pin_reply(request, ticket_id, reply_id):
+    """Toggle pin on an internal note."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    try:
+        reply = Reply.objects.get(pk=reply_id, ticket=ticket)
+    except Reply.DoesNotExist:
+        return HttpResponseNotFound("Reply not found")
+
+    if not reply.is_internal_note:
+        return HttpResponseForbidden("Only internal notes can be pinned.")
+
+    reply.is_pinned = not reply.is_pinned
+    reply.save(update_fields=["is_pinned", "updated_at"])
 
     return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)

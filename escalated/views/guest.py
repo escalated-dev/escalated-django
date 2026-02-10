@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from inertia import render
 
 from escalated.conf import get_setting
-from escalated.models import Ticket, Department, EscalatedSetting
+from escalated.models import Ticket, Department, EscalatedSetting, SatisfactionRating
 from escalated.serializers import (
     TicketSerializer,
     ReplySerializer,
@@ -168,5 +168,45 @@ def ticket_reply(request, token):
                 AttachmentService.attach(reply_obj, f)
             except Exception:
                 pass
+
+    return redirect("escalated:guest_ticket_show", token=token)
+
+
+def ticket_rate(request, token):
+    """Allow a guest to rate a resolved/closed ticket."""
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(guest_token=token)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found.")
+
+    # Only allow rating resolved or closed tickets
+    if ticket.status not in [Ticket.Status.RESOLVED, Ticket.Status.CLOSED]:
+        return HttpResponseForbidden("You can only rate resolved or closed tickets.")
+
+    # Check if already rated
+    if SatisfactionRating.objects.filter(ticket=ticket).exists():
+        return HttpResponseForbidden("This ticket has already been rated.")
+
+    rating_value = request.POST.get("rating")
+    try:
+        rating_value = int(rating_value)
+        if not (1 <= rating_value <= 5):
+            return HttpResponseForbidden("Rating must be between 1 and 5.")
+    except (ValueError, TypeError):
+        return HttpResponseForbidden("Invalid rating value.")
+
+    comment = request.POST.get("comment", "").strip() or None
+
+    # Guest rating has no authenticated user, so rated_by is null
+    SatisfactionRating.objects.create(
+        ticket=ticket,
+        rating=rating_value,
+        comment=comment,
+        rated_by_content_type=None,
+        rated_by_object_id=None,
+    )
 
     return redirect("escalated:guest_ticket_show", token=token)

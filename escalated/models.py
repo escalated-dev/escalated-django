@@ -59,6 +59,10 @@ class TicketQuerySet(models.QuerySet):
     def by_status(self, status):
         return self.filter(status=status)
 
+    def followed_by(self, user_id):
+        """Filter tickets that are followed by a specific user."""
+        return self.filter(ticket_followers__user_id=user_id)
+
 
 class TicketManager(models.Manager):
     def get_queryset(self):
@@ -240,6 +244,12 @@ class Ticket(models.Model):
     # Extensibility
     metadata = models.JSONField(null=True, blank=True)
     tags = models.ManyToManyField(Tag, related_name="tickets", blank=True)
+    followers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through="TicketFollower",
+        related_name="escalated_following_tickets",
+        blank=True,
+    )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -333,6 +343,23 @@ class Ticket(models.Model):
             pass
         return ""
 
+    def is_followed_by(self, user_id):
+        """Check if a user is following this ticket."""
+        return self.ticket_followers.filter(user_id=user_id).exists()
+
+    def follow(self, user_id):
+        """Add a follower to this ticket (idempotent)."""
+        TicketFollower.objects.get_or_create(ticket=self, user_id=user_id)
+
+    def unfollow(self, user_id):
+        """Remove a follower from this ticket."""
+        self.ticket_followers.filter(user_id=user_id).delete()
+
+    @property
+    def followers_count(self):
+        """Return the number of followers on this ticket."""
+        return self.ticket_followers.count()
+
     @property
     def sla_first_response_remaining(self):
         if not self.first_response_due_at or self.first_response_at:
@@ -364,6 +391,7 @@ class Reply(models.Model):
     )
     body = models.TextField()
     is_internal_note = models.BooleanField(default=False)
+    is_pinned = models.BooleanField(default=False)
     type = models.CharField(max_length=20, choices=Type.choices, default=Type.REPLY)
     metadata = models.JSONField(null=True, blank=True)
     is_deleted = models.BooleanField(default=False)
@@ -572,6 +600,98 @@ class EscalatedSetting(models.Model):
     def guest_tickets_enabled(cls):
         """Check if guest tickets are enabled."""
         return cls.get_bool("guest_tickets_enabled", default=True)
+
+
+class Macro(models.Model):
+    """Reusable sets of actions that can be applied to tickets."""
+
+    name = models.CharField(max_length=255)
+    description = models.CharField(max_length=500, blank=True, default="")
+    actions = models.JSONField(
+        default=list,
+        help_text='JSON array of actions, e.g. [{"type": "set_status", "value": "open"}]',
+    )
+    is_shared = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="escalated_macros",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("macros")
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class TicketFollower(models.Model):
+    """Join table tracking which users follow which tickets."""
+
+    ticket = models.ForeignKey(
+        "Ticket",
+        on_delete=models.CASCADE,
+        related_name="ticket_followers",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="escalated_followed_tickets",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("ticket_followers")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["ticket", "user"],
+                name="escalated_tf_ticket_user_uniq",
+            ),
+        ]
+
+    def __str__(self):
+        return f"User {self.user_id} follows Ticket {self.ticket_id}"
+
+
+class SatisfactionRating(models.Model):
+    """Customer satisfaction rating for a ticket (one per ticket)."""
+
+    ticket = models.OneToOneField(
+        "Ticket",
+        on_delete=models.CASCADE,
+        related_name="satisfaction_rating",
+    )
+    rating = models.PositiveSmallIntegerField(
+        help_text="Rating from 1 to 5",
+    )
+    comment = models.TextField(blank=True, null=True)
+
+    # GenericFK for the rater (authenticated user or null for guests)
+    rated_by_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="escalated_satisfaction_ratings",
+    )
+    rated_by_object_id = models.PositiveIntegerField(null=True, blank=True)
+    rated_by = GenericForeignKey("rated_by_content_type", "rated_by_object_id")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = get_table_name("satisfaction_ratings")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Rating {self.rating}/5 for {self.ticket}"
 
 
 class InboundEmail(models.Model):

@@ -2,10 +2,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.core.paginator import Paginator
 from django.http import HttpResponseForbidden, HttpResponseNotFound
+from django.shortcuts import redirect
 from inertia import render
 
 from escalated.conf import get_setting
-from escalated.models import Ticket, Tag, Department
+from escalated.models import Ticket, Tag, Department, SatisfactionRating
 from escalated.permissions import can_view_ticket, can_reply_ticket, can_close_ticket
 from escalated.serializers import TicketSerializer, TagSerializer, DepartmentSerializer
 from escalated.services.ticket_service import TicketService
@@ -222,5 +223,45 @@ def ticket_reopen(request, ticket_id):
     service = TicketService()
     service.reopen(ticket, request.user)
 
-    from django.shortcuts import redirect
+    return redirect("escalated:customer_ticket_show", ticket_id=ticket_id)
+
+
+@login_required
+def ticket_rate(request, ticket_id):
+    """Allow a customer to rate a resolved/closed ticket."""
+    if request.method != "POST":
+        return HttpResponseForbidden("Method not allowed")
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound("Ticket not found")
+
+    # Only allow rating resolved or closed tickets
+    if ticket.status not in [Ticket.Status.RESOLVED, Ticket.Status.CLOSED]:
+        return HttpResponseForbidden("You can only rate resolved or closed tickets.")
+
+    # Check if already rated
+    if SatisfactionRating.objects.filter(ticket=ticket).exists():
+        return HttpResponseForbidden("This ticket has already been rated.")
+
+    rating_value = request.POST.get("rating")
+    try:
+        rating_value = int(rating_value)
+        if not (1 <= rating_value <= 5):
+            return HttpResponseForbidden("Rating must be between 1 and 5.")
+    except (ValueError, TypeError):
+        return HttpResponseForbidden("Invalid rating value.")
+
+    comment = request.POST.get("comment", "").strip() or None
+
+    ct = ContentType.objects.get_for_model(request.user)
+    SatisfactionRating.objects.create(
+        ticket=ticket,
+        rating=rating_value,
+        comment=comment,
+        rated_by_content_type=ct,
+        rated_by_object_id=request.user.pk,
+    )
+
     return redirect("escalated:customer_ticket_show", ticket_id=ticket_id)
