@@ -19,6 +19,18 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 - **Tagging system** — Categorize tickets with colored tags
 - **Inertia.js + Vue 3 UI** — Shared frontend via [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated)
 
+### v0.4.0 — Advanced Features
+
+- **Bulk actions** — Assign, change status/priority, add tags, close, or delete multiple tickets at once
+- **Macros** — Reusable multi-step automations (set status + assign + add note in one click)
+- **Ticket followers** — Agents follow tickets and receive the same notifications as the assignee
+- **Satisfaction ratings** — 1-5 star CSAT ratings with optional comments after resolution
+- **Pinned notes** — Pin important internal notes to the top of the ticket thread
+- **Keyboard shortcuts** — Full keyboard navigation for power users
+- **Quick filters** — One-click filter chips (My Tickets, Unassigned, Urgent, SLA Breaching)
+- **Presence indicators** — See who else is viewing a ticket in real-time
+- **Enhanced dashboard** — CSAT metrics, resolution times, SLA breach tracking
+
 ## Requirements
 
 - Python 3.10+
@@ -247,6 +259,15 @@ All routes use the configurable prefix (default: `support`).
 | `/support/admin/reports/` | GET | Admin reports |
 | `/support/admin/departments/` | GET | Department management |
 | `/support/admin/sla-policies/` | GET | SLA policy management |
+| `/support/admin/escalation-rules/` | GET | Escalation rule management |
+| `/support/admin/tags/` | GET | Tag management |
+| `/support/admin/canned-responses/` | GET | Canned response management |
+| `/support/agent/tickets/bulk/` | POST | Bulk actions on multiple tickets |
+| `/support/agent/tickets/<id>/follow/` | POST | Follow/unfollow a ticket |
+| `/support/agent/tickets/<id>/macro/` | POST | Apply a macro to a ticket |
+| `/support/agent/tickets/<id>/presence/` | POST | Update presence on a ticket |
+| `/support/agent/tickets/<id>/pin/<reply_id>/` | POST | Pin/unpin an internal note |
+| `/support/tickets/<id>/rate/` | POST | Submit satisfaction rating |
 
 ## Signals
 
@@ -270,6 +291,10 @@ Available signals: `ticket_created`, `ticket_updated`, `ticket_status_changed`, 
 
 - **[Escalated for Laravel](https://github.com/escalated-dev/escalated-laravel)** — Laravel Composer package
 - **[Escalated for Rails](https://github.com/escalated-dev/escalated-rails)** — Ruby on Rails engine
+- **[Escalated for Django](https://github.com/escalated-dev/escalated-django)** — Django reusable app (you are here)
+- **[Escalated for AdonisJS](https://github.com/escalated-dev/escalated-adonis)** — AdonisJS v6 package
+- **[Escalated for Filament](https://github.com/escalated-dev/escalated-filament)** — Filament v3 admin panel plugin
+- **[Shared Frontend](https://github.com/escalated-dev/escalated)** — Vue 3 + Inertia.js UI components
 
 Same architecture, same Vue UI, same three hosting modes — for every major backend framework.
 
