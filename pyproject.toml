@@ -24,5 +24,8 @@ dev = [
     "faker>=18.0",
 ]
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+
 [project.urls]
 Homepage = "https://github.com/escalated-dev/escalated-django"
