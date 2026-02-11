@@ -66,10 +66,16 @@ class PluginService:
 
     def get_all_plugins(self):
         """
-        Scan the plugins directory and merge each plugin's manifest with
-        its database activation state.
+        Return plugins from all sources (local directory + pip packages).
 
         Returns a list of dicts suitable for passing to an Inertia page.
+        """
+        return self._get_local_plugins() + self._get_pip_plugins()
+
+    def _get_local_plugins(self):
+        """
+        Scan the plugins directory and merge each plugin's manifest with
+        its database activation state.
         """
         from escalated.plugin_models import EscalatedPlugin
 
@@ -109,7 +115,74 @@ class PluginService:
                     else None
                 ),
                 "path": plugin_dir,
+                "source": "local",
             })
+
+        return plugins
+
+    def _get_pip_plugins(self):
+        """Discover plugins installed via pip (packages with plugin.json)."""
+        from escalated.plugin_models import EscalatedPlugin
+        import importlib.metadata
+
+        plugins = []
+        try:
+            for dist in importlib.metadata.distributions():
+                # Check if the distribution has a plugin.json at its root
+                dist_files = dist.files or []
+                has_manifest = any(
+                    str(f) == "plugin.json" for f in dist_files
+                )
+                if not has_manifest:
+                    continue
+
+                # Find the actual path to plugin.json
+                dist_path = None
+                for f in dist_files:
+                    if str(f) == "plugin.json":
+                        dist_path = str(f.locate())
+                        break
+
+                if not dist_path or not os.path.isfile(dist_path):
+                    continue
+
+                directory = os.path.dirname(dist_path)
+                try:
+                    with open(dist_path, "r", encoding="utf-8") as fh:
+                        manifest = json.load(fh)
+                except (json.JSONDecodeError, OSError):
+                    continue
+
+                if not manifest:
+                    continue
+
+                slug = dist.metadata["Name"]
+
+                try:
+                    db_plugin = EscalatedPlugin.objects.filter(slug=slug).first()
+                except Exception:
+                    db_plugin = None
+
+                plugins.append({
+                    "slug": slug,
+                    "name": manifest.get("name", slug),
+                    "description": manifest.get("description", ""),
+                    "version": manifest.get("version", "1.0.0"),
+                    "author": manifest.get("author", "Unknown"),
+                    "author_url": manifest.get("author_url", ""),
+                    "requires": manifest.get("requires", "1.0.0"),
+                    "main_file": manifest.get("main_file", "plugin.py"),
+                    "is_active": db_plugin.is_active if db_plugin else False,
+                    "activated_at": (
+                        db_plugin.activated_at.isoformat()
+                        if db_plugin and db_plugin.activated_at
+                        else None
+                    ),
+                    "path": directory,
+                    "source": "composer",  # Use "composer" for consistency with frontend
+                })
+        except Exception as exc:
+            logger.debug("Could not scan pip packages: %s", exc)
 
         return plugins
 
@@ -183,6 +256,12 @@ class PluginService:
         and remove the plugin directory from disk.
         """
         from escalated.plugin_models import EscalatedPlugin
+
+        # Check if this is a pip-installed plugin
+        all_plugins = self.get_all_plugins()
+        plugin_data = next((p for p in all_plugins if p["slug"] == slug), None)
+        if plugin_data and plugin_data.get("source") == "composer":
+            raise Exception("Package plugins cannot be deleted. Remove the package via pip instead.")
 
         plugin_path = os.path.join(self._plugins_path, slug)
 
@@ -272,6 +351,26 @@ class PluginService:
         finally:
             os.unlink(tmp.name)
 
+    def _resolve_plugin_path(self, slug):
+        """Resolve the filesystem path for a plugin slug (local or pip)."""
+        # Check local plugins first
+        local_path = os.path.join(self._plugins_path, slug)
+        if os.path.isfile(os.path.join(local_path, "plugin.json")):
+            return local_path
+
+        # Check pip-installed plugins
+        try:
+            import importlib.metadata
+            for dist in importlib.metadata.distributions():
+                if dist.metadata["Name"] == slug:
+                    for f in (dist.files or []):
+                        if str(f) == "plugin.json":
+                            return os.path.dirname(str(f.locate()))
+        except Exception:
+            pass
+
+        return None
+
     def load_active_plugins(self):
         """
         Load all currently active plugins.  Called once during Django's
@@ -291,13 +390,21 @@ class PluginService:
         ``importlib`` or ``exec`` to execute it.  Fires the
         ``plugin_loaded`` action once the file has been executed.
         """
-        manifest = self._get_manifest(slug)
-        if manifest is None:
+        plugin_dir = self._resolve_plugin_path(slug)
+        if plugin_dir is None:
+            logger.warning("Cannot load plugin '%s': no manifest found.", slug)
+            return
+
+        manifest_path = os.path.join(plugin_dir, "plugin.json")
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as fh:
+                manifest = json.load(fh)
+        except (json.JSONDecodeError, OSError):
             logger.warning("Cannot load plugin '%s': no manifest found.", slug)
             return
 
         main_file = manifest.get("main_file", "plugin.py")
-        plugin_file = os.path.join(self._plugins_path, slug, main_file)
+        plugin_file = os.path.join(plugin_dir, main_file)
 
         if not os.path.isfile(plugin_file):
             logger.warning(
@@ -309,7 +416,6 @@ class PluginService:
 
         # Attempt import as a Python module first; fall back to exec
         module_name = f"escalated_plugins.{slug.replace('-', '_')}"
-        plugin_dir = os.path.join(self._plugins_path, slug)
 
         try:
             # Add plugin directory to sys.path temporarily if needed

@@ -184,6 +184,12 @@ def plugin_delete(request, slug):
 
     service = PluginService()
 
+    # Check if plugin is package-sourced before attempting delete
+    all_plugins = service.get_all_plugins()
+    plugin_data = next((p for p in all_plugins if p["slug"] == slug), None)
+    if plugin_data and plugin_data.get("source") == "composer":
+        return redirect("escalated:admin_plugins_index")
+
     try:
         service.delete_plugin(slug)
         logger.info("Plugin deleted: %s", slug)
