@@ -1,6 +1,6 @@
 from django.urls import path
 
-from escalated.views import customer, agent, admin, guest, inbound
+from escalated.views import customer, agent, admin, guest, inbound, admin_plugins
 
 app_name = "escalated"
 
@@ -87,6 +87,12 @@ admin_patterns = [
     # Settings
     path("admin/settings/", admin.settings_index, name="admin_settings"),
     path("admin/settings/update/", admin.settings_update, name="admin_settings_update"),
+    # Plugins
+    path("admin/plugins/", admin_plugins.plugin_list, name="admin_plugins_index"),
+    path("admin/plugins/upload/", admin_plugins.plugin_upload, name="admin_plugins_upload"),
+    path("admin/plugins/<slug:slug>/activate/", admin_plugins.plugin_activate, name="admin_plugins_activate"),
+    path("admin/plugins/<slug:slug>/deactivate/", admin_plugins.plugin_deactivate, name="admin_plugins_deactivate"),
+    path("admin/plugins/<slug:slug>/delete/", admin_plugins.plugin_delete, name="admin_plugins_delete"),
 ]
 
 # Guest-facing URLs (no authentication required)
