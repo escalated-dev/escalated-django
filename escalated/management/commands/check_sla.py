@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.utils.translation import gettext as _
 
 from escalated.services.sla_service import SlaService
 
@@ -11,17 +12,17 @@ class Command(BaseCommand):
             "--warning-threshold",
             type=int,
             default=30,
-            help="Minutes before SLA deadline to trigger warning (default: 30)",
+            help=_("Minutes before SLA deadline to trigger warning (default: 30)"),
         )
 
     def handle(self, *args, **options):
-        self.stdout.write("Checking SLA deadlines for all open tickets...")
+        self.stdout.write(_("Checking SLA deadlines for all open tickets..."))
 
         breached_count, warned_count = SlaService.check_all_tickets()
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"SLA check complete: {breached_count} breaches detected, "
-                f"{warned_count} warnings sent."
+                _("SLA check complete: %(breached)d breaches detected, %(warned)d warnings sent.")
+                % {"breached": breached_count, "warned": warned_count}
             )
         )

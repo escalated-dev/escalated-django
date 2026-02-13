@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Q, Avg
 from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
+from django.utils.translation import gettext as _
 from inertia import render
 
 from escalated.models import (
@@ -40,7 +41,7 @@ def _require_agent(request):
     if not request.user.is_authenticated:
         return redirect("login")
     if not is_agent(request.user) and not is_admin(request.user):
-        return HttpResponseForbidden("Agent access required.")
+        return HttpResponseForbidden(_("Agent access required."))
     return None
 
 
@@ -193,10 +194,10 @@ def ticket_show(request, ticket_id):
             "attachments",
         ).get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     if not can_view_ticket(request.user, ticket):
-        return HttpResponseForbidden("You cannot view this ticket.")
+        return HttpResponseForbidden(_("You cannot view this ticket."))
 
     replies = ticket.replies.filter(is_deleted=False).select_related("author")
     activities = ticket.activities.all()[:50]
@@ -260,15 +261,15 @@ def ticket_update(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     if not can_update_ticket(request.user, ticket):
-        return HttpResponseForbidden("You cannot update this ticket.")
+        return HttpResponseForbidden(_("You cannot update this ticket."))
 
     service = TicketService()
     data = {}
@@ -289,12 +290,12 @@ def ticket_reply(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     body = request.POST.get("body", "").strip()
     if not body:
@@ -325,12 +326,12 @@ def ticket_note(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     body = request.POST.get("body", "").strip()
     if not body:
@@ -350,12 +351,12 @@ def ticket_assign(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     agent_id = request.POST.get("agent_id")
     if not agent_id:
@@ -366,7 +367,7 @@ def ticket_assign(request, ticket_id):
         try:
             agent = User.objects.get(pk=agent_id)
         except User.DoesNotExist:
-            return HttpResponseNotFound("Agent not found")
+            return HttpResponseNotFound(_("Agent not found"))
 
         service = TicketService()
         service.assign(ticket, request.user, agent)
@@ -382,17 +383,17 @@ def ticket_status(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     new_status = request.POST.get("status")
     valid_statuses = [s.value for s in Ticket.Status]
     if new_status not in valid_statuses:
-        return HttpResponseForbidden("Invalid status.")
+        return HttpResponseForbidden(_("Invalid status."))
 
     service = TicketService()
     service.change_status(ticket, request.user, new_status)
@@ -408,17 +409,17 @@ def ticket_priority(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     new_priority = request.POST.get("priority")
     valid_priorities = [p.value for p in Ticket.Priority]
     if new_priority not in valid_priorities:
-        return HttpResponseForbidden("Invalid priority.")
+        return HttpResponseForbidden(_("Invalid priority."))
 
     service = TicketService()
     service.change_priority(ticket, request.user, new_priority)
@@ -434,12 +435,12 @@ def ticket_tags(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     service = TicketService()
 
@@ -462,18 +463,18 @@ def ticket_department(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     department_id = request.POST.get("department_id")
     try:
         department = Department.objects.get(pk=department_id)
     except Department.DoesNotExist:
-        return HttpResponseNotFound("Department not found")
+        return HttpResponseNotFound(_("Department not found"))
 
     service = TicketService()
     service.change_department(ticket, request.user, department)
@@ -494,7 +495,7 @@ def ticket_bulk_action(request):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         body = json.loads(request.body)
@@ -562,12 +563,12 @@ def ticket_apply_macro(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     macro_id = request.POST.get("macro_id")
     if not macro_id:
@@ -578,7 +579,7 @@ def ticket_apply_macro(request, ticket_id):
             Q(is_shared=True) | Q(created_by=request.user)
         ).get(pk=macro_id)
     except Macro.DoesNotExist:
-        return HttpResponseNotFound("Macro not found")
+        return HttpResponseNotFound(_("Macro not found"))
 
     from escalated.services.macro_service import MacroService
     macro_service = MacroService()
@@ -600,12 +601,12 @@ def ticket_follow(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     user_id = request.user.pk
 
@@ -630,12 +631,12 @@ def ticket_presence(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     user_id = request.user.pk
     user_name = request.user.get_full_name() or request.user.username
@@ -675,20 +676,20 @@ def ticket_pin_reply(request, ticket_id, reply_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     try:
         reply = Reply.objects.get(pk=reply_id, ticket=ticket)
     except Reply.DoesNotExist:
-        return HttpResponseNotFound("Reply not found")
+        return HttpResponseNotFound(_("Reply not found"))
 
     if not reply.is_internal_note:
-        return HttpResponseForbidden("Only internal notes can be pinned.")
+        return HttpResponseForbidden(_("Only internal notes can be pinned."))
 
     reply.is_pinned = not reply.is_pinned
     reply.save(update_fields=["is_pinned", "updated_at"])

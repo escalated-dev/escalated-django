@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+{% load i18n %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Reply on Your Ticket</title>
+    <title>{% trans "New Reply on Ticket" %}</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: #4f46e5; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
@@ -15,25 +15,25 @@
 </head>
 <body>
     <div class="header">
-        <h2 style="margin: 0;">New Reply on Ticket <span class="reference" style="color: white;">{{ ticket.reference }}</span></h2>
+        <h2 style="margin: 0;">{% blocktrans with ref=ticket.reference %}New Reply on Ticket{% endblocktrans %} <span class="reference" style="color: white;">{{ ticket.reference }}</span></h2>
     </div>
     <div class="content">
         <p><strong>{{ ticket.subject }}</strong></p>
 
         {% if reply.author %}
-        <p><strong>{{ reply.author.get_full_name }}</strong> replied:</p>
+        {% blocktrans with name=reply.author.get_full_name %}<p><strong>{{ name }}</strong> replied:</p>{% endblocktrans %}
         {% else %}
-        <p>A new reply has been added:</p>
+        <p>{% trans "A new reply has been added:" %}</p>
         {% endif %}
 
         <div class="reply-body">
             {{ reply.body|linebreaksbr }}
         </div>
 
-        <p style="margin-top: 20px;">Log in to your account to view the full conversation and respond.</p>
+        <p style="margin-top: 20px;">{% trans "Log in to your account to view the full conversation and respond." %}</p>
     </div>
     <div class="footer">
-        <p>This is an automated message from the support system. Please do not reply directly to this email.</p>
+        <p>{% trans "This is an automated message from the support system. Please do not reply directly to this email." %}</p>
     </div>
 </body>
 </html>

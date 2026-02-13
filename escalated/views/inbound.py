@@ -1,6 +1,7 @@
 import logging
 
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.utils.translation import gettext as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -36,7 +37,7 @@ def inbound_webhook(request, adapter_name):
             f"Inbound email webhook called but feature is disabled "
             f"(adapter={adapter_name})"
         )
-        return HttpResponseBadRequest("Inbound email processing is disabled.")
+        return HttpResponseBadRequest(_("Inbound email processing is disabled."))
 
     # Resolve the adapter
     try:
@@ -51,7 +52,7 @@ def inbound_webhook(request, adapter_name):
             f"Inbound email webhook verification failed "
             f"(adapter={adapter_name}, ip={request.META.get('REMOTE_ADDR')})"
         )
-        return HttpResponseForbidden("Request verification failed.")
+        return HttpResponseForbidden(_("Request verification failed."))
 
     # Parse the request into an InboundMessage
     try:
