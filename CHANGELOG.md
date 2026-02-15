@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-02-11
+
+### Added
+- Plugin storage moved to `plugins/escalated`
+- pip package plugin auto-discovery via importlib.metadata
+- Dual-source plugin loading (local + pip) with `source` field
+- Package plugin deletion guard (views + service layer)
+
 ## [0.1.0] - 2026-02-07
 
 ### Added
