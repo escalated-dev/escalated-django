@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+{% load i18n %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket Escalated</title>
+    <title>{% trans "Ticket Escalated" %}</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: #d97706; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
@@ -15,34 +15,34 @@
 </head>
 <body>
     <div class="header">
-        <h2 style="margin: 0;">Ticket Escalated</h2>
+        <h2 style="margin: 0;">{% trans "Ticket Escalated" %}</h2>
     </div>
     <div class="content">
         <div class="alert-box">
-            <p style="margin-top: 0;"><strong>Ticket <span class="reference">{{ ticket.reference }}</span> has been escalated.</strong></p>
+            {% blocktrans with ref=ticket.reference %}<p style="margin-top: 0;"><strong>Ticket <span class="reference">{{ ref }}</span> has been escalated.</strong></p>{% endblocktrans %}
 
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="padding: 6px 0; font-weight: 600; width: 140px;">Subject:</td>
+                    <td style="padding: 6px 0; font-weight: 600; width: 140px;">{% trans "Subject:" %}</td>
                     <td>{{ ticket.subject }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 6px 0; font-weight: 600;">Priority:</td>
+                    <td style="padding: 6px 0; font-weight: 600;">{% trans "Priority:" %}</td>
                     <td>{{ ticket.get_priority_display }}</td>
                 </tr>
                 {% if reason %}
                 <tr>
-                    <td style="padding: 6px 0; font-weight: 600;">Reason:</td>
+                    <td style="padding: 6px 0; font-weight: 600;">{% trans "Reason:" %}</td>
                     <td>{{ reason }}</td>
                 </tr>
                 {% endif %}
             </table>
         </div>
 
-        <p>This ticket requires immediate attention. Please review and take action.</p>
+        <p>{% trans "This ticket requires immediate attention. Please review and take action." %}</p>
     </div>
     <div class="footer">
-        <p>This is an automated escalation alert from the support system.</p>
+        <p>{% trans "This is an automated escalation alert from the support system." %}</p>
     </div>
 </body>
 </html>

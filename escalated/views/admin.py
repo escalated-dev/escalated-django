@@ -10,6 +10,7 @@ from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonRespons
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.text import slugify
+from django.utils.translation import gettext as _
 from inertia import render
 
 from escalated.models import (
@@ -49,7 +50,7 @@ def _require_admin(request):
     if not request.user.is_authenticated:
         return redirect("login")
     if not is_admin(request.user):
-        return HttpResponseForbidden("Admin access required.")
+        return HttpResponseForbidden(_("Admin access required."))
     return None
 
 
@@ -263,7 +264,7 @@ def tickets_show(request, ticket_id):
             "attachments",
         ).get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     replies = ticket.replies.filter(is_deleted=False).select_related("author")
     activities = ticket.activities.all()[:50]
@@ -318,12 +319,12 @@ def tickets_reply(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     body = request.POST.get("body", "").strip()
     if not body:
@@ -353,12 +354,12 @@ def tickets_note(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     body = request.POST.get("body", "").strip()
     if not body:
@@ -378,12 +379,12 @@ def tickets_assign(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     from django.contrib.auth import get_user_model
     User = get_user_model()
@@ -396,7 +397,7 @@ def tickets_assign(request, ticket_id):
         try:
             agent = User.objects.get(pk=agent_id)
         except User.DoesNotExist:
-            return HttpResponseNotFound("Agent not found")
+            return HttpResponseNotFound(_("Agent not found"))
 
         service = TicketService()
         service.assign(ticket, request.user, agent)
@@ -412,17 +413,17 @@ def tickets_status(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     new_status = request.POST.get("status")
     valid_statuses = [s.value for s in Ticket.Status]
     if new_status not in valid_statuses:
-        return HttpResponseForbidden("Invalid status.")
+        return HttpResponseForbidden(_("Invalid status."))
 
     service = TicketService()
     service.change_status(ticket, request.user, new_status)
@@ -438,17 +439,17 @@ def tickets_priority(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     new_priority = request.POST.get("priority")
     valid_priorities = [p.value for p in Ticket.Priority]
     if new_priority not in valid_priorities:
-        return HttpResponseForbidden("Invalid priority.")
+        return HttpResponseForbidden(_("Invalid priority."))
 
     service = TicketService()
     service.change_priority(ticket, request.user, new_priority)
@@ -464,12 +465,12 @@ def tickets_tags(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     service = TicketService()
 
@@ -492,18 +493,18 @@ def tickets_department(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     department_id = request.POST.get("department_id")
     try:
         department = Department.objects.get(pk=department_id)
     except Department.DoesNotExist:
-        return HttpResponseNotFound("Department not found")
+        return HttpResponseNotFound(_("Department not found"))
 
     service = TicketService()
     service.change_department(ticket, request.user, department)
@@ -546,7 +547,7 @@ def departments_create(request):
 
         if not name:
             return render(request, "Escalated/Admin/Departments/Create", props={
-                "errors": {"name": "Name is required."},
+                "errors": {"name": _("Name is required.")},
             })
 
         Department.objects.create(
@@ -566,7 +567,7 @@ def departments_edit(request, department_id):
     try:
         department = Department.objects.get(pk=department_id)
     except Department.DoesNotExist:
-        return HttpResponseNotFound("Department not found")
+        return HttpResponseNotFound(_("Department not found"))
 
     if request.method == "POST":
         department.name = request.POST.get("name", department.name)
@@ -606,7 +607,7 @@ def departments_delete(request, department_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         department = Department.objects.get(pk=department_id)
@@ -646,7 +647,7 @@ def sla_policies_create(request):
         name = request.POST.get("name", "").strip()
         if not name:
             return render(request, "Escalated/Admin/SlaPolicies/Create", props={
-                "errors": {"name": "Name is required."},
+                "errors": {"name": _("Name is required.")},
             })
 
         try:
@@ -694,7 +695,7 @@ def sla_policies_edit(request, policy_id):
     try:
         policy = SlaPolicy.objects.get(pk=policy_id)
     except SlaPolicy.DoesNotExist:
-        return HttpResponseNotFound("SLA Policy not found")
+        return HttpResponseNotFound(_("SLA Policy not found"))
 
     if request.method == "POST":
         import json
@@ -741,7 +742,7 @@ def sla_policies_delete(request, policy_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         policy = SlaPolicy.objects.get(pk=policy_id)
@@ -781,7 +782,7 @@ def escalation_rules_create(request):
         name = request.POST.get("name", "").strip()
         if not name:
             return render(request, "Escalated/Admin/EscalationRules/Create", props={
-                "errors": {"name": "Name is required."},
+                "errors": {"name": _("Name is required.")},
                 "trigger_types": [
                     {"value": t.value, "label": t.label}
                     for t in EscalationRule.TriggerType
@@ -826,7 +827,7 @@ def escalation_rules_edit(request, rule_id):
     try:
         rule = EscalationRule.objects.get(pk=rule_id)
     except EscalationRule.DoesNotExist:
-        return HttpResponseNotFound("Escalation rule not found")
+        return HttpResponseNotFound(_("Escalation rule not found"))
 
     if request.method == "POST":
         import json
@@ -866,7 +867,7 @@ def escalation_rules_delete(request, rule_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         rule = EscalationRule.objects.get(pk=rule_id)
@@ -907,7 +908,7 @@ def tags_create(request):
         name = request.POST.get("name", "").strip()
         if not name:
             return render(request, "Escalated/Admin/Tags/Create", props={
-                "errors": {"name": "Name is required."},
+                "errors": {"name": _("Name is required.")},
             })
 
         Tag.objects.create(
@@ -929,7 +930,7 @@ def tags_edit(request, tag_id):
     try:
         tag = Tag.objects.get(pk=tag_id)
     except Tag.DoesNotExist:
-        return HttpResponseNotFound("Tag not found")
+        return HttpResponseNotFound(_("Tag not found"))
 
     if request.method == "POST":
         tag.name = request.POST.get("name", tag.name)
@@ -950,7 +951,7 @@ def tags_delete(request, tag_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         tag = Tag.objects.get(pk=tag_id)
@@ -988,7 +989,7 @@ def canned_responses_create(request):
         title = request.POST.get("title", "").strip()
         if not title:
             return render(request, "Escalated/Admin/CannedResponses/Create", props={
-                "errors": {"title": "Title is required."},
+                "errors": {"title": _("Title is required.")},
             })
 
         CannedResponse.objects.create(
@@ -1012,7 +1013,7 @@ def canned_responses_edit(request, response_id):
     try:
         canned = CannedResponse.objects.get(pk=response_id)
     except CannedResponse.DoesNotExist:
-        return HttpResponseNotFound("Canned response not found")
+        return HttpResponseNotFound(_("Canned response not found"))
 
     if request.method == "POST":
         canned.title = request.POST.get("title", canned.title)
@@ -1034,7 +1035,7 @@ def canned_responses_delete(request, response_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         canned = CannedResponse.objects.get(pk=response_id)
@@ -1078,7 +1079,7 @@ def settings_update(request):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     # Boolean settings (sent as "1"/"0" or absent)
     bool_keys = [
@@ -1150,7 +1151,7 @@ def tickets_bulk_action(request):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         body = json.loads(request.body)
@@ -1218,12 +1219,12 @@ def tickets_apply_macro(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     macro_id = request.POST.get("macro_id")
     if not macro_id:
@@ -1234,7 +1235,7 @@ def tickets_apply_macro(request, ticket_id):
             Q(is_shared=True) | Q(created_by=request.user)
         ).get(pk=macro_id)
     except Macro.DoesNotExist:
-        return HttpResponseNotFound("Macro not found")
+        return HttpResponseNotFound(_("Macro not found"))
 
     from escalated.services.macro_service import MacroService
     macro_service = MacroService()
@@ -1256,12 +1257,12 @@ def tickets_follow(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     user_id = request.user.pk
 
@@ -1286,12 +1287,12 @@ def tickets_presence(request, ticket_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     user_id = request.user.pk
     user_name = request.user.get_full_name() or request.user.username
@@ -1331,20 +1332,20 @@ def tickets_pin_reply(request, ticket_id, reply_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         ticket = Ticket.objects.get(pk=ticket_id)
     except Ticket.DoesNotExist:
-        return HttpResponseNotFound("Ticket not found")
+        return HttpResponseNotFound(_("Ticket not found"))
 
     try:
         reply = Reply.objects.get(pk=reply_id, ticket=ticket)
     except Reply.DoesNotExist:
-        return HttpResponseNotFound("Reply not found")
+        return HttpResponseNotFound(_("Reply not found"))
 
     if not reply.is_internal_note:
-        return HttpResponseForbidden("Only internal notes can be pinned.")
+        return HttpResponseForbidden(_("Only internal notes can be pinned."))
 
     reply.is_pinned = not reply.is_pinned
     reply.save(update_fields=["is_pinned", "updated_at"])
@@ -1381,7 +1382,7 @@ def macros_create(request):
         name = request.POST.get("name", "").strip()
         if not name:
             return render(request, "Escalated/Admin/Macros/Create", props={
-                "errors": {"name": "Name is required."},
+                "errors": {"name": _("Name is required.")},
             })
 
         try:
@@ -1412,7 +1413,7 @@ def macros_edit(request, macro_id):
     try:
         macro = Macro.objects.get(pk=macro_id)
     except Macro.DoesNotExist:
-        return HttpResponseNotFound("Macro not found")
+        return HttpResponseNotFound(_("Macro not found"))
 
     if request.method == "POST":
         macro.name = request.POST.get("name", macro.name)
@@ -1441,7 +1442,7 @@ def macros_delete(request, macro_id):
         return check
 
     if request.method != "POST":
-        return HttpResponseForbidden("Method not allowed")
+        return HttpResponseForbidden(_("Method not allowed"))
 
     try:
         macro = Macro.objects.get(pk=macro_id)

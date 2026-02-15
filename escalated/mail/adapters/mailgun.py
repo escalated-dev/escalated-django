@@ -63,6 +63,21 @@ class MailgunAdapter(BaseAdapter):
             logger.warning("Mailgun webhook missing signature fields")
             return False
 
+        # Reject timestamps older than 5 minutes (replay protection)
+        import time
+
+        try:
+            ts = int(timestamp)
+        except (ValueError, TypeError):
+            logger.warning("Mailgun webhook has invalid timestamp")
+            return False
+
+        if abs(int(time.time()) - ts) > 300:
+            logger.warning(
+                "Mailgun webhook timestamp too old — possible replay attack."
+            )
+            return False
+
         expected = hmac.new(
             signing_key.encode("utf-8"),
             f"{timestamp}{token}".encode("utf-8"),

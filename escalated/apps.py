@@ -1,13 +1,14 @@
 import logging
 
 from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger("escalated")
 
 
 class EscalatedConfig(AppConfig):
     name = "escalated"
-    verbose_name = "Escalated Support"
+    verbose_name = _("Escalated Support")
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self):

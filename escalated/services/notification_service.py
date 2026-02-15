@@ -6,6 +6,7 @@ import logging
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils.translation import gettext as _
 
 from escalated.conf import get_setting
 
@@ -24,7 +25,10 @@ class NotificationService:
 
         if "email" in channels:
             NotificationService._send_email(
-                subject=f"[{ticket.reference}] New ticket: {ticket.subject}",
+                subject="[%s] %s" % (
+                    ticket.reference,
+                    _("New ticket: %(subject)s") % {"subject": ticket.subject},
+                ),
                 template="escalated/emails/new_ticket.html",
                 context={"ticket": ticket},
                 recipient=NotificationService._get_requester_email(ticket),
@@ -47,7 +51,10 @@ class NotificationService:
             requester_email = NotificationService._get_requester_email(ticket)
             if requester_email and reply.author != ticket.requester:
                 NotificationService._send_email(
-                    subject=f"[{ticket.reference}] New reply on: {ticket.subject}",
+                    subject="[%s] %s" % (
+                        ticket.reference,
+                        _("New reply on: %(subject)s") % {"subject": ticket.subject},
+                    ),
                     template="escalated/emails/reply.html",
                     context={"ticket": ticket, "reply": reply},
                     recipient=requester_email,
@@ -58,7 +65,10 @@ class NotificationService:
                 agent_email = getattr(ticket.assigned_to, "email", None)
                 if agent_email:
                     NotificationService._send_email(
-                        subject=f"[{ticket.reference}] Customer reply on: {ticket.subject}",
+                        subject="[%s] %s" % (
+                            ticket.reference,
+                            _("Customer reply on: %(subject)s") % {"subject": ticket.subject},
+                        ),
                         template="escalated/emails/reply.html",
                         context={"ticket": ticket, "reply": reply},
                         recipient=agent_email,
@@ -68,7 +78,10 @@ class NotificationService:
             NotificationService._notify_followers(
                 ticket,
                 reply.author,
-                subject=f"[{ticket.reference}] New reply on: {ticket.subject}",
+                subject="[%s] %s" % (
+                    ticket.reference,
+                    _("New reply on: %(subject)s") % {"subject": ticket.subject},
+                ),
                 template="escalated/emails/reply.html",
                 context={"ticket": ticket, "reply": reply},
                 exclude_user_ids=[
@@ -92,7 +105,10 @@ class NotificationService:
             agent_email = getattr(agent, "email", None)
             if agent_email:
                 NotificationService._send_email(
-                    subject=f"[{ticket.reference}] Ticket assigned to you: {ticket.subject}",
+                    subject="[%s] %s" % (
+                        ticket.reference,
+                        _("Ticket assigned to you: %(subject)s") % {"subject": ticket.subject},
+                    ),
                     template="escalated/emails/assigned.html",
                     context={"ticket": ticket, "agent": agent},
                     recipient=agent_email,
@@ -113,7 +129,10 @@ class NotificationService:
             requester_email = NotificationService._get_requester_email(ticket)
             if requester_email:
                 NotificationService._send_email(
-                    subject=f"[{ticket.reference}] Status updated: {ticket.subject}",
+                    subject="[%s] %s" % (
+                        ticket.reference,
+                        _("Status updated: %(subject)s") % {"subject": ticket.subject},
+                    ),
                     template="escalated/emails/status_changed.html",
                     context={
                         "ticket": ticket,
@@ -127,7 +146,10 @@ class NotificationService:
             NotificationService._notify_followers(
                 ticket,
                 causer=None,
-                subject=f"[{ticket.reference}] Status updated: {ticket.subject}",
+                subject="[%s] %s" % (
+                    ticket.reference,
+                    _("Status updated: %(subject)s") % {"subject": ticket.subject},
+                ),
                 template="escalated/emails/status_changed.html",
                 context={
                     "ticket": ticket,
@@ -152,7 +174,13 @@ class NotificationService:
             agent_email = getattr(ticket.assigned_to, "email", None)
             if agent_email:
                 NotificationService._send_email(
-                    subject=f"[SLA BREACH] [{ticket.reference}] {breach_type}: {ticket.subject}",
+                    subject="[SLA BREACH] [%s] %s" % (
+                        ticket.reference,
+                        _("%(breach_type)s: %(subject)s") % {
+                            "breach_type": breach_type,
+                            "subject": ticket.subject,
+                        },
+                    ),
                     template="escalated/emails/sla_breach.html",
                     context={"ticket": ticket, "breach_type": breach_type},
                     recipient=agent_email,
@@ -173,7 +201,7 @@ class NotificationService:
             agent_email = getattr(ticket.assigned_to, "email", None)
             if agent_email:
                 NotificationService._send_email(
-                    subject=f"[ESCALATED] [{ticket.reference}] {ticket.subject}",
+                    subject="[ESCALATED] [%s] %s" % (ticket.reference, ticket.subject),
                     template="escalated/emails/escalated.html",
                     context={"ticket": ticket, "reason": reason},
                     recipient=agent_email,
@@ -194,7 +222,10 @@ class NotificationService:
             requester_email = NotificationService._get_requester_email(ticket)
             if requester_email:
                 NotificationService._send_email(
-                    subject=f"[{ticket.reference}] Resolved: {ticket.subject}",
+                    subject="[%s] %s" % (
+                        ticket.reference,
+                        _("Status updated: %(subject)s") % {"subject": ticket.subject},
+                    ),
                     template="escalated/emails/resolved.html",
                     context={"ticket": ticket},
                     recipient=requester_email,
