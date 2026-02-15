@@ -9,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from escalated.conf import get_table_name
 
@@ -121,11 +122,11 @@ class SlaPolicy(models.Model):
     is_default = models.BooleanField(default=False)
     first_response_hours = models.JSONField(
         default=dict,
-        help_text='Map of priority to hours, e.g. {"low": 24, "medium": 8, "high": 4, "urgent": 1, "critical": 0.5}',
+        help_text=_('Map of priority to hours, e.g. {"low": 24, "medium": 8, "high": 4, "urgent": 1, "critical": 0.5}'),
     )
     resolution_hours = models.JSONField(
         default=dict,
-        help_text='Map of priority to hours, e.g. {"low": 72, "medium": 24, "high": 8, "urgent": 4, "critical": 2}',
+        help_text=_('Map of priority to hours, e.g. {"low": 72, "medium": 24, "high": 8, "urgent": 4, "critical": 2}'),
     )
     business_hours_only = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -134,8 +135,8 @@ class SlaPolicy(models.Model):
 
     class Meta:
         db_table = get_table_name("sla_policies")
-        verbose_name = "SLA Policy"
-        verbose_name_plural = "SLA Policies"
+        verbose_name = _("SLA Policy")
+        verbose_name_plural = _("SLA Policies")
 
     def __str__(self):
         return self.name
@@ -164,21 +165,21 @@ class Tag(models.Model):
 
 class Ticket(models.Model):
     class Status(models.TextChoices):
-        OPEN = "open", "Open"
-        IN_PROGRESS = "in_progress", "In Progress"
-        WAITING_ON_CUSTOMER = "waiting_on_customer", "Waiting on Customer"
-        WAITING_ON_AGENT = "waiting_on_agent", "Waiting on Agent"
-        ESCALATED = "escalated", "Escalated"
-        RESOLVED = "resolved", "Resolved"
-        CLOSED = "closed", "Closed"
-        REOPENED = "reopened", "Reopened"
+        OPEN = "open", _("Open")
+        IN_PROGRESS = "in_progress", _("In Progress")
+        WAITING_ON_CUSTOMER = "waiting_on_customer", _("Waiting on Customer")
+        WAITING_ON_AGENT = "waiting_on_agent", _("Waiting on Agent")
+        ESCALATED = "escalated", _("Escalated")
+        RESOLVED = "resolved", _("Resolved")
+        CLOSED = "closed", _("Closed")
+        REOPENED = "reopened", _("Reopened")
 
     class Priority(models.TextChoices):
-        LOW = "low", "Low"
-        MEDIUM = "medium", "Medium"
-        HIGH = "high", "High"
-        URGENT = "urgent", "Urgent"
-        CRITICAL = "critical", "Critical"
+        LOW = "low", _("Low")
+        MEDIUM = "medium", _("Medium")
+        HIGH = "high", _("High")
+        URGENT = "urgent", _("Urgent")
+        CRITICAL = "critical", _("Critical")
 
     # Requester via GenericForeignKey so any user model works
     requester_content_type = models.ForeignKey(
@@ -218,7 +219,7 @@ class Ticket(models.Model):
     guest_email = models.EmailField(null=True, blank=True)
     guest_token = models.CharField(
         max_length=64, null=True, blank=True, unique=True,
-        help_text="Unique token for guest ticket access",
+        help_text=_("Unique token for guest ticket access"),
     )
 
     subject = models.CharField(max_length=500)
@@ -377,9 +378,9 @@ class Ticket(models.Model):
 
 class Reply(models.Model):
     class Type(models.TextChoices):
-        REPLY = "reply", "Reply"
-        NOTE = "note", "Internal Note"
-        SYSTEM = "system", "System"
+        REPLY = "reply", _("Reply")
+        NOTE = "note", _("Internal Note")
+        SYSTEM = "system", _("System")
 
     ticket = models.ForeignKey(
         Ticket, on_delete=models.CASCADE, related_name="replies"
@@ -432,7 +433,7 @@ class Attachment(models.Model):
     original_filename = models.CharField(max_length=500)
     mime_type = models.CharField(max_length=255, blank=True, default="")
     size = models.PositiveIntegerField(
-        default=0, help_text="File size in bytes"
+        default=0, help_text=_("File size in bytes")
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -451,22 +452,22 @@ class Attachment(models.Model):
 
 class EscalationRule(models.Model):
     class TriggerType(models.TextChoices):
-        SLA_BREACH = "sla_breach", "SLA Breach"
-        PRIORITY_CHANGE = "priority_change", "Priority Change"
-        NO_RESPONSE = "no_response", "No Response"
-        CUSTOMER_REPLY = "customer_reply", "Customer Reply"
-        TIME_BASED = "time_based", "Time Based"
+        SLA_BREACH = "sla_breach", _("SLA Breach")
+        PRIORITY_CHANGE = "priority_change", _("Priority Change")
+        NO_RESPONSE = "no_response", _("No Response")
+        CUSTOMER_REPLY = "customer_reply", _("Customer Reply")
+        TIME_BASED = "time_based", _("Time Based")
 
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, default="")
     trigger_type = models.CharField(max_length=30, choices=TriggerType.choices)
     conditions = models.JSONField(
         default=dict,
-        help_text="JSON conditions that must be met for the rule to fire",
+        help_text=_("JSON conditions that must be met for the rule to fire"),
     )
     actions = models.JSONField(
         default=dict,
-        help_text="JSON actions to take when the rule fires (e.g., assign, notify, change priority)",
+        help_text=_("JSON actions to take when the rule fires (e.g., assign, notify, change priority)"),
     )
     order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -506,20 +507,20 @@ class CannedResponse(models.Model):
 
 class TicketActivity(models.Model):
     class ActivityType(models.TextChoices):
-        CREATED = "created", "Created"
-        STATUS_CHANGED = "status_changed", "Status Changed"
-        PRIORITY_CHANGED = "priority_changed", "Priority Changed"
-        ASSIGNED = "assigned", "Assigned"
-        UNASSIGNED = "unassigned", "Unassigned"
-        REPLY_ADDED = "reply_added", "Reply Added"
-        NOTE_ADDED = "note_added", "Note Added"
-        TAG_ADDED = "tag_added", "Tag Added"
-        TAG_REMOVED = "tag_removed", "Tag Removed"
-        DEPARTMENT_CHANGED = "department_changed", "Department Changed"
-        ESCALATED = "escalated", "Escalated"
-        SLA_BREACHED = "sla_breached", "SLA Breached"
-        ATTACHMENT_ADDED = "attachment_added", "Attachment Added"
-        MERGED = "merged", "Merged"
+        CREATED = "created", _("Created")
+        STATUS_CHANGED = "status_changed", _("Status Changed")
+        PRIORITY_CHANGED = "priority_changed", _("Priority Changed")
+        ASSIGNED = "assigned", _("Assigned")
+        UNASSIGNED = "unassigned", _("Unassigned")
+        REPLY_ADDED = "reply_added", _("Reply Added")
+        NOTE_ADDED = "note_added", _("Note Added")
+        TAG_ADDED = "tag_added", _("Tag Added")
+        TAG_REMOVED = "tag_removed", _("Tag Removed")
+        DEPARTMENT_CHANGED = "department_changed", _("Department Changed")
+        ESCALATED = "escalated", _("Escalated")
+        SLA_BREACHED = "sla_breached", _("SLA Breached")
+        ATTACHMENT_ADDED = "attachment_added", _("Attachment Added")
+        MERGED = "merged", _("Merged")
 
     ticket = models.ForeignKey(
         Ticket, on_delete=models.CASCADE, related_name="activities"
@@ -543,7 +544,7 @@ class TicketActivity(models.Model):
     class Meta:
         db_table = get_table_name("activities")
         ordering = ["-created_at"]
-        verbose_name_plural = "Ticket activities"
+        verbose_name_plural = _("Ticket activities")
 
     def __str__(self):
         return f"{self.type} on {self.ticket.reference}"
@@ -611,7 +612,7 @@ class Macro(models.Model):
     description = models.CharField(max_length=500, blank=True, default="")
     actions = models.JSONField(
         default=list,
-        help_text='JSON array of actions, e.g. [{"type": "set_status", "value": "open"}]',
+        help_text=_('JSON array of actions, e.g. [{"type": "set_status", "value": "open"}]'),
     )
     is_shared = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0)
@@ -671,7 +672,7 @@ class SatisfactionRating(models.Model):
         related_name="satisfaction_rating",
     )
     rating = models.PositiveSmallIntegerField(
-        help_text="Rating from 1 to 5",
+        help_text=_("Rating from 1 to 5"),
     )
     comment = models.TextField(blank=True, null=True)
 
@@ -700,10 +701,10 @@ class InboundEmail(models.Model):
     """Tracks inbound emails received via webhook or IMAP polling."""
 
     class Status(models.TextChoices):
-        PENDING = "pending", "Pending"
-        PROCESSED = "processed", "Processed"
-        FAILED = "failed", "Failed"
-        SPAM = "spam", "Spam"
+        PENDING = "pending", _("Pending")
+        PROCESSED = "processed", _("Processed")
+        FAILED = "failed", _("Failed")
+        SPAM = "spam", _("Spam")
 
     message_id = models.CharField(max_length=500, unique=True, null=True, blank=True)
     from_email = models.CharField(max_length=500)

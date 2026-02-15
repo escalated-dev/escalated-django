@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "escalated-django"
-version = "0.4.0"
+version = "0.5.0"
 description = "Embeddable support ticket system for Django"
 readme = "README.md"
 license = {text = "MIT"}
@@ -23,6 +23,9 @@ dev = [
     "factory-boy>=3.2",
     "faker>=18.0",
 ]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
 
 [project.urls]
 Homepage = "https://github.com/escalated-dev/escalated-django"

@@ -1,0 +1,9 @@
+{
+    "name": "Hello World Plugin",
+    "description": "A friendly example plugin that demonstrates how to use hooks, filters, and UI extensions in Escalated. Perfect for testing or as a starting point for your own plugin. Feel free to delete it anytime.",
+    "version": "1.0.0",
+    "author": "Escalated Team",
+    "author_url": "https://escalated.dev",
+    "requires": "0.4.0",
+    "main_file": "plugin.py"
+}

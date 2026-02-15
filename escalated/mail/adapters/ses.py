@@ -65,6 +65,33 @@ class SESAdapter(BaseAdapter):
             )
             return False
 
+        # Validate SNS message type
+        message_type = data.get("Type", "")
+        if message_type not in (
+            "SubscriptionConfirmation",
+            "Notification",
+            "UnsubscribeConfirmation",
+        ):
+            logger.warning(
+                f"SES adapter: unexpected SNS message type: {message_type}"
+            )
+            return False
+
+        # Validate SigningCertURL is from a legitimate AWS SNS endpoint
+        signing_cert_url = data.get("SigningCertURL") or data.get(
+            "SigningCertUrl"
+        )
+        if signing_cert_url:
+            parsed_cert_url = urlparse(signing_cert_url)
+            if parsed_cert_url.scheme != "https" or not re.match(
+                r"^sns\.[a-z0-9-]+\.amazonaws\.com$",
+                parsed_cert_url.hostname or "",
+            ):
+                logger.warning(
+                    f"SES adapter: invalid SigningCertURL: {signing_cert_url}"
+                )
+                return False
+
         return True
 
     def parse_request(self, request) -> InboundMessage:

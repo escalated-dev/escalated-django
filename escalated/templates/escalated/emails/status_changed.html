@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+{% load i18n %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket Status Updated</title>
+    <title>{% trans "Ticket Status Updated" %}</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
@@ -17,10 +17,10 @@
 </head>
 <body>
     <div class="header">
-        <h2 style="margin: 0;">Ticket Status Updated</h2>
+        <h2 style="margin: 0;">{% trans "Ticket Status Updated" %}</h2>
     </div>
     <div class="content">
-        <p>The status of your ticket <span class="reference">{{ ticket.reference }}</span> has been updated.</p>
+        {% blocktrans with ref=ticket.reference %}<p>The status of your ticket <span class="reference">{{ ref }}</span> has been updated.</p>{% endblocktrans %}
         <p><strong>{{ ticket.subject }}</strong></p>
 
         <div class="status-change">
@@ -29,10 +29,10 @@
             <span class="status-badge" style="background: #dbeafe; color: #1e40af;">{{ new_status }}</span>
         </div>
 
-        <p>Log in to your account to view the full details of your ticket.</p>
+        <p>{% trans "Log in to your account to view the full details of your ticket." %}</p>
     </div>
     <div class="footer">
-        <p>This is an automated message from the support system. Please do not reply directly to this email.</p>
+        <p>{% trans "This is an automated message from the support system. Please do not reply directly to this email." %}</p>
     </div>
 </body>
 </html>

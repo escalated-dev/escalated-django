@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from escalated.conf import get_setting
 from escalated.models import Ticket
@@ -15,12 +16,12 @@ class Command(BaseCommand):
             "--days",
             type=int,
             default=None,
-            help="Days after resolution to auto-close (overrides setting)",
+            help=_("Days after resolution to auto-close (overrides setting)"),
         )
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Show what would be closed without making changes",
+            help=_("Show what would be closed without making changes"),
         )
 
     def handle(self, *args, **options):
@@ -39,15 +40,15 @@ class Command(BaseCommand):
 
         if dry_run:
             self.stdout.write(
-                f"[DRY RUN] Would close {count} tickets resolved more than "
-                f"{days} days ago."
+                _("[DRY RUN] Would close %(count)d tickets resolved more than %(days)d days ago.")
+                % {"count": count, "days": days}
             )
             for ticket in stale_tickets[:20]:
                 self.stdout.write(f"  - {ticket.reference}: {ticket.subject}")
             return
 
         if count == 0:
-            self.stdout.write("No resolved tickets to auto-close.")
+            self.stdout.write(_("No resolved tickets to auto-close."))
             return
 
         now = timezone.now()
@@ -58,7 +59,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Auto-closed {updated} tickets that were resolved more than "
-                f"{days} days ago."
+                _("Auto-closed %(count)d tickets that were resolved more than %(days)d days ago.")
+                % {"count": updated, "days": days}
             )
         )

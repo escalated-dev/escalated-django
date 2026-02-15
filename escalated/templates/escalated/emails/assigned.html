@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+{% load i18n %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket Assigned to You</title>
+    <title>{% trans "Ticket Assigned to You" %}</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: #059669; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
@@ -16,46 +16,46 @@
 </head>
 <body>
     <div class="header">
-        <h2 style="margin: 0;">Ticket Assigned to You</h2>
+        <h2 style="margin: 0;">{% trans "Ticket Assigned to You" %}</h2>
     </div>
     <div class="content">
-        <p>Hi {{ agent.get_full_name }},</p>
-        <p>A support ticket has been assigned to you.</p>
+        <p>{{ agent.get_full_name }},</p>
+        <p>{% trans "A support ticket has been assigned to you." %}</p>
 
         <table style="width: 100%; border-collapse: collapse;">
             <tr>
-                <td style="padding: 8px 0; font-weight: 600; width: 140px;">Reference:</td>
+                <td style="padding: 8px 0; font-weight: 600; width: 140px;">{% trans "Reference:" %}</td>
                 <td class="reference">{{ ticket.reference }}</td>
             </tr>
             <tr>
-                <td style="padding: 8px 0; font-weight: 600;">Subject:</td>
+                <td style="padding: 8px 0; font-weight: 600;">{% trans "Subject:" %}</td>
                 <td>{{ ticket.subject }}</td>
             </tr>
             <tr>
-                <td style="padding: 8px 0; font-weight: 600;">Priority:</td>
+                <td style="padding: 8px 0; font-weight: 600;">{% trans "Priority:" %}</td>
                 <td><span class="badge badge-priority">{{ ticket.get_priority_display }}</span></td>
             </tr>
             <tr>
-                <td style="padding: 8px 0; font-weight: 600;">Status:</td>
+                <td style="padding: 8px 0; font-weight: 600;">{% trans "Status:" %}</td>
                 <td>{{ ticket.get_status_display }}</td>
             </tr>
             {% if ticket.department %}
             <tr>
-                <td style="padding: 8px 0; font-weight: 600;">Department:</td>
+                <td style="padding: 8px 0; font-weight: 600;">{% trans "Department:" %}</td>
                 <td>{{ ticket.department.name }}</td>
             </tr>
             {% endif %}
         </table>
 
         <div style="margin-top: 16px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
-            <strong>Description:</strong>
+            <strong>{% trans "Description:" %}</strong>
             <p>{{ ticket.description|truncatewords:50 }}</p>
         </div>
 
-        <p style="margin-top: 20px;">Please review and respond to this ticket at your earliest convenience.</p>
+        <p style="margin-top: 20px;">{% trans "Please review and respond to this ticket at your earliest convenience." %}</p>
     </div>
     <div class="footer">
-        <p>This is an automated message from the support system.</p>
+        <p>{% trans "This is an automated message from the support system." %}</p>
     </div>
 </body>
 </html>

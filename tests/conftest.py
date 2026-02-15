@@ -1,6 +1,19 @@
+
 import django
 from django.conf import settings
-
+import pytest
+from tests.factories import (
+    UserFactory,
+    TicketFactory,
+    ReplyFactory,
+    TagFactory,
+    DepartmentFactory,
+    SlaPolicyFactory,
+    EscalationRuleFactory,
+    CannedResponseFactory,
+    MacroFactory,
+    ApiTokenFactory,
+)
 
 def pytest_configure():
     settings.configure(
@@ -64,24 +77,6 @@ def pytest_configure():
         SECRET_KEY="test-secret-key-not-for-production",
     )
     django.setup()
-
-
-import pytest
-from django.contrib.auth.models import User
-
-from tests.factories import (
-    UserFactory,
-    TicketFactory,
-    ReplyFactory,
-    TagFactory,
-    DepartmentFactory,
-    SlaPolicyFactory,
-    EscalationRuleFactory,
-    CannedResponseFactory,
-    MacroFactory,
-    ApiTokenFactory,
-)
-
 
 @pytest.fixture
 def user(db):

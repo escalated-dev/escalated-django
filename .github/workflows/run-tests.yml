@@ -1,0 +1,38 @@
+name: run-tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.11", "3.10"]
+        django: ["5.1", "5.0", "4.2"]
+        exclude:
+          - python: "3.10"
+            django: "5.1"
+
+    name: Py${{ matrix.python }} - Django ${{ matrix.django }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+          pip install "django~=${{ matrix.django }}.0"
+
+      - name: Execute tests
+        run: pytest
