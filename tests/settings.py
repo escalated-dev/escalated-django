@@ -17,6 +17,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "auth.User"
 ROOT_URLCONF = "tests.urls"
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}
+
 ESCALATED = {
     "MODE": "self_hosted",
     "TABLE_PREFIX": "escalated_",
@@ -31,6 +37,10 @@ ESCALATED = {
     },
     "NOTIFICATION_CHANNELS": [],
     "WEBHOOK_URL": None,
+    "API_ENABLED": True,
+    "API_RATE_LIMIT": 60,
+    "API_TOKEN_EXPIRY_DAYS": None,
+    "API_PREFIX": "support/api/v1",
 }
 
 TEMPLATES = [
