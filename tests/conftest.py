@@ -1,5 +1,4 @@
 import pytest
-
 from tests.factories import (
     UserFactory,
     TicketFactory,
@@ -9,8 +8,9 @@ from tests.factories import (
     SlaPolicyFactory,
     EscalationRuleFactory,
     CannedResponseFactory,
+    MacroFactory,
+    ApiTokenFactory,
 )
-
 
 @pytest.fixture
 def user(db):
@@ -63,3 +63,20 @@ def canned_response(db, agent_user):
 @pytest.fixture
 def escalation_rule(db):
     return EscalationRuleFactory()
+
+
+@pytest.fixture
+def macro(db, agent_user):
+    return MacroFactory(created_by=agent_user)
+
+
+@pytest.fixture
+def api_token(db, agent_user):
+    """Create an API token for an agent. The `plain_text` attr holds the raw string."""
+    return ApiTokenFactory(user=agent_user)
+
+
+@pytest.fixture
+def admin_api_token(db, admin_user):
+    """Create an API token for an admin. The `plain_text` attr holds the raw string."""
+    return ApiTokenFactory(user=admin_user)

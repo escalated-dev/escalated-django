@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 import uuid
 from datetime import timedelta
 
@@ -770,3 +772,114 @@ class InboundEmail(models.Model):
         """Mark this inbound email as spam."""
         self.status = self.Status.SPAM
         self.save(update_fields=["status", "updated_at"])
+
+
+# ---------------------------------------------------------------------------
+# API Token
+# ---------------------------------------------------------------------------
+
+
+class ApiTokenQuerySet(models.QuerySet):
+    def active(self):
+        """Return tokens that are not expired."""
+        return self.filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+        )
+
+    def expired(self):
+        """Return tokens that have expired."""
+        return self.filter(
+            expires_at__isnull=False,
+            expires_at__lte=timezone.now(),
+        )
+
+
+class ApiTokenManager(models.Manager):
+    def get_queryset(self):
+        return ApiTokenQuerySet(self.model, using=self._db)
+
+    def active(self):
+        return self.get_queryset().active()
+
+    def expired(self):
+        return self.get_queryset().expired()
+
+
+class ApiToken(models.Model):
+    """API token for authenticating REST API requests."""
+
+    # Tokenable via GenericForeignKey (like Laravel morphTo)
+    tokenable_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="escalated_api_tokens",
+    )
+    tokenable_object_id = models.PositiveIntegerField(null=True, blank=True)
+    tokenable = GenericForeignKey("tokenable_content_type", "tokenable_object_id")
+
+    name = models.CharField(max_length=255)
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    abilities = models.JSONField(default=list)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    last_used_ip = models.CharField(max_length=45, null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ApiTokenManager()
+
+    class Meta:
+        db_table = get_table_name("api_tokens")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"ApiToken({self.name})"
+
+    def has_ability(self, ability):
+        """Check if this token has the given ability."""
+        abilities = self.abilities or []
+        return "*" in abilities or ability in abilities
+
+    @property
+    def is_expired(self):
+        """Check if this token has expired."""
+        if self.expires_at is None:
+            return False
+        return self.expires_at <= timezone.now()
+
+    @classmethod
+    def create_token(cls, user, name, abilities=None, expires_at=None):
+        """
+        Create a new API token for a user.
+
+        Returns a dict with 'token' (the model instance) and
+        'plain_text_token' (the unhashed token string to give to the user).
+        """
+        if abilities is None:
+            abilities = ["*"]
+
+        plain_text = secrets.token_hex(32)
+        hashed = hashlib.sha256(plain_text.encode()).hexdigest()
+
+        ct = ContentType.objects.get_for_model(user)
+        token = cls.objects.create(
+            tokenable_content_type=ct,
+            tokenable_object_id=user.pk,
+            name=name,
+            token=hashed,
+            abilities=abilities,
+            expires_at=expires_at,
+        )
+
+        return {"token": token, "plain_text_token": plain_text}
+
+    @classmethod
+    def find_by_plain_text(cls, plain_text):
+        """Look up a token by its plain-text value (hashes it first)."""
+        hashed = hashlib.sha256(plain_text.encode()).hexdigest()
+        try:
+            return cls.objects.get(token=hashed)
+        except cls.DoesNotExist:
+            return None

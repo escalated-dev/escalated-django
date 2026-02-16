@@ -45,6 +45,11 @@ DEFAULTS = {
     "IMAP_USERNAME": None,
     "IMAP_PASSWORD": None,
     "IMAP_MAILBOX": "INBOX",
+    # REST API settings
+    "API_ENABLED": False,
+    "API_RATE_LIMIT": 60,
+    "API_TOKEN_EXPIRY_DAYS": None,
+    "API_PREFIX": "support/api/v1",
     # Plugin system settings
     "PLUGINS_ENABLED": True,
     "PLUGINS_PATH": None,  # Defaults to <BASE_DIR>/plugins/escalated at runtime
