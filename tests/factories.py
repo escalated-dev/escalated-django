@@ -15,6 +15,12 @@ from escalated.models import (
     EscalationRule,
     CannedResponse,
     Macro,
+    AuditLog,
+    TicketStatus,
+    BusinessSchedule,
+    Holiday,
+    Role,
+    Permission,
 )
 
 
@@ -196,3 +202,79 @@ class ApiTokenFactory(factory.django.DjangoModelFactory):
         # Attach the plain_text for test usage
         instance.plain_text = plain_text
         return instance
+
+
+class TicketStatusFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = TicketStatus
+
+    label = factory.Sequence(lambda n: f"Status {n}")
+    slug = factory.Sequence(lambda n: f"status-{n}")
+    category = "open"
+    color = "#6b7280"
+    description = factory.Faker("sentence")
+    position = factory.Sequence(lambda n: n)
+    is_default = False
+
+
+class BusinessScheduleFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = BusinessSchedule
+
+    name = factory.Sequence(lambda n: f"Schedule {n}")
+    timezone = "UTC"
+    is_default = False
+    schedule = factory.LazyFunction(lambda: {
+        "monday": {"start": "09:00", "end": "17:00"},
+        "tuesday": {"start": "09:00", "end": "17:00"},
+        "wednesday": {"start": "09:00", "end": "17:00"},
+        "thursday": {"start": "09:00", "end": "17:00"},
+        "friday": {"start": "09:00", "end": "17:00"},
+    })
+
+
+class HolidayFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Holiday
+
+    schedule = factory.SubFactory(BusinessScheduleFactory)
+    name = factory.Sequence(lambda n: f"Holiday {n}")
+    date = factory.LazyFunction(lambda: __import__('datetime').date(2026, 12, 25))
+    recurring = False
+
+
+class PermissionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Permission
+        django_get_or_create = ("slug",)
+
+    name = factory.Sequence(lambda n: f"Permission {n}")
+    slug = factory.Sequence(lambda n: f"permission-{n}")
+    group = "general"
+    description = factory.Faker("sentence")
+
+
+class RoleFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Role
+
+    name = factory.Sequence(lambda n: f"Role {n}")
+    slug = factory.Sequence(lambda n: f"role-{n}")
+    description = factory.Faker("sentence")
+    is_system = False
+
+
+class AuditLogFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = AuditLog
+
+    user = factory.SubFactory(UserFactory)
+    action = "created"
+    auditable_content_type = factory.LazyAttribute(
+        lambda o: ContentType.objects.get_for_model(Ticket)
+    )
+    auditable_object_id = 1
+    old_values = None
+    new_values = factory.LazyFunction(lambda: {"status": "open"})
+    ip_address = "127.0.0.1"
+    user_agent = "TestAgent/1.0"

@@ -24,6 +24,12 @@ from escalated.models import (
     Macro,
     Reply,
     SatisfactionRating,
+    AuditLog,
+    TicketStatus,
+    BusinessSchedule,
+    Holiday,
+    Role,
+    Permission,
 )
 from escalated.permissions import is_admin, is_agent
 from escalated.serializers import (
@@ -39,6 +45,12 @@ from escalated.serializers import (
     AttachmentSerializer,
     MacroSerializer,
     SatisfactionRatingSerializer,
+    AuditLogSerializer,
+    TicketStatusSerializer,
+    BusinessScheduleSerializer,
+    HolidaySerializer,
+    RoleSerializer,
+    PermissionSerializer,
 )
 from escalated.services.ticket_service import TicketService
 
@@ -1451,3 +1463,405 @@ def macros_delete(request, macro_id):
         pass
 
     return redirect("escalated:admin_macros_index")
+
+
+# ---------------------------------------------------------------------------
+# Audit Logs (read-only)
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def audit_logs_index(request):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    logs = AuditLog.objects.select_related("user", "auditable_content_type")
+
+    user_id = request.GET.get("user_id")
+    if user_id:
+        logs = logs.filter(user_id=user_id)
+
+    action = request.GET.get("action")
+    if action:
+        logs = logs.filter(action=action)
+
+    auditable_type = request.GET.get("auditable_type")
+    if auditable_type:
+        logs = logs.filter(auditable_content_type__model=auditable_type)
+
+    date_from = request.GET.get("date_from")
+    if date_from:
+        logs = logs.filter(created_at__date__gte=date_from)
+
+    date_to = request.GET.get("date_to")
+    if date_to:
+        logs = logs.filter(created_at__date__lte=date_to)
+
+    paginator = Paginator(logs, 50)
+    page = paginator.get_page(request.GET.get("page", 1))
+
+    return render(request, "Escalated/Admin/AuditLog/Index", props={
+        "logs": AuditLogSerializer.serialize_list(page.object_list),
+        "pagination": {
+            "current_page": page.number,
+            "total_pages": paginator.num_pages,
+            "total_count": paginator.count,
+            "has_next": page.has_next(),
+            "has_previous": page.has_previous(),
+        },
+        "filters": {
+            "user_id": user_id,
+            "action": action,
+            "auditable_type": auditable_type,
+            "date_from": date_from,
+            "date_to": date_to,
+        },
+        "users": [
+            {"id": u.pk, "name": u.get_full_name() or u.username}
+            for u in User.objects.filter(is_active=True)
+        ],
+        "actions": ["created", "updated", "deleted"],
+        "resource_types": list(
+            AuditLog.objects.values_list(
+                "auditable_content_type__model", flat=True
+            ).distinct()
+        ),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Ticket Statuses CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def statuses_index(request):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    statuses = TicketStatus.objects.all()
+    return render(request, "Escalated/Admin/Statuses/Index", props={
+        "statuses": TicketStatusSerializer.serialize_list(statuses),
+        "categories": ["new", "open", "pending", "on_hold", "solved"],
+    })
+
+
+@login_required
+def statuses_create(request):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method == "POST":
+        label = request.POST.get("label", "").strip()
+        if not label:
+            return render(request, "Escalated/Admin/Statuses/Form", props={
+                "errors": {"label": _("Label is required.")},
+                "categories": ["new", "open", "pending", "on_hold", "solved"],
+            })
+
+        category = request.POST.get("category", "open")
+        is_default = request.POST.get("is_default", "false") == "true"
+
+        if is_default:
+            TicketStatus.objects.filter(category=category).update(is_default=False)
+
+        TicketStatus.objects.create(
+            label=label,
+            category=category,
+            color=request.POST.get("color", "#6b7280"),
+            description=request.POST.get("description", ""),
+            position=int(request.POST.get("position", 0)),
+            is_default=is_default,
+        )
+        return redirect("escalated:admin_statuses_index")
+
+    return render(request, "Escalated/Admin/Statuses/Form", props={
+        "categories": ["new", "open", "pending", "on_hold", "solved"],
+    })
+
+
+@login_required
+def statuses_edit(request, status_id):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    try:
+        status = TicketStatus.objects.get(pk=status_id)
+    except TicketStatus.DoesNotExist:
+        return HttpResponseNotFound(_("Status not found"))
+
+    if request.method == "POST":
+        status.label = request.POST.get("label", status.label)
+        status.category = request.POST.get("category", status.category)
+        status.color = request.POST.get("color", status.color)
+        status.description = request.POST.get("description", status.description)
+        status.position = int(request.POST.get("position", status.position))
+
+        is_default = request.POST.get("is_default", "false") == "true"
+        if is_default and not status.is_default:
+            TicketStatus.objects.filter(category=status.category).exclude(
+                pk=status.pk
+            ).update(is_default=False)
+        status.is_default = is_default
+
+        status.save()
+        return redirect("escalated:admin_statuses_index")
+
+    return render(request, "Escalated/Admin/Statuses/Form", props={
+        "status": TicketStatusSerializer.serialize(status),
+        "categories": ["new", "open", "pending", "on_hold", "solved"],
+    })
+
+
+@login_required
+def statuses_delete(request, status_id):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        status = TicketStatus.objects.get(pk=status_id)
+        status.delete()
+    except TicketStatus.DoesNotExist:
+        pass
+
+    return redirect("escalated:admin_statuses_index")
+
+
+# ---------------------------------------------------------------------------
+# Business Hours CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def business_hours_index(request):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    schedules = BusinessSchedule.objects.prefetch_related("holidays").all()
+    return render(request, "Escalated/Admin/BusinessHours/Index", props={
+        "schedules": BusinessScheduleSerializer.serialize_list(schedules),
+    })
+
+
+@login_required
+def business_hours_create(request):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if not name:
+            return render(request, "Escalated/Admin/BusinessHours/Form", props={
+                "errors": {"name": _("Name is required.")},
+            })
+
+        is_default = request.POST.get("is_default", "false") == "true"
+        if is_default:
+            BusinessSchedule.objects.filter(is_default=True).update(is_default=False)
+
+        try:
+            schedule_data = json.loads(request.POST.get("schedule", "{}"))
+        except (json.JSONDecodeError, TypeError):
+            schedule_data = {}
+
+        sched = BusinessSchedule.objects.create(
+            name=name,
+            timezone=request.POST.get("timezone", "UTC"),
+            is_default=is_default,
+            schedule=schedule_data,
+        )
+
+        try:
+            holidays = json.loads(request.POST.get("holidays", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            holidays = []
+
+        for h in holidays:
+            Holiday.objects.create(
+                schedule=sched,
+                name=h.get("name", ""),
+                date=h.get("date"),
+                recurring=h.get("recurring", False),
+            )
+
+        return redirect("escalated:admin_business_hours_index")
+
+    from zoneinfo import available_timezones
+    return render(request, "Escalated/Admin/BusinessHours/Form", props={
+        "timezones": sorted(available_timezones()),
+    })
+
+
+@login_required
+def business_hours_edit(request, schedule_id):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    try:
+        sched = BusinessSchedule.objects.prefetch_related("holidays").get(pk=schedule_id)
+    except BusinessSchedule.DoesNotExist:
+        return HttpResponseNotFound(_("Business schedule not found"))
+
+    if request.method == "POST":
+        sched.name = request.POST.get("name", sched.name)
+        sched.timezone = request.POST.get("timezone", sched.timezone)
+
+        is_default = request.POST.get("is_default", "false") == "true"
+        if is_default and not sched.is_default:
+            BusinessSchedule.objects.filter(is_default=True).exclude(
+                pk=sched.pk
+            ).update(is_default=False)
+        sched.is_default = is_default
+
+        try:
+            sched.schedule = json.loads(request.POST.get("schedule", "{}"))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        sched.save()
+
+        # Sync holidays
+        sched.holidays.all().delete()
+        try:
+            holidays = json.loads(request.POST.get("holidays", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            holidays = []
+
+        for h in holidays:
+            Holiday.objects.create(
+                schedule=sched,
+                name=h.get("name", ""),
+                date=h.get("date"),
+                recurring=h.get("recurring", False),
+            )
+
+        return redirect("escalated:admin_business_hours_index")
+
+    from zoneinfo import available_timezones
+    return render(request, "Escalated/Admin/BusinessHours/Edit", props={
+        "schedule": BusinessScheduleSerializer.serialize(sched),
+        "timezones": sorted(available_timezones()),
+    })
+
+
+@login_required
+def business_hours_delete(request, schedule_id):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        sched = BusinessSchedule.objects.get(pk=schedule_id)
+        sched.delete()
+    except BusinessSchedule.DoesNotExist:
+        pass
+
+    return redirect("escalated:admin_business_hours_index")
+
+
+# ---------------------------------------------------------------------------
+# Roles CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def roles_index(request):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    roles = Role.objects.annotate(users__count=Count("users"))
+    return render(request, "Escalated/Admin/Roles/Index", props={
+        "roles": RoleSerializer.serialize_list(roles),
+    })
+
+
+@login_required
+def roles_create(request):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if not name:
+            return render(request, "Escalated/Admin/Roles/Form", props={
+                "errors": {"name": _("Name is required.")},
+                "permissions": PermissionSerializer.serialize_grouped(Permission.objects.all()),
+            })
+
+        role = Role.objects.create(
+            name=name,
+            description=request.POST.get("description", ""),
+        )
+
+        permission_ids = request.POST.getlist("permissions")
+        if permission_ids:
+            role.permissions.set(permission_ids)
+
+        return redirect("escalated:admin_roles_index")
+
+    return render(request, "Escalated/Admin/Roles/Form", props={
+        "permissions": PermissionSerializer.serialize_grouped(Permission.objects.all()),
+    })
+
+
+@login_required
+def roles_edit(request, role_id):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    try:
+        role = Role.objects.prefetch_related("permissions").get(pk=role_id)
+    except Role.DoesNotExist:
+        return HttpResponseNotFound(_("Role not found"))
+
+    if request.method == "POST":
+        role.name = request.POST.get("name", role.name)
+        role.description = request.POST.get("description", role.description)
+        role.save()
+
+        permission_ids = request.POST.getlist("permissions")
+        role.permissions.set(permission_ids)
+
+        return redirect("escalated:admin_roles_index")
+
+    return render(request, "Escalated/Admin/Roles/Form", props={
+        "role": RoleSerializer.serialize(role, include_permissions=True),
+        "permissions": PermissionSerializer.serialize_grouped(Permission.objects.all()),
+    })
+
+
+@login_required
+def roles_delete(request, role_id):
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        role = Role.objects.get(pk=role_id)
+        if role.is_system:
+            return HttpResponseForbidden(_("System roles cannot be deleted."))
+        role.delete()
+    except Role.DoesNotExist:
+        pass
+
+    return redirect("escalated:admin_roles_index")

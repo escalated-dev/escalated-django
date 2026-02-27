@@ -88,6 +88,23 @@ admin_patterns = [
     # Settings
     path("admin/settings/", admin.settings_index, name="admin_settings"),
     path("admin/settings/update/", admin.settings_update, name="admin_settings_update"),
+    # Audit Logs
+    path("admin/audit-logs/", admin.audit_logs_index, name="admin_audit_logs_index"),
+    # Statuses
+    path("admin/statuses/", admin.statuses_index, name="admin_statuses_index"),
+    path("admin/statuses/create/", admin.statuses_create, name="admin_statuses_create"),
+    path("admin/statuses/<int:status_id>/edit/", admin.statuses_edit, name="admin_statuses_edit"),
+    path("admin/statuses/<int:status_id>/delete/", admin.statuses_delete, name="admin_statuses_delete"),
+    # Business Hours
+    path("admin/business-hours/", admin.business_hours_index, name="admin_business_hours_index"),
+    path("admin/business-hours/create/", admin.business_hours_create, name="admin_business_hours_create"),
+    path("admin/business-hours/<int:schedule_id>/edit/", admin.business_hours_edit, name="admin_business_hours_edit"),
+    path("admin/business-hours/<int:schedule_id>/delete/", admin.business_hours_delete, name="admin_business_hours_delete"),
+    # Roles
+    path("admin/roles/", admin.roles_index, name="admin_roles_index"),
+    path("admin/roles/create/", admin.roles_create, name="admin_roles_create"),
+    path("admin/roles/<int:role_id>/edit/", admin.roles_edit, name="admin_roles_edit"),
+    path("admin/roles/<int:role_id>/delete/", admin.roles_delete, name="admin_roles_delete"),
     # Plugins
     path("admin/plugins/", admin_plugins.plugin_list, name="admin_plugins_index"),
     path("admin/plugins/upload/", admin_plugins.plugin_upload, name="admin_plugins_upload"),

@@ -10,6 +10,12 @@ from tests.factories import (
     CannedResponseFactory,
     MacroFactory,
     ApiTokenFactory,
+    TicketStatusFactory,
+    BusinessScheduleFactory,
+    HolidayFactory,
+    PermissionFactory,
+    RoleFactory,
+    AuditLogFactory,
 )
 
 @pytest.fixture
@@ -80,3 +86,38 @@ def api_token(db, agent_user):
 def admin_api_token(db, admin_user):
     """Create an API token for an admin. The `plain_text` attr holds the raw string."""
     return ApiTokenFactory(user=admin_user)
+
+
+@pytest.fixture
+def ticket_status(db):
+    return TicketStatusFactory()
+
+
+@pytest.fixture
+def business_schedule(db):
+    return BusinessScheduleFactory()
+
+
+@pytest.fixture
+def holiday(db, business_schedule):
+    return HolidayFactory(schedule=business_schedule)
+
+
+@pytest.fixture
+def permission(db):
+    return PermissionFactory()
+
+
+@pytest.fixture
+def role(db):
+    return RoleFactory()
+
+
+@pytest.fixture
+def audit_log(db, admin_user, ticket):
+    from django.contrib.contenttypes.models import ContentType
+    return AuditLogFactory(
+        user=admin_user,
+        auditable_content_type=ContentType.objects.get_for_model(ticket),
+        auditable_object_id=ticket.pk,
+    )

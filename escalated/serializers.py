@@ -322,3 +322,131 @@ class SatisfactionRatingSerializer:
         except Exception:
             data["rated_by"] = None
         return data
+
+
+class AuditLogSerializer:
+    @staticmethod
+    def serialize(log):
+        return {
+            "id": log.pk,
+            "user": _user_dict(log.user),
+            "action": log.action,
+            "auditable_type": str(log.auditable_content_type),
+            "auditable_id": log.auditable_object_id,
+            "old_values": log.old_values,
+            "new_values": log.new_values,
+            "ip_address": log.ip_address,
+            "user_agent": log.user_agent,
+            "created_at": _format_dt(log.created_at),
+        }
+
+    @staticmethod
+    def serialize_list(logs):
+        return [AuditLogSerializer.serialize(l) for l in logs]
+
+
+class TicketStatusSerializer:
+    @staticmethod
+    def serialize(status):
+        return {
+            "id": status.pk,
+            "label": status.label,
+            "slug": status.slug,
+            "category": status.category,
+            "color": status.color,
+            "description": status.description,
+            "position": status.position,
+            "is_default": status.is_default,
+            "created_at": _format_dt(status.created_at),
+            "updated_at": _format_dt(status.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(statuses):
+        return [TicketStatusSerializer.serialize(s) for s in statuses]
+
+
+class HolidaySerializer:
+    @staticmethod
+    def serialize(holiday):
+        return {
+            "id": holiday.pk,
+            "name": holiday.name,
+            "date": str(holiday.date),
+            "recurring": holiday.recurring,
+        }
+
+
+class BusinessScheduleSerializer:
+    @staticmethod
+    def serialize(schedule, include_holidays=True):
+        data = {
+            "id": schedule.pk,
+            "name": schedule.name,
+            "timezone": schedule.timezone,
+            "is_default": schedule.is_default,
+            "schedule": schedule.schedule,
+            "created_at": _format_dt(schedule.created_at),
+            "updated_at": _format_dt(schedule.updated_at),
+        }
+        if include_holidays:
+            data["holidays"] = [
+                HolidaySerializer.serialize(h)
+                for h in schedule.holidays.all()
+            ]
+        return data
+
+    @staticmethod
+    def serialize_list(schedules):
+        return [BusinessScheduleSerializer.serialize(s) for s in schedules]
+
+
+class PermissionSerializer:
+    @staticmethod
+    def serialize(permission):
+        return {
+            "id": permission.pk,
+            "name": permission.name,
+            "slug": permission.slug,
+            "group": permission.group,
+            "description": permission.description,
+        }
+
+    @staticmethod
+    def serialize_list(permissions):
+        return [PermissionSerializer.serialize(p) for p in permissions]
+
+    @staticmethod
+    def serialize_grouped(permissions):
+        """Group permissions by their group field."""
+        grouped = {}
+        for p in permissions:
+            group = p.group
+            if group not in grouped:
+                grouped[group] = []
+            grouped[group].append(PermissionSerializer.serialize(p))
+        return grouped
+
+
+class RoleSerializer:
+    @staticmethod
+    def serialize(role, include_permissions=False):
+        data = {
+            "id": role.pk,
+            "name": role.name,
+            "slug": role.slug,
+            "description": role.description,
+            "is_system": role.is_system,
+            "users_count": role.users.count() if hasattr(role, '_prefetched_objects_cache') else getattr(role, 'users__count', role.users.count()),
+            "created_at": _format_dt(role.created_at),
+            "updated_at": _format_dt(role.updated_at),
+        }
+        if include_permissions:
+            data["permissions"] = PermissionSerializer.serialize_list(
+                role.permissions.all()
+            )
+        return data
+
+    @staticmethod
+    def serialize_list(roles):
+        return [RoleSerializer.serialize(r) for r in roles]

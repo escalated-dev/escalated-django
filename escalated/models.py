@@ -883,3 +883,171 @@ class ApiToken(models.Model):
             return cls.objects.get(token=hashed)
         except cls.DoesNotExist:
             return None
+
+
+# ---------------------------------------------------------------------------
+# Audit Log
+# ---------------------------------------------------------------------------
+
+
+class AuditLog(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="escalated_audit_logs",
+    )
+    action = models.CharField(max_length=50)
+    auditable_content_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE,
+        related_name="escalated_audit_logs",
+    )
+    auditable_object_id = models.PositiveIntegerField()
+    auditable = GenericForeignKey("auditable_content_type", "auditable_object_id")
+    old_values = models.JSONField(null=True, blank=True)
+    new_values = models.JSONField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = get_table_name("audit_logs")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["auditable_content_type", "auditable_object_id"]),
+            models.Index(fields=["user"]),
+            models.Index(fields=["action"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.action} on {self.auditable_content_type} #{self.auditable_object_id}"
+
+
+# ---------------------------------------------------------------------------
+# Ticket Status
+# ---------------------------------------------------------------------------
+
+
+class TicketStatus(models.Model):
+    CATEGORY_CHOICES = [
+        ("new", _("New")),
+        ("open", _("Open")),
+        ("pending", _("Pending")),
+        ("on_hold", _("On Hold")),
+        ("solved", _("Solved")),
+    ]
+
+    label = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    color = models.CharField(max_length=20, default="#6b7280")
+    description = models.TextField(blank=True, default="")
+    position = models.IntegerField(default=0)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("ticket_statuses")
+        ordering = ["category", "position"]
+
+    def __str__(self):
+        return self.label
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.label).replace("-", "_")
+        super().save(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Business Schedule & Holiday
+# ---------------------------------------------------------------------------
+
+
+class BusinessSchedule(models.Model):
+    name = models.CharField(max_length=255)
+    timezone = models.CharField(max_length=100, default="UTC")
+    is_default = models.BooleanField(default=False)
+    schedule = models.JSONField(
+        default=dict,
+        help_text=_('Day schedules, e.g. {"monday": {"start": "09:00", "end": "17:00"}}'),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("business_schedules")
+
+    def __str__(self):
+        return self.name
+
+
+class Holiday(models.Model):
+    schedule = models.ForeignKey(
+        BusinessSchedule, on_delete=models.CASCADE, related_name="holidays",
+    )
+    name = models.CharField(max_length=255)
+    date = models.DateField()
+    recurring = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("holidays")
+
+    def __str__(self):
+        return f"{self.name} ({self.date})"
+
+
+# ---------------------------------------------------------------------------
+# Role & Permission
+# ---------------------------------------------------------------------------
+
+
+class Permission(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    group = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = get_table_name("permissions")
+        ordering = ["group", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Role(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    description = models.TextField(blank=True, default="")
+    is_system = models.BooleanField(default=False)
+    permissions = models.ManyToManyField(
+        "Permission", related_name="roles", blank=True,
+        db_table=get_table_name("role_permission"),
+    )
+    users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, related_name="escalated_roles", blank=True,
+        db_table=get_table_name("role_user"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("roles")
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name).replace("-", "_")
+        super().save(*args, **kwargs)
+
+    def has_permission(self, slug):
+        return self.permissions.filter(slug=slug).exists()
