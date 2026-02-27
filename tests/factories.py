@@ -28,6 +28,15 @@ from escalated.models import (
     SideConversationReply,
     ArticleCategory,
     Article,
+    AgentProfile,
+    Skill,
+    AgentCapacity,
+    Webhook,
+    WebhookDelivery,
+    Automation,
+    TwoFactor,
+    CustomObject,
+    CustomObjectRecord,
 )
 
 
@@ -362,3 +371,90 @@ class ArticleFactory(factory.django.DjangoModelFactory):
     body = factory.Faker("paragraph")
     status = "draft"
     author = factory.SubFactory(UserFactory)
+
+
+class AgentProfileFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = AgentProfile
+
+    user = factory.SubFactory(UserFactory)
+    agent_type = "full"
+    max_tickets = None
+
+
+class SkillFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Skill
+        django_get_or_create = ("slug",)
+
+    name = factory.Sequence(lambda n: f"Skill {n}")
+    slug = factory.Sequence(lambda n: f"skill-{n}")
+
+
+class AgentCapacityFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = AgentCapacity
+
+    user = factory.SubFactory(UserFactory)
+    channel = "default"
+    max_concurrent = 10
+    current_count = 0
+
+
+class WebhookFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Webhook
+
+    url = factory.Sequence(lambda n: f"https://example.com/webhook/{n}")
+    events = factory.LazyFunction(lambda: ["ticket.created", "ticket.updated"])
+    secret = factory.Faker("sha256")
+    active = True
+
+
+class WebhookDeliveryFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = WebhookDelivery
+
+    webhook = factory.SubFactory(WebhookFactory)
+    event = "ticket.created"
+    payload = factory.LazyFunction(lambda: {"ticket_id": 1})
+    response_code = 200
+    attempts = 1
+
+
+class AutomationFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Automation
+
+    name = factory.Sequence(lambda n: f"Automation {n}")
+    conditions = factory.LazyFunction(lambda: [{"field": "status", "operator": "=", "value": "open"}])
+    actions = factory.LazyFunction(lambda: [{"type": "change_status", "value": "in_progress"}])
+    active = True
+    position = factory.Sequence(lambda n: n)
+
+
+class TwoFactorFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = TwoFactor
+
+    user = factory.SubFactory(UserFactory)
+    secret = factory.LazyFunction(lambda: "JBSWY3DPEHPK3PXP")
+    recovery_codes = factory.LazyFunction(lambda: ["AAAAAAAA-BBBBBBBB", "CCCCCCCC-DDDDDDDD"])
+    confirmed_at = None
+
+
+class CustomObjectFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = CustomObject
+
+    name = factory.Sequence(lambda n: f"Object {n}")
+    slug = factory.Sequence(lambda n: f"object-{n}")
+    fields_schema = factory.LazyFunction(lambda: [{"name": "field1", "type": "text", "required": True}])
+
+
+class CustomObjectRecordFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = CustomObjectRecord
+
+    object = factory.SubFactory(CustomObjectFactory)
+    data = factory.LazyFunction(lambda: {"field1": "value1"})

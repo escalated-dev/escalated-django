@@ -1390,3 +1390,270 @@ class Article(models.Model):
         """Increment the not-helpful count by one."""
         self.not_helpful_count += 1
         self.save(update_fields=["not_helpful_count", "updated_at"])
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: Agent & Routing
+# ---------------------------------------------------------------------------
+
+
+class AgentProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="escalated_agent_profile",
+    )
+    agent_type = models.CharField(max_length=20, default="full")
+    max_tickets = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("agent_profiles")
+
+    def __str__(self):
+        return f"Agent profile for {self.user}"
+
+    def is_light_agent(self) -> bool:
+        return self.agent_type == "light"
+
+    def is_full_agent(self) -> bool:
+        return self.agent_type == "full"
+
+    @classmethod
+    def for_user(cls, user_id):
+        """Get or create an agent profile for the given user ID."""
+        obj, _ = cls.objects.get_or_create(
+            user_id=user_id,
+            defaults={"agent_type": "full"},
+        )
+        return obj
+
+
+class AgentSkill(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    skill = models.ForeignKey(
+        "Skill",
+        on_delete=models.CASCADE,
+        related_name="agent_skills",
+    )
+    proficiency = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        db_table = get_table_name("agent_skill")
+        unique_together = [("user", "skill")]
+
+    def __str__(self):
+        return f"{self.user} - {self.skill} ({self.proficiency})"
+
+
+class Skill(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    agents = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through="AgentSkill",
+        related_name="escalated_skills",
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("skills")
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class AgentCapacity(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="escalated_agent_capacities",
+    )
+    channel = models.CharField(max_length=50, default="default")
+    max_concurrent = models.PositiveIntegerField(default=10)
+    current_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("agent_capacity")
+        unique_together = [("user", "channel")]
+
+    def __str__(self):
+        return f"{self.user} - {self.channel}"
+
+    def load_percentage(self) -> float:
+        if self.max_concurrent <= 0:
+            return 100.0
+        return round((self.current_count / self.max_concurrent) * 100, 1)
+
+    def has_capacity(self) -> bool:
+        return self.current_count < self.max_concurrent
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: Automation & Integration
+# ---------------------------------------------------------------------------
+
+
+class WebhookQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(active=True)
+
+
+class WebhookManager(models.Manager):
+    def get_queryset(self):
+        return WebhookQuerySet(self.model, using=self._db)
+
+    def active(self):
+        return self.get_queryset().active()
+
+
+class Webhook(models.Model):
+    url = models.URLField(max_length=500)
+    events = models.JSONField(default=list)
+    secret = models.CharField(max_length=255, null=True, blank=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = WebhookManager()
+
+    class Meta:
+        db_table = get_table_name("webhooks")
+
+    def __str__(self):
+        return self.url
+
+    def subscribed_to(self, event: str) -> bool:
+        return event in (self.events or [])
+
+
+class WebhookDelivery(models.Model):
+    webhook = models.ForeignKey(
+        Webhook,
+        on_delete=models.CASCADE,
+        related_name="deliveries",
+    )
+    event = models.CharField(max_length=100)
+    payload = models.JSONField(null=True, blank=True)
+    response_code = models.PositiveSmallIntegerField(null=True, blank=True)
+    response_body = models.TextField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("webhook_deliveries")
+
+    def __str__(self):
+        return f"Delivery {self.pk} for {self.webhook}"
+
+    def is_success(self) -> bool:
+        return self.response_code is not None and 200 <= self.response_code <= 299
+
+
+class AutomationQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(active=True).order_by("position")
+
+
+class AutomationManager(models.Manager):
+    def get_queryset(self):
+        return AutomationQuerySet(self.model, using=self._db)
+
+    def active(self):
+        return self.get_queryset().active()
+
+
+class Automation(models.Model):
+    name = models.CharField(max_length=255)
+    conditions = models.JSONField(default=list)
+    actions = models.JSONField(default=list)
+    active = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = AutomationManager()
+
+    class Meta:
+        db_table = get_table_name("automations")
+        indexes = [
+            models.Index(fields=["active"]),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Security & Enterprise
+# ---------------------------------------------------------------------------
+
+
+class TwoFactor(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="escalated_two_factor",
+    )
+    secret = models.TextField()
+    recovery_codes = models.JSONField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("two_factor")
+
+    def __str__(self):
+        return f"2FA for {self.user}"
+
+    def is_confirmed(self) -> bool:
+        return self.confirmed_at is not None
+
+
+class CustomObject(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    fields_schema = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("custom_objects")
+
+    def __str__(self):
+        return self.name
+
+
+class CustomObjectRecord(models.Model):
+    object = models.ForeignKey(
+        CustomObject,
+        on_delete=models.CASCADE,
+        related_name="records",
+    )
+    data = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("custom_object_records")
+
+    def __str__(self):
+        return f"Record {self.pk} for {self.object.name}"

@@ -139,6 +139,44 @@ admin_patterns = [
     path("admin/plugins/<slug:slug>/activate/", admin_plugins.plugin_activate, name="admin_plugins_activate"),
     path("admin/plugins/<slug:slug>/deactivate/", admin_plugins.plugin_deactivate, name="admin_plugins_deactivate"),
     path("admin/plugins/<slug:slug>/delete/", admin_plugins.plugin_delete, name="admin_plugins_delete"),
+    # Skills
+    path("admin/skills/", admin.skills_index, name="admin_skills_index"),
+    path("admin/skills/create/", admin.skills_create, name="admin_skills_create"),
+    path("admin/skills/<int:skill_id>/edit/", admin.skills_edit, name="admin_skills_edit"),
+    path("admin/skills/<int:skill_id>/delete/", admin.skills_delete, name="admin_skills_delete"),
+    # Capacity
+    path("admin/capacity/", admin.capacity_index, name="admin_capacity_index"),
+    path("admin/capacity/<int:capacity_id>/update/", admin.capacity_update, name="admin_capacity_update"),
+    # Webhooks
+    path("admin/webhooks/", admin.webhooks_index, name="admin_webhooks_index"),
+    path("admin/webhooks/create/", admin.webhooks_create, name="admin_webhooks_create"),
+    path("admin/webhooks/<int:webhook_id>/edit/", admin.webhooks_edit, name="admin_webhooks_edit"),
+    path("admin/webhooks/<int:webhook_id>/delete/", admin.webhooks_delete, name="admin_webhooks_delete"),
+    path("admin/webhooks/<int:webhook_id>/deliveries/", admin.webhooks_deliveries, name="admin_webhooks_deliveries"),
+    path("admin/webhooks/deliveries/<int:delivery_id>/retry/", admin.webhooks_retry, name="admin_webhooks_retry"),
+    # Automations
+    path("admin/automations/", admin.automations_index, name="admin_automations_index"),
+    path("admin/automations/create/", admin.automations_create, name="admin_automations_create"),
+    path("admin/automations/<int:automation_id>/edit/", admin.automations_edit, name="admin_automations_edit"),
+    path("admin/automations/<int:automation_id>/delete/", admin.automations_delete, name="admin_automations_delete"),
+    # Settings - CSAT, SSO, 2FA
+    path("admin/settings/csat/", admin.settings_csat, name="admin_settings_csat"),
+    path("admin/settings/sso/", admin.settings_sso, name="admin_settings_sso"),
+    path("admin/settings/two-factor/", admin.settings_two_factor, name="admin_settings_two_factor"),
+    path("admin/settings/two-factor/setup/", admin.two_factor_setup, name="admin_two_factor_setup"),
+    path("admin/settings/two-factor/confirm/", admin.two_factor_confirm, name="admin_two_factor_confirm"),
+    path("admin/settings/two-factor/disable/", admin.two_factor_disable, name="admin_two_factor_disable"),
+    # Custom Objects
+    path("admin/custom-objects/", admin.custom_objects_index, name="admin_custom_objects_index"),
+    path("admin/custom-objects/create/", admin.custom_objects_create, name="admin_custom_objects_create"),
+    path("admin/custom-objects/<int:object_id>/edit/", admin.custom_objects_edit, name="admin_custom_objects_edit"),
+    path("admin/custom-objects/<int:object_id>/delete/", admin.custom_objects_delete, name="admin_custom_objects_delete"),
+    path("admin/custom-objects/<int:object_id>/records/", admin.custom_object_records, name="admin_custom_object_records"),
+    path("admin/custom-objects/<int:object_id>/records/store/", admin.custom_object_records_store, name="admin_custom_object_records_store"),
+    path("admin/custom-objects/<int:object_id>/records/<int:record_id>/update/", admin.custom_object_records_update, name="admin_custom_object_records_update"),
+    path("admin/custom-objects/<int:object_id>/records/<int:record_id>/delete/", admin.custom_object_records_delete, name="admin_custom_object_records_delete"),
+    # Reports
+    path("admin/reports/dashboard/", admin.reports_dashboard, name="admin_reports_dashboard"),
 ]
 
 # Guest-facing URLs (no authentication required)

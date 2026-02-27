@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Avg, F
+from django.db.models import Count, Q, Avg, F, Max
 from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -37,6 +37,16 @@ from escalated.models import (
     SideConversationReply,
     ArticleCategory,
     Article,
+    AgentProfile,
+    Skill,
+    AgentSkill,
+    AgentCapacity,
+    Webhook,
+    WebhookDelivery,
+    Automation,
+    TwoFactor,
+    CustomObject,
+    CustomObjectRecord,
 )
 from escalated.permissions import is_admin, is_agent
 from escalated.serializers import (
@@ -64,6 +74,14 @@ from escalated.serializers import (
     SideConversationReplySerializer,
     ArticleCategorySerializer,
     ArticleSerializer,
+    AgentProfileSerializer,
+    SkillSerializer,
+    AgentCapacitySerializer,
+    WebhookSerializer,
+    WebhookDeliverySerializer,
+    AutomationSerializer,
+    CustomObjectSerializer,
+    CustomObjectRecordSerializer,
 )
 from escalated.services.ticket_service import TicketService
 
@@ -2632,3 +2650,584 @@ def kb_categories_delete(request, category_id):
         pass
 
     return redirect("escalated:admin_kb_categories_index")
+
+
+# ---------------------------------------------------------------------------
+# Skills CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def skills_index(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    skills = Skill.objects.annotate(agents_count=Count("agents")).order_by("name")
+    return render(request, "Escalated/Admin/Skills/Index", props={"skills": SkillSerializer.serialize_list(skills)})
+
+
+@login_required
+def skills_create(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if not name:
+            return render(request, "Escalated/Admin/Skills/Form", props={"errors": {"name": _("Name is required.")}})
+        Skill.objects.create(name=name)
+        return redirect("escalated:admin_skills_index")
+    return render(request, "Escalated/Admin/Skills/Form", props={})
+
+
+@login_required
+def skills_edit(request, skill_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    try:
+        skill = Skill.objects.get(pk=skill_id)
+    except Skill.DoesNotExist:
+        return HttpResponseNotFound(_("Skill not found"))
+    if request.method == "POST":
+        skill.name = request.POST.get("name", skill.name)
+        skill.save()
+        return redirect("escalated:admin_skills_index")
+    return render(request, "Escalated/Admin/Skills/Form", props={"skill": SkillSerializer.serialize(skill)})
+
+
+@login_required
+def skills_delete(request, skill_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+    try:
+        Skill.objects.get(pk=skill_id).delete()
+    except Skill.DoesNotExist:
+        pass
+    return redirect("escalated:admin_skills_index")
+
+
+# ---------------------------------------------------------------------------
+# Capacity
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def capacity_index(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    capacities = AgentCapacity.objects.select_related("user").order_by("user_id")
+    return render(request, "Escalated/Admin/Capacity/Index", props={"capacities": AgentCapacitySerializer.serialize_list(capacities)})
+
+
+@login_required
+def capacity_update(request, capacity_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+    try:
+        capacity = AgentCapacity.objects.get(pk=capacity_id)
+    except AgentCapacity.DoesNotExist:
+        return HttpResponseNotFound(_("Capacity not found"))
+    max_concurrent = request.POST.get("max_concurrent")
+    if max_concurrent:
+        capacity.max_concurrent = int(max_concurrent)
+        capacity.save(update_fields=["max_concurrent", "updated_at"])
+    return redirect("escalated:admin_capacity_index")
+
+
+# ---------------------------------------------------------------------------
+# Webhooks CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def webhooks_index(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    webhooks = Webhook.objects.annotate(deliveries_count=Count("deliveries")).order_by("-created_at")
+    return render(request, "Escalated/Admin/Webhooks/Index", props={
+        "webhooks": WebhookSerializer.serialize_list(webhooks),
+        "available_events": WebhookSerializer.AVAILABLE_EVENTS,
+    })
+
+
+@login_required
+def webhooks_create(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method == "POST":
+        url = request.POST.get("url", "").strip()
+        if not url:
+            return render(request, "Escalated/Admin/Webhooks/Form", props={
+                "errors": {"url": _("URL is required.")},
+                "available_events": WebhookSerializer.AVAILABLE_EVENTS,
+            })
+        try:
+            events = json.loads(request.POST.get("events", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            events = []
+        Webhook.objects.create(
+            url=url,
+            events=events,
+            secret=request.POST.get("secret", "") or None,
+            active=request.POST.get("active", "true") == "true",
+        )
+        return redirect("escalated:admin_webhooks_index")
+    return render(request, "Escalated/Admin/Webhooks/Form", props={"available_events": WebhookSerializer.AVAILABLE_EVENTS})
+
+
+@login_required
+def webhooks_edit(request, webhook_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    try:
+        webhook = Webhook.objects.get(pk=webhook_id)
+    except Webhook.DoesNotExist:
+        return HttpResponseNotFound(_("Webhook not found"))
+    if request.method == "POST":
+        webhook.url = request.POST.get("url", webhook.url)
+        try:
+            webhook.events = json.loads(request.POST.get("events", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            pass
+        secret = request.POST.get("secret")
+        if secret is not None:
+            webhook.secret = secret or None
+        webhook.active = request.POST.get("active", "true") == "true"
+        webhook.save()
+        return redirect("escalated:admin_webhooks_index")
+    return render(request, "Escalated/Admin/Webhooks/Form", props={
+        "webhook": WebhookSerializer.serialize(webhook),
+        "available_events": WebhookSerializer.AVAILABLE_EVENTS,
+    })
+
+
+@login_required
+def webhooks_delete(request, webhook_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+    try:
+        Webhook.objects.get(pk=webhook_id).delete()
+    except Webhook.DoesNotExist:
+        pass
+    return redirect("escalated:admin_webhooks_index")
+
+
+@login_required
+def webhooks_deliveries(request, webhook_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    try:
+        webhook = Webhook.objects.get(pk=webhook_id)
+    except Webhook.DoesNotExist:
+        return HttpResponseNotFound(_("Webhook not found"))
+    deliveries = webhook.deliveries.order_by("-created_at")
+    paginator = Paginator(deliveries, 25)
+    page = paginator.get_page(request.GET.get("page", 1))
+    return render(request, "Escalated/Admin/Webhooks/Deliveries", props={
+        "webhook": WebhookSerializer.serialize(webhook),
+        "deliveries": WebhookDeliverySerializer.serialize_list(page.object_list),
+        "pagination": {
+            "current_page": page.number,
+            "total_pages": paginator.num_pages,
+            "total_count": paginator.count,
+            "has_next": page.has_next(),
+            "has_previous": page.has_previous(),
+        },
+    })
+
+
+@login_required
+def webhooks_retry(request, delivery_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        delivery = WebhookDelivery.objects.get(pk=delivery_id)
+    except WebhookDelivery.DoesNotExist:
+        return JsonResponse({"error": "Delivery not found"}, status=404)
+    from escalated.services.webhook_dispatcher import WebhookDispatcher
+    dispatcher = WebhookDispatcher()
+    dispatcher.retry_delivery(delivery)
+    return JsonResponse({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Automations CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def automations_index(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    automations = Automation.objects.order_by("position")
+    return render(request, "Escalated/Admin/Automations/Index", props={"automations": AutomationSerializer.serialize_list(automations)})
+
+
+@login_required
+def automations_create(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if not name:
+            return render(request, "Escalated/Admin/Automations/Form", props={"errors": {"name": _("Name is required.")}})
+        try:
+            conditions = json.loads(request.POST.get("conditions", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            conditions = []
+        try:
+            actions = json.loads(request.POST.get("actions", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            actions = []
+        max_pos = Automation.objects.aggregate(max_pos=Max("position"))["max_pos"] or 0
+        Automation.objects.create(
+            name=name,
+            conditions=conditions,
+            actions=actions,
+            active=request.POST.get("active", "true") == "true",
+            position=max_pos + 1,
+        )
+        return redirect("escalated:admin_automations_index")
+    return render(request, "Escalated/Admin/Automations/Form", props={})
+
+
+@login_required
+def automations_edit(request, automation_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    try:
+        automation = Automation.objects.get(pk=automation_id)
+    except Automation.DoesNotExist:
+        return HttpResponseNotFound(_("Automation not found"))
+    if request.method == "POST":
+        automation.name = request.POST.get("name", automation.name)
+        try:
+            automation.conditions = json.loads(request.POST.get("conditions", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            pass
+        try:
+            automation.actions = json.loads(request.POST.get("actions", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            pass
+        automation.active = request.POST.get("active", "true") == "true"
+        automation.save()
+        return redirect("escalated:admin_automations_index")
+    return render(request, "Escalated/Admin/Automations/Form", props={"automation": AutomationSerializer.serialize(automation)})
+
+
+@login_required
+def automations_delete(request, automation_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+    try:
+        Automation.objects.get(pk=automation_id).delete()
+    except Automation.DoesNotExist:
+        pass
+    return redirect("escalated:admin_automations_index")
+
+
+# ---------------------------------------------------------------------------
+# Settings - CSAT, SSO, Two-Factor
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def settings_csat(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    from escalated.models import EscalatedSetting
+    defaults = {
+        "csat_question_text": "How would you rate your support experience?",
+        "csat_scale": "1-5",
+        "csat_delivery_trigger": "on_resolve",
+        "csat_delay_hours": "0",
+    }
+    if request.method == "POST":
+        for key in defaults:
+            EscalatedSetting.objects.update_or_create(key=key, defaults={"value": request.POST.get(key, defaults[key])})
+        return redirect("escalated:admin_settings")
+    config = {}
+    for key, default in defaults.items():
+        try:
+            config[key] = EscalatedSetting.objects.get(key=key).value
+        except EscalatedSetting.DoesNotExist:
+            config[key] = default
+    return render(request, "Escalated/Admin/Settings/Csat", props={"config": config})
+
+
+@login_required
+def settings_sso(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    from escalated.services.sso_service import SsoService
+    sso = SsoService()
+    if request.method == "POST":
+        sso.save_config(request.POST.dict())
+        return redirect("escalated:admin_settings")
+    return render(request, "Escalated/Admin/Settings/Sso", props={"config": sso.get_config()})
+
+
+@login_required
+def settings_two_factor(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    two_factor = TwoFactor.objects.filter(user=request.user).first()
+    return render(request, "Escalated/Admin/Settings/TwoFactor", props={
+        "enabled": two_factor.is_confirmed() if two_factor else False,
+        "pending": two_factor is not None and not two_factor.is_confirmed() if two_factor else False,
+    })
+
+
+@login_required
+def two_factor_setup(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+    from escalated.services.two_factor_service import TwoFactorService
+    service = TwoFactorService()
+    TwoFactor.objects.filter(user=request.user, confirmed_at__isnull=True).delete()
+    secret = service.generate_secret()
+    recovery_codes = service.generate_recovery_codes()
+    TwoFactor.objects.create(user=request.user, secret=secret, recovery_codes=recovery_codes)
+    qr_uri = service.generate_qr_uri(secret, request.user.email)
+    return JsonResponse({"qr_uri": qr_uri, "recovery_codes": recovery_codes})
+
+
+@login_required
+def two_factor_confirm(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    code = body.get("code", "").strip()
+    if not code or len(code) != 6:
+        return JsonResponse({"error": "Code must be 6 digits"}, status=400)
+    two_factor = TwoFactor.objects.filter(user=request.user, confirmed_at__isnull=True).first()
+    if not two_factor:
+        return JsonResponse({"error": "No pending 2FA setup"}, status=400)
+    from escalated.services.two_factor_service import TwoFactorService
+    service = TwoFactorService()
+    if not service.verify(two_factor.secret, code):
+        return JsonResponse({"error": "Invalid code"}, status=400)
+    from django.utils import timezone as tz
+    two_factor.confirmed_at = tz.now()
+    two_factor.save(update_fields=["confirmed_at", "updated_at"])
+    return JsonResponse({"success": True})
+
+
+@login_required
+def two_factor_disable(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+    TwoFactor.objects.filter(user=request.user).delete()
+    return JsonResponse({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Custom Objects CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def custom_objects_index(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    objects = CustomObject.objects.annotate(records_count=Count("records")).order_by("name")
+    return render(request, "Escalated/Admin/CustomObjects/Index", props={"custom_objects": CustomObjectSerializer.serialize_list(objects)})
+
+
+@login_required
+def custom_objects_create(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if not name:
+            return render(request, "Escalated/Admin/CustomObjects/Form", props={"errors": {"name": _("Name is required.")}})
+        slug_val = slugify(request.POST.get("slug", "") or name)
+        try:
+            fields_schema = json.loads(request.POST.get("fields_schema", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            fields_schema = []
+        CustomObject.objects.create(name=name, slug=slug_val, fields_schema=fields_schema)
+        return redirect("escalated:admin_custom_objects_index")
+    return render(request, "Escalated/Admin/CustomObjects/Form", props={})
+
+
+@login_required
+def custom_objects_edit(request, object_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    try:
+        obj = CustomObject.objects.get(pk=object_id)
+    except CustomObject.DoesNotExist:
+        return HttpResponseNotFound(_("Custom object not found"))
+    if request.method == "POST":
+        obj.name = request.POST.get("name", obj.name)
+        obj.slug = slugify(request.POST.get("slug", "") or obj.name)
+        try:
+            obj.fields_schema = json.loads(request.POST.get("fields_schema", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            pass
+        obj.save()
+        return redirect("escalated:admin_custom_objects_index")
+    return render(request, "Escalated/Admin/CustomObjects/Form", props={"custom_object": CustomObjectSerializer.serialize(obj)})
+
+
+@login_required
+def custom_objects_delete(request, object_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+    try:
+        CustomObject.objects.get(pk=object_id).delete()
+    except CustomObject.DoesNotExist:
+        pass
+    return redirect("escalated:admin_custom_objects_index")
+
+
+@login_required
+def custom_object_records(request, object_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    try:
+        obj = CustomObject.objects.get(pk=object_id)
+    except CustomObject.DoesNotExist:
+        return HttpResponseNotFound(_("Custom object not found"))
+    records = obj.records.order_by("-created_at")
+    paginator = Paginator(records, 25)
+    page = paginator.get_page(request.GET.get("page", 1))
+    return render(request, "Escalated/Admin/CustomObjects/Records", props={
+        "custom_object": CustomObjectSerializer.serialize(obj),
+        "records": CustomObjectRecordSerializer.serialize_list(page.object_list),
+        "pagination": {
+            "current_page": page.number,
+            "total_pages": paginator.num_pages,
+            "total_count": paginator.count,
+            "has_next": page.has_next(),
+            "has_previous": page.has_previous(),
+        },
+    })
+
+
+@login_required
+def custom_object_records_store(request, object_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        obj = CustomObject.objects.get(pk=object_id)
+    except CustomObject.DoesNotExist:
+        return JsonResponse({"error": "Custom object not found"}, status=404)
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    record = CustomObjectRecord.objects.create(object=obj, data=body.get("data", {}))
+    return JsonResponse({"record": CustomObjectRecordSerializer.serialize(record)})
+
+
+@login_required
+def custom_object_records_update(request, object_id, record_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        record = CustomObjectRecord.objects.get(pk=record_id, object_id=object_id)
+    except CustomObjectRecord.DoesNotExist:
+        return JsonResponse({"error": "Record not found"}, status=404)
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    record.data = body.get("data", record.data)
+    record.save()
+    return JsonResponse({"record": CustomObjectRecordSerializer.serialize(record)})
+
+
+@login_required
+def custom_object_records_delete(request, object_id, record_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    try:
+        record = CustomObjectRecord.objects.get(pk=record_id, object_id=object_id)
+        record.delete()
+    except CustomObjectRecord.DoesNotExist:
+        return JsonResponse({"error": "Record not found"}, status=404)
+    return JsonResponse({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Reports
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def reports_dashboard(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    from escalated.services.reporting_service import ReportingService
+    from datetime import timedelta
+    from django.utils import timezone as tz
+    service = ReportingService()
+    end = tz.now()
+    start = end - timedelta(days=30)
+    return render(request, "Escalated/Admin/Reports/Dashboard", props={
+        "ticket_volume": service.get_ticket_volume_by_date(start, end),
+        "by_status": service.get_tickets_by_status(),
+        "by_priority": service.get_tickets_by_priority(),
+        "avg_response_hours": service.get_average_response_time(start, end),
+        "avg_resolution_hours": service.get_average_resolution_time(start, end),
+        "agent_performance": service.get_agent_performance(start, end),
+    })
