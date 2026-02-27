@@ -30,6 +30,13 @@ from escalated.models import (
     Holiday,
     Role,
     Permission,
+    CustomField,
+    CustomFieldValue,
+    TicketLink,
+    SideConversation,
+    SideConversationReply,
+    ArticleCategory,
+    Article,
 )
 from escalated.permissions import is_admin, is_agent
 from escalated.serializers import (
@@ -51,6 +58,12 @@ from escalated.serializers import (
     HolidaySerializer,
     RoleSerializer,
     PermissionSerializer,
+    CustomFieldSerializer,
+    TicketLinkSerializer,
+    SideConversationSerializer,
+    SideConversationReplySerializer,
+    ArticleCategorySerializer,
+    ArticleSerializer,
 )
 from escalated.services.ticket_service import TicketService
 
@@ -1865,3 +1878,757 @@ def roles_delete(request, role_id):
         pass
 
     return redirect("escalated:admin_roles_index")
+
+
+# ---------------------------------------------------------------------------
+# Custom Fields CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def custom_fields_index(request):
+    """List all custom fields."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    fields = CustomField.objects.all().order_by("position")
+    return render(request, "Escalated/Admin/CustomFields/Index", props={
+        "custom_fields": CustomFieldSerializer.serialize_list(fields),
+    })
+
+
+@login_required
+def custom_fields_create(request):
+    """Create a new custom field."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if not name:
+            return render(request, "Escalated/Admin/CustomFields/Create", props={
+                "errors": {"name": _("Name is required.")},
+                "contexts": [
+                    {"value": c.value, "label": c.label}
+                    for c in CustomField.Context
+                ],
+            })
+
+        try:
+            options = json.loads(request.POST.get("options", "null"))
+        except (json.JSONDecodeError, TypeError):
+            options = None
+
+        try:
+            validation_rules = json.loads(
+                request.POST.get("validation_rules", "null")
+            )
+        except (json.JSONDecodeError, TypeError):
+            validation_rules = None
+
+        try:
+            conditions = json.loads(request.POST.get("conditions", "null"))
+        except (json.JSONDecodeError, TypeError):
+            conditions = None
+
+        CustomField.objects.create(
+            name=name,
+            slug=slugify(request.POST.get("slug", "") or name),
+            type=request.POST.get("type", CustomField.FieldType.TEXT),
+            context=request.POST.get("context", CustomField.Context.TICKET),
+            options=options,
+            required=request.POST.get("required", "false") == "true",
+            placeholder=request.POST.get("placeholder", ""),
+            description=request.POST.get("description", ""),
+            validation_rules=validation_rules,
+            conditions=conditions,
+            position=int(request.POST.get("position", 0)),
+            active=request.POST.get("active", "true") == "true",
+        )
+        return redirect("escalated:admin_custom_fields_index")
+
+    return render(request, "Escalated/Admin/CustomFields/Create", props={
+        "contexts": [
+            {"value": c.value, "label": c.label}
+            for c in CustomField.Context
+        ],
+    })
+
+
+@login_required
+def custom_fields_edit(request, field_id):
+    """Edit an existing custom field."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    try:
+        field = CustomField.objects.get(pk=field_id)
+    except CustomField.DoesNotExist:
+        return HttpResponseNotFound(_("Custom field not found"))
+
+    if request.method == "POST":
+        field.name = request.POST.get("name", field.name)
+        field.slug = slugify(request.POST.get("slug", "") or field.name)
+        field.type = request.POST.get("type", field.type)
+        field.context = request.POST.get("context", field.context)
+        field.required = request.POST.get("required", "false") == "true"
+        field.placeholder = request.POST.get("placeholder", field.placeholder)
+        field.description = request.POST.get("description", field.description)
+        field.position = int(request.POST.get("position", field.position))
+        field.active = request.POST.get("active", "true") == "true"
+
+        try:
+            field.options = json.loads(request.POST.get("options", "null"))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        try:
+            field.validation_rules = json.loads(
+                request.POST.get("validation_rules", "null")
+            )
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        try:
+            field.conditions = json.loads(
+                request.POST.get("conditions", "null")
+            )
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        field.save()
+        return redirect("escalated:admin_custom_fields_index")
+
+    return render(request, "Escalated/Admin/CustomFields/Edit", props={
+        "custom_field": CustomFieldSerializer.serialize(field),
+        "contexts": [
+            {"value": c.value, "label": c.label}
+            for c in CustomField.Context
+        ],
+    })
+
+
+@login_required
+def custom_fields_delete(request, field_id):
+    """Delete a custom field."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        field = CustomField.objects.get(pk=field_id)
+        field.delete()
+    except CustomField.DoesNotExist:
+        pass
+
+    return redirect("escalated:admin_custom_fields_index")
+
+
+@login_required
+def custom_fields_reorder(request):
+    """Reorder custom fields via JSON body."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    positions = body.get("positions", [])
+    for item in positions:
+        CustomField.objects.filter(pk=item.get("id")).update(
+            position=item.get("position", 0)
+        )
+
+    return JsonResponse({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Ticket Links (JSON API)
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_links_index(request, ticket_id):
+    """List all links for a ticket."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return JsonResponse({"error": "Ticket not found"}, status=404)
+
+    parent_links = ticket.links_as_parent.select_related("child_ticket").all()
+    child_links = ticket.links_as_child.select_related("parent_ticket").all()
+
+    links = []
+    for link in parent_links:
+        links.append(TicketLinkSerializer.serialize(link, direction='parent'))
+    for link in child_links:
+        links.append(TicketLinkSerializer.serialize(link, direction='child'))
+
+    return JsonResponse({"links": links})
+
+
+@login_required
+def ticket_links_store(request, ticket_id):
+    """Create a link between two tickets."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return JsonResponse({"error": "Ticket not found"}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    target_reference = body.get("target_reference", "").strip()
+    link_type = body.get("link_type", TicketLink.LinkType.RELATED)
+
+    if not target_reference:
+        return JsonResponse({"error": "target_reference is required"}, status=400)
+
+    try:
+        target = Ticket.objects.get(reference=target_reference)
+    except Ticket.DoesNotExist:
+        return JsonResponse({"error": "Target ticket not found"}, status=404)
+
+    # Prevent self-linking
+    if target.pk == ticket.pk:
+        return JsonResponse({"error": "Cannot link a ticket to itself"}, status=400)
+
+    # Prevent duplicates
+    exists = TicketLink.objects.filter(
+        parent_ticket=ticket, child_ticket=target, link_type=link_type
+    ).exists() or TicketLink.objects.filter(
+        parent_ticket=target, child_ticket=ticket, link_type=link_type
+    ).exists()
+
+    if exists:
+        return JsonResponse({"error": "Link already exists"}, status=400)
+
+    link = TicketLink.objects.create(
+        parent_ticket=ticket,
+        child_ticket=target,
+        link_type=link_type,
+    )
+
+    return JsonResponse({
+        "link": TicketLinkSerializer.serialize(link, direction='parent'),
+    })
+
+
+@login_required
+def ticket_links_destroy(request, ticket_id, link_id):
+    """Delete a ticket link."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        link = TicketLink.objects.get(pk=link_id)
+        # Verify the link belongs to this ticket (as parent or child)
+        if link.parent_ticket_id != ticket_id and link.child_ticket_id != ticket_id:
+            return JsonResponse({"error": "Link not found for this ticket"}, status=404)
+        link.delete()
+    except TicketLink.DoesNotExist:
+        return JsonResponse({"error": "Link not found"}, status=404)
+
+    return JsonResponse({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Ticket Merging
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_merge_search(request):
+    """Search for merge target tickets."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    q = request.GET.get("q", "").strip()
+    if not q:
+        return JsonResponse({"tickets": []})
+
+    tickets = (
+        Ticket.objects.filter(merged_into__isnull=True)
+        .filter(
+            Q(reference__icontains=q)
+            | Q(subject__icontains=q)
+        )
+        .order_by("-created_at")[:10]
+    )
+
+    return JsonResponse({
+        "tickets": [
+            {
+                "id": t.pk,
+                "reference": t.reference,
+                "subject": t.subject,
+                "status": t.status,
+            }
+            for t in tickets
+        ]
+    })
+
+
+@login_required
+def ticket_merge(request, ticket_id):
+    """Merge a ticket into a target ticket."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        source = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    target_reference = body.get("target_reference", "").strip()
+    if not target_reference:
+        return JsonResponse({"error": "target_reference is required"}, status=400)
+
+    try:
+        target = Ticket.objects.get(reference=target_reference)
+    except Ticket.DoesNotExist:
+        return JsonResponse({"error": "Target ticket not found"}, status=404)
+
+    if target.pk == source.pk:
+        return JsonResponse({"error": "Cannot merge a ticket into itself"}, status=400)
+
+    from escalated.services.ticket_merge_service import TicketMergeService
+    merge_service = TicketMergeService()
+    merge_service.merge(source, target, merged_by_user_id=request.user.pk)
+
+    return JsonResponse({"success": True, "merged_into": target.reference})
+
+
+# ---------------------------------------------------------------------------
+# Side Conversations
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def side_conversations_index(request, ticket_id):
+    """List all side conversations for a ticket."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return JsonResponse({"error": "Ticket not found"}, status=404)
+
+    conversations = (
+        ticket.side_conversations
+        .select_related("created_by")
+        .prefetch_related("replies__author")
+        .all()
+    )
+
+    return JsonResponse({
+        "side_conversations": SideConversationSerializer.serialize_list(conversations),
+    })
+
+
+@login_required
+def side_conversations_store(request, ticket_id):
+    """Create a new side conversation with an initial reply."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return JsonResponse({"error": "Ticket not found"}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    subject = body.get("subject", "").strip()
+    message_body = body.get("body", "").strip()
+    channel = body.get("channel", SideConversation.Channel.INTERNAL)
+
+    if not subject:
+        return JsonResponse({"error": "subject is required"}, status=400)
+
+    conversation = SideConversation.objects.create(
+        ticket=ticket,
+        subject=subject,
+        channel=channel,
+        created_by=request.user,
+    )
+
+    if message_body:
+        SideConversationReply.objects.create(
+            side_conversation=conversation,
+            body=message_body,
+            author=request.user,
+        )
+
+    # Re-fetch with relations for serialization
+    conversation = (
+        SideConversation.objects
+        .select_related("created_by")
+        .prefetch_related("replies__author")
+        .get(pk=conversation.pk)
+    )
+
+    return JsonResponse({
+        "side_conversation": SideConversationSerializer.serialize(conversation),
+    })
+
+
+@login_required
+def side_conversations_reply(request, ticket_id, conversation_id):
+    """Add a reply to a side conversation."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return JsonResponse({"error": "Ticket not found"}, status=404)
+
+    try:
+        conversation = SideConversation.objects.get(
+            pk=conversation_id, ticket=ticket
+        )
+    except SideConversation.DoesNotExist:
+        return JsonResponse({"error": "Side conversation not found"}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    message_body = body.get("body", "").strip()
+    if not message_body:
+        return JsonResponse({"error": "body is required"}, status=400)
+
+    reply = SideConversationReply.objects.create(
+        side_conversation=conversation,
+        body=message_body,
+        author=request.user,
+    )
+
+    return JsonResponse({
+        "reply": SideConversationReplySerializer.serialize(reply),
+    })
+
+
+@login_required
+def side_conversations_close(request, ticket_id, conversation_id):
+    """Close a side conversation."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return JsonResponse({"error": "Ticket not found"}, status=404)
+
+    try:
+        conversation = SideConversation.objects.get(
+            pk=conversation_id, ticket=ticket
+        )
+    except SideConversation.DoesNotExist:
+        return JsonResponse({"error": "Side conversation not found"}, status=404)
+
+    conversation.status = "closed"
+    conversation.save(update_fields=["status", "updated_at"])
+
+    return JsonResponse({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Base - Articles CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def articles_index(request):
+    """List all KB articles with filters."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    articles = Article.objects.select_related("category", "author")
+
+    search = request.GET.get("search")
+    if search:
+        articles = articles.search(search)
+
+    status_filter = request.GET.get("status")
+    if status_filter:
+        articles = articles.filter(status=status_filter)
+
+    category_filter = request.GET.get("category")
+    if category_filter:
+        articles = articles.filter(category_id=category_filter)
+
+    paginator = Paginator(articles, 20)
+    page = paginator.get_page(request.GET.get("page", 1))
+
+    return render(request, "Escalated/Admin/KB/Articles/Index", props={
+        "articles": ArticleSerializer.serialize_list(page.object_list),
+        "pagination": {
+            "current_page": page.number,
+            "total_pages": paginator.num_pages,
+            "total_count": paginator.count,
+            "has_next": page.has_next(),
+            "has_previous": page.has_previous(),
+        },
+        "filters": {
+            "search": search,
+            "status": status_filter,
+            "category": category_filter,
+        },
+        "categories": ArticleCategorySerializer.serialize_list(
+            ArticleCategory.objects.ordered()
+        ),
+    })
+
+
+@login_required
+def articles_create(request):
+    """Create a new KB article."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        if not title:
+            return render(request, "Escalated/Admin/KB/Articles/Create", props={
+                "errors": {"title": _("Title is required.")},
+                "categories": ArticleCategorySerializer.serialize_list(
+                    ArticleCategory.objects.ordered()
+                ),
+            })
+
+        status = request.POST.get("status", Article.Status.DRAFT)
+        published_at = None
+        if status == Article.Status.PUBLISHED:
+            published_at = timezone.now()
+
+        category_id = request.POST.get("category_id")
+
+        Article.objects.create(
+            title=title,
+            slug=slugify(request.POST.get("slug", "") or title),
+            body=request.POST.get("body", ""),
+            status=status,
+            category_id=category_id if category_id else None,
+            author=request.user,
+            published_at=published_at,
+        )
+        return redirect("escalated:admin_articles_index")
+
+    return render(request, "Escalated/Admin/KB/Articles/Create", props={
+        "categories": ArticleCategorySerializer.serialize_list(
+            ArticleCategory.objects.ordered()
+        ),
+    })
+
+
+@login_required
+def articles_edit(request, article_id):
+    """Edit a KB article."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    try:
+        article = Article.objects.select_related("category", "author").get(
+            pk=article_id
+        )
+    except Article.DoesNotExist:
+        return HttpResponseNotFound(_("Article not found"))
+
+    if request.method == "POST":
+        article.title = request.POST.get("title", article.title)
+        article.slug = slugify(request.POST.get("slug", "") or article.title)
+        article.body = request.POST.get("body", article.body)
+
+        new_status = request.POST.get("status", article.status)
+        if new_status == Article.Status.PUBLISHED and article.status != Article.Status.PUBLISHED:
+            article.published_at = timezone.now()
+        article.status = new_status
+
+        category_id = request.POST.get("category_id")
+        article.category_id = category_id if category_id else None
+
+        article.save()
+        return redirect("escalated:admin_articles_index")
+
+    return render(request, "Escalated/Admin/KB/Articles/Edit", props={
+        "article": ArticleSerializer.serialize(article),
+        "categories": ArticleCategorySerializer.serialize_list(
+            ArticleCategory.objects.ordered()
+        ),
+    })
+
+
+@login_required
+def articles_delete(request, article_id):
+    """Delete a KB article."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        article = Article.objects.get(pk=article_id)
+        article.delete()
+    except Article.DoesNotExist:
+        pass
+
+    return redirect("escalated:admin_articles_index")
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Base - Categories CRUD
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def kb_categories_index(request):
+    """List all KB categories with article counts."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    categories = ArticleCategory.objects.annotate(
+        articles_count=Count("articles")
+    ).order_by("position", "name")
+
+    return render(request, "Escalated/Admin/KB/Categories/Index", props={
+        "categories": ArticleCategorySerializer.serialize_list(categories),
+    })
+
+
+@login_required
+def kb_categories_store(request):
+    """Create a new KB category."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    name = request.POST.get("name", "").strip()
+    if not name:
+        return JsonResponse({"error": "Name is required"}, status=400)
+
+    parent_id = request.POST.get("parent_id")
+
+    ArticleCategory.objects.create(
+        name=name,
+        slug=slugify(name),
+        parent_id=parent_id if parent_id else None,
+        position=int(request.POST.get("position", 0)),
+        description=request.POST.get("description", ""),
+    )
+
+    return redirect("escalated:admin_kb_categories_index")
+
+
+@login_required
+def kb_categories_update(request, category_id):
+    """Update a KB category."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        category = ArticleCategory.objects.get(pk=category_id)
+    except ArticleCategory.DoesNotExist:
+        return HttpResponseNotFound(_("Category not found"))
+
+    category.name = request.POST.get("name", category.name)
+    category.slug = slugify(request.POST.get("slug", "") or category.name)
+    category.description = request.POST.get("description", category.description)
+    category.position = int(request.POST.get("position", category.position))
+
+    parent_id = request.POST.get("parent_id")
+    category.parent_id = parent_id if parent_id else None
+
+    category.save()
+
+    return redirect("escalated:admin_kb_categories_index")
+
+
+@login_required
+def kb_categories_delete(request, category_id):
+    """Delete a KB category."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        category = ArticleCategory.objects.get(pk=category_id)
+        category.delete()
+    except ArticleCategory.DoesNotExist:
+        pass
+
+    return redirect("escalated:admin_kb_categories_index")

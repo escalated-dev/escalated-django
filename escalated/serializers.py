@@ -450,3 +450,156 @@ class RoleSerializer:
     @staticmethod
     def serialize_list(roles):
         return [RoleSerializer.serialize(r) for r in roles]
+
+
+class CustomFieldSerializer:
+    @staticmethod
+    def serialize(field):
+        return {
+            "id": field.pk,
+            "name": field.name,
+            "slug": field.slug,
+            "type": field.type,
+            "context": field.context,
+            "options": field.options,
+            "required": field.required,
+            "placeholder": field.placeholder,
+            "description": field.description,
+            "validation_rules": field.validation_rules,
+            "conditions": field.conditions,
+            "position": field.position,
+            "active": field.active,
+            "created_at": _format_dt(field.created_at),
+            "updated_at": _format_dt(field.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(fields):
+        return [CustomFieldSerializer.serialize(f) for f in fields]
+
+
+class CustomFieldValueSerializer:
+    @staticmethod
+    def serialize(value):
+        return {
+            "id": value.pk,
+            "custom_field_id": value.custom_field_id,
+            "entity_type": str(value.entity_content_type),
+            "entity_id": value.entity_object_id,
+            "value": value.value,
+        }
+
+    @staticmethod
+    def serialize_list(values):
+        return [CustomFieldValueSerializer.serialize(v) for v in values]
+
+
+class TicketLinkSerializer:
+    @staticmethod
+    def serialize(link, direction='parent'):
+        ticket = link.child_ticket if direction == 'parent' else link.parent_ticket
+        return {
+            "id": link.pk,
+            "link_type": link.link_type,
+            "direction": direction,
+            "ticket": {
+                "id": ticket.pk,
+                "reference": ticket.reference,
+                "subject": ticket.subject,
+                "status": ticket.status,
+                "type": getattr(ticket, 'type', 'question'),
+            },
+        }
+
+
+class SideConversationReplySerializer:
+    @staticmethod
+    def serialize(reply):
+        return {
+            "id": reply.pk,
+            "side_conversation_id": reply.side_conversation_id,
+            "body": reply.body,
+            "author": _user_dict(reply.author),
+            "created_at": _format_dt(reply.created_at),
+            "updated_at": _format_dt(reply.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(replies):
+        return [SideConversationReplySerializer.serialize(r) for r in replies]
+
+
+class SideConversationSerializer:
+    @staticmethod
+    def serialize(conversation, include_replies=True):
+        data = {
+            "id": conversation.pk,
+            "ticket_id": conversation.ticket_id,
+            "subject": conversation.subject,
+            "channel": conversation.channel,
+            "status": conversation.status,
+            "created_by": _user_dict(conversation.created_by),
+            "created_at": _format_dt(conversation.created_at),
+            "updated_at": _format_dt(conversation.updated_at),
+        }
+        if include_replies:
+            data["replies"] = SideConversationReplySerializer.serialize_list(
+                conversation.replies.all()
+            )
+        return data
+
+    @staticmethod
+    def serialize_list(conversations):
+        return [SideConversationSerializer.serialize(c) for c in conversations]
+
+
+class ArticleCategorySerializer:
+    @staticmethod
+    def serialize(category):
+        data = {
+            "id": category.pk,
+            "name": category.name,
+            "slug": category.slug,
+            "parent_id": category.parent_id,
+            "position": category.position,
+            "description": category.description,
+            "created_at": _format_dt(category.created_at),
+            "updated_at": _format_dt(category.updated_at),
+        }
+        if hasattr(category, 'articles__count'):
+            data["articles_count"] = category.articles__count
+        elif hasattr(category, 'articles_count'):
+            data["articles_count"] = category.articles_count
+        return data
+
+    @staticmethod
+    def serialize_list(categories):
+        return [ArticleCategorySerializer.serialize(c) for c in categories]
+
+
+class ArticleSerializer:
+    @staticmethod
+    def serialize(article):
+        return {
+            "id": article.pk,
+            "category": (
+                ArticleCategorySerializer.serialize(article.category)
+                if article.category
+                else None
+            ),
+            "title": article.title,
+            "slug": article.slug,
+            "body": article.body,
+            "status": article.status,
+            "author": _user_dict(article.author),
+            "view_count": article.view_count,
+            "helpful_count": article.helpful_count,
+            "not_helpful_count": article.not_helpful_count,
+            "published_at": _format_dt(article.published_at),
+            "created_at": _format_dt(article.created_at),
+            "updated_at": _format_dt(article.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(articles):
+        return [ArticleSerializer.serialize(a) for a in articles]

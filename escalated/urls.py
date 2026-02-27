@@ -43,6 +43,7 @@ admin_patterns = [
     # Tickets
     path("admin/tickets/", admin.tickets_index, name="admin_tickets_index"),
     path("admin/tickets/bulk/", admin.tickets_bulk_action, name="admin_tickets_bulk"),
+    path("admin/tickets/merge-search/", admin.ticket_merge_search, name="admin_ticket_merge_search"),
     path("admin/tickets/<int:ticket_id>/", admin.tickets_show, name="admin_tickets_show"),
     path("admin/tickets/<int:ticket_id>/reply/", admin.tickets_reply, name="admin_tickets_reply"),
     path("admin/tickets/<int:ticket_id>/note/", admin.tickets_note, name="admin_tickets_note"),
@@ -55,6 +56,17 @@ admin_patterns = [
     path("admin/tickets/<int:ticket_id>/follow/", admin.tickets_follow, name="admin_tickets_follow"),
     path("admin/tickets/<int:ticket_id>/presence/", admin.tickets_presence, name="admin_tickets_presence"),
     path("admin/tickets/<int:ticket_id>/<int:reply_id>/pin/", admin.tickets_pin_reply, name="admin_tickets_pin"),
+    # Ticket Links
+    path("admin/tickets/<int:ticket_id>/links/", admin.ticket_links_index, name="admin_ticket_links_index"),
+    path("admin/tickets/<int:ticket_id>/links/store/", admin.ticket_links_store, name="admin_ticket_links_store"),
+    path("admin/tickets/<int:ticket_id>/links/<int:link_id>/delete/", admin.ticket_links_destroy, name="admin_ticket_links_destroy"),
+    # Ticket Merging
+    path("admin/tickets/<int:ticket_id>/merge/", admin.ticket_merge, name="admin_ticket_merge"),
+    # Side Conversations
+    path("admin/tickets/<int:ticket_id>/side-conversations/", admin.side_conversations_index, name="admin_side_conversations_index"),
+    path("admin/tickets/<int:ticket_id>/side-conversations/store/", admin.side_conversations_store, name="admin_side_conversations_store"),
+    path("admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/reply/", admin.side_conversations_reply, name="admin_side_conversations_reply"),
+    path("admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/close/", admin.side_conversations_close, name="admin_side_conversations_close"),
     # Departments
     path("admin/departments/", admin.departments_index, name="admin_departments_index"),
     path("admin/departments/create/", admin.departments_create, name="admin_departments_create"),
@@ -105,6 +117,22 @@ admin_patterns = [
     path("admin/roles/create/", admin.roles_create, name="admin_roles_create"),
     path("admin/roles/<int:role_id>/edit/", admin.roles_edit, name="admin_roles_edit"),
     path("admin/roles/<int:role_id>/delete/", admin.roles_delete, name="admin_roles_delete"),
+    # Custom Fields
+    path("admin/custom-fields/", admin.custom_fields_index, name="admin_custom_fields_index"),
+    path("admin/custom-fields/create/", admin.custom_fields_create, name="admin_custom_fields_create"),
+    path("admin/custom-fields/<int:field_id>/edit/", admin.custom_fields_edit, name="admin_custom_fields_edit"),
+    path("admin/custom-fields/<int:field_id>/delete/", admin.custom_fields_delete, name="admin_custom_fields_delete"),
+    path("admin/custom-fields/reorder/", admin.custom_fields_reorder, name="admin_custom_fields_reorder"),
+    # Knowledge Base - Articles
+    path("admin/kb/articles/", admin.articles_index, name="admin_articles_index"),
+    path("admin/kb/articles/create/", admin.articles_create, name="admin_articles_create"),
+    path("admin/kb/articles/<int:article_id>/edit/", admin.articles_edit, name="admin_articles_edit"),
+    path("admin/kb/articles/<int:article_id>/delete/", admin.articles_delete, name="admin_articles_delete"),
+    # Knowledge Base - Categories
+    path("admin/kb/categories/", admin.kb_categories_index, name="admin_kb_categories_index"),
+    path("admin/kb/categories/store/", admin.kb_categories_store, name="admin_kb_categories_store"),
+    path("admin/kb/categories/<int:category_id>/update/", admin.kb_categories_update, name="admin_kb_categories_update"),
+    path("admin/kb/categories/<int:category_id>/delete/", admin.kb_categories_delete, name="admin_kb_categories_delete"),
     # Plugins
     path("admin/plugins/", admin_plugins.plugin_list, name="admin_plugins_index"),
     path("admin/plugins/upload/", admin_plugins.plugin_upload, name="admin_plugins_upload"),

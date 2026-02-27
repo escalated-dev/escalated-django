@@ -16,6 +16,13 @@ from tests.factories import (
     PermissionFactory,
     RoleFactory,
     AuditLogFactory,
+    CustomFieldFactory,
+    CustomFieldValueFactory,
+    TicketLinkFactory,
+    SideConversationFactory,
+    SideConversationReplyFactory,
+    ArticleCategoryFactory,
+    ArticleFactory,
 )
 
 @pytest.fixture
@@ -121,3 +128,28 @@ def audit_log(db, admin_user, ticket):
         auditable_content_type=ContentType.objects.get_for_model(ticket),
         auditable_object_id=ticket.pk,
     )
+
+
+@pytest.fixture
+def custom_field(db):
+    return CustomFieldFactory()
+
+
+@pytest.fixture
+def article_category(db):
+    return ArticleCategoryFactory()
+
+
+@pytest.fixture
+def article(db, article_category, admin_user):
+    return ArticleFactory(category=article_category, author=admin_user)
+
+
+@pytest.fixture
+def side_conversation(db, ticket, admin_user):
+    return SideConversationFactory(ticket=ticket, created_by=admin_user)
+
+
+@pytest.fixture
+def ticket_link(db):
+    return TicketLinkFactory()

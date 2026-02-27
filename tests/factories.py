@@ -21,6 +21,13 @@ from escalated.models import (
     Holiday,
     Role,
     Permission,
+    CustomField,
+    CustomFieldValue,
+    TicketLink,
+    SideConversation,
+    SideConversationReply,
+    ArticleCategory,
+    Article,
 )
 
 
@@ -278,3 +285,80 @@ class AuditLogFactory(factory.django.DjangoModelFactory):
     new_values = factory.LazyFunction(lambda: {"status": "open"})
     ip_address = "127.0.0.1"
     user_agent = "TestAgent/1.0"
+
+
+class CustomFieldFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = CustomField
+
+    name = factory.Sequence(lambda n: f"Field {n}")
+    slug = factory.Sequence(lambda n: f"field-{n}")
+    type = "text"
+    context = "ticket"
+    required = False
+    position = factory.Sequence(lambda n: n)
+    active = True
+
+
+class CustomFieldValueFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = CustomFieldValue
+
+    custom_field = factory.SubFactory(CustomFieldFactory)
+    entity_content_type = factory.LazyAttribute(
+        lambda o: ContentType.objects.get_for_model(Ticket)
+    )
+    entity_object_id = 1
+    value = factory.Faker("word")
+
+
+class TicketLinkFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = TicketLink
+
+    parent_ticket = factory.SubFactory(TicketFactory)
+    child_ticket = factory.SubFactory(TicketFactory)
+    link_type = "related"
+
+
+class SideConversationFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = SideConversation
+
+    ticket = factory.SubFactory(TicketFactory)
+    subject = factory.Sequence(lambda n: f"Side Conversation {n}")
+    channel = "internal"
+    status = "open"
+    created_by = factory.SubFactory(UserFactory)
+
+
+class SideConversationReplyFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = SideConversationReply
+
+    side_conversation = factory.SubFactory(SideConversationFactory)
+    body = factory.Faker("paragraph")
+    author = factory.SubFactory(UserFactory)
+
+
+class ArticleCategoryFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ArticleCategory
+        django_get_or_create = ("slug",)
+
+    name = factory.Sequence(lambda n: f"Category {n}")
+    slug = factory.Sequence(lambda n: f"category-{n}")
+    position = factory.Sequence(lambda n: n)
+    description = factory.Faker("sentence")
+
+
+class ArticleFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Article
+
+    category = factory.SubFactory(ArticleCategoryFactory)
+    title = factory.Sequence(lambda n: f"Article {n}")
+    slug = factory.Sequence(lambda n: f"article-{n}")
+    body = factory.Faker("paragraph")
+    status = "draft"
+    author = factory.SubFactory(UserFactory)
