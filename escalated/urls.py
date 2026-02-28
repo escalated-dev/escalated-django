@@ -43,6 +43,7 @@ admin_patterns = [
     # Tickets
     path("admin/tickets/", admin.tickets_index, name="admin_tickets_index"),
     path("admin/tickets/bulk/", admin.tickets_bulk_action, name="admin_tickets_bulk"),
+    path("admin/tickets/merge-search/", admin.ticket_merge_search, name="admin_ticket_merge_search"),
     path("admin/tickets/<int:ticket_id>/", admin.tickets_show, name="admin_tickets_show"),
     path("admin/tickets/<int:ticket_id>/reply/", admin.tickets_reply, name="admin_tickets_reply"),
     path("admin/tickets/<int:ticket_id>/note/", admin.tickets_note, name="admin_tickets_note"),
@@ -55,6 +56,17 @@ admin_patterns = [
     path("admin/tickets/<int:ticket_id>/follow/", admin.tickets_follow, name="admin_tickets_follow"),
     path("admin/tickets/<int:ticket_id>/presence/", admin.tickets_presence, name="admin_tickets_presence"),
     path("admin/tickets/<int:ticket_id>/<int:reply_id>/pin/", admin.tickets_pin_reply, name="admin_tickets_pin"),
+    # Ticket Links
+    path("admin/tickets/<int:ticket_id>/links/", admin.ticket_links_index, name="admin_ticket_links_index"),
+    path("admin/tickets/<int:ticket_id>/links/store/", admin.ticket_links_store, name="admin_ticket_links_store"),
+    path("admin/tickets/<int:ticket_id>/links/<int:link_id>/delete/", admin.ticket_links_destroy, name="admin_ticket_links_destroy"),
+    # Ticket Merging
+    path("admin/tickets/<int:ticket_id>/merge/", admin.ticket_merge, name="admin_ticket_merge"),
+    # Side Conversations
+    path("admin/tickets/<int:ticket_id>/side-conversations/", admin.side_conversations_index, name="admin_side_conversations_index"),
+    path("admin/tickets/<int:ticket_id>/side-conversations/store/", admin.side_conversations_store, name="admin_side_conversations_store"),
+    path("admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/reply/", admin.side_conversations_reply, name="admin_side_conversations_reply"),
+    path("admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/close/", admin.side_conversations_close, name="admin_side_conversations_close"),
     # Departments
     path("admin/departments/", admin.departments_index, name="admin_departments_index"),
     path("admin/departments/create/", admin.departments_create, name="admin_departments_create"),
@@ -88,12 +100,83 @@ admin_patterns = [
     # Settings
     path("admin/settings/", admin.settings_index, name="admin_settings"),
     path("admin/settings/update/", admin.settings_update, name="admin_settings_update"),
+    # Audit Logs
+    path("admin/audit-logs/", admin.audit_logs_index, name="admin_audit_logs_index"),
+    # Statuses
+    path("admin/statuses/", admin.statuses_index, name="admin_statuses_index"),
+    path("admin/statuses/create/", admin.statuses_create, name="admin_statuses_create"),
+    path("admin/statuses/<int:status_id>/edit/", admin.statuses_edit, name="admin_statuses_edit"),
+    path("admin/statuses/<int:status_id>/delete/", admin.statuses_delete, name="admin_statuses_delete"),
+    # Business Hours
+    path("admin/business-hours/", admin.business_hours_index, name="admin_business_hours_index"),
+    path("admin/business-hours/create/", admin.business_hours_create, name="admin_business_hours_create"),
+    path("admin/business-hours/<int:schedule_id>/edit/", admin.business_hours_edit, name="admin_business_hours_edit"),
+    path("admin/business-hours/<int:schedule_id>/delete/", admin.business_hours_delete, name="admin_business_hours_delete"),
+    # Roles
+    path("admin/roles/", admin.roles_index, name="admin_roles_index"),
+    path("admin/roles/create/", admin.roles_create, name="admin_roles_create"),
+    path("admin/roles/<int:role_id>/edit/", admin.roles_edit, name="admin_roles_edit"),
+    path("admin/roles/<int:role_id>/delete/", admin.roles_delete, name="admin_roles_delete"),
+    # Custom Fields
+    path("admin/custom-fields/", admin.custom_fields_index, name="admin_custom_fields_index"),
+    path("admin/custom-fields/create/", admin.custom_fields_create, name="admin_custom_fields_create"),
+    path("admin/custom-fields/<int:field_id>/edit/", admin.custom_fields_edit, name="admin_custom_fields_edit"),
+    path("admin/custom-fields/<int:field_id>/delete/", admin.custom_fields_delete, name="admin_custom_fields_delete"),
+    path("admin/custom-fields/reorder/", admin.custom_fields_reorder, name="admin_custom_fields_reorder"),
+    # Knowledge Base - Articles
+    path("admin/kb/articles/", admin.articles_index, name="admin_articles_index"),
+    path("admin/kb/articles/create/", admin.articles_create, name="admin_articles_create"),
+    path("admin/kb/articles/<int:article_id>/edit/", admin.articles_edit, name="admin_articles_edit"),
+    path("admin/kb/articles/<int:article_id>/delete/", admin.articles_delete, name="admin_articles_delete"),
+    # Knowledge Base - Categories
+    path("admin/kb/categories/", admin.kb_categories_index, name="admin_kb_categories_index"),
+    path("admin/kb/categories/store/", admin.kb_categories_store, name="admin_kb_categories_store"),
+    path("admin/kb/categories/<int:category_id>/update/", admin.kb_categories_update, name="admin_kb_categories_update"),
+    path("admin/kb/categories/<int:category_id>/delete/", admin.kb_categories_delete, name="admin_kb_categories_delete"),
     # Plugins
     path("admin/plugins/", admin_plugins.plugin_list, name="admin_plugins_index"),
     path("admin/plugins/upload/", admin_plugins.plugin_upload, name="admin_plugins_upload"),
     path("admin/plugins/<slug:slug>/activate/", admin_plugins.plugin_activate, name="admin_plugins_activate"),
     path("admin/plugins/<slug:slug>/deactivate/", admin_plugins.plugin_deactivate, name="admin_plugins_deactivate"),
     path("admin/plugins/<slug:slug>/delete/", admin_plugins.plugin_delete, name="admin_plugins_delete"),
+    # Skills
+    path("admin/skills/", admin.skills_index, name="admin_skills_index"),
+    path("admin/skills/create/", admin.skills_create, name="admin_skills_create"),
+    path("admin/skills/<int:skill_id>/edit/", admin.skills_edit, name="admin_skills_edit"),
+    path("admin/skills/<int:skill_id>/delete/", admin.skills_delete, name="admin_skills_delete"),
+    # Capacity
+    path("admin/capacity/", admin.capacity_index, name="admin_capacity_index"),
+    path("admin/capacity/<int:capacity_id>/update/", admin.capacity_update, name="admin_capacity_update"),
+    # Webhooks
+    path("admin/webhooks/", admin.webhooks_index, name="admin_webhooks_index"),
+    path("admin/webhooks/create/", admin.webhooks_create, name="admin_webhooks_create"),
+    path("admin/webhooks/<int:webhook_id>/edit/", admin.webhooks_edit, name="admin_webhooks_edit"),
+    path("admin/webhooks/<int:webhook_id>/delete/", admin.webhooks_delete, name="admin_webhooks_delete"),
+    path("admin/webhooks/<int:webhook_id>/deliveries/", admin.webhooks_deliveries, name="admin_webhooks_deliveries"),
+    path("admin/webhooks/deliveries/<int:delivery_id>/retry/", admin.webhooks_retry, name="admin_webhooks_retry"),
+    # Automations
+    path("admin/automations/", admin.automations_index, name="admin_automations_index"),
+    path("admin/automations/create/", admin.automations_create, name="admin_automations_create"),
+    path("admin/automations/<int:automation_id>/edit/", admin.automations_edit, name="admin_automations_edit"),
+    path("admin/automations/<int:automation_id>/delete/", admin.automations_delete, name="admin_automations_delete"),
+    # Settings - CSAT, SSO, 2FA
+    path("admin/settings/csat/", admin.settings_csat, name="admin_settings_csat"),
+    path("admin/settings/sso/", admin.settings_sso, name="admin_settings_sso"),
+    path("admin/settings/two-factor/", admin.settings_two_factor, name="admin_settings_two_factor"),
+    path("admin/settings/two-factor/setup/", admin.two_factor_setup, name="admin_two_factor_setup"),
+    path("admin/settings/two-factor/confirm/", admin.two_factor_confirm, name="admin_two_factor_confirm"),
+    path("admin/settings/two-factor/disable/", admin.two_factor_disable, name="admin_two_factor_disable"),
+    # Custom Objects
+    path("admin/custom-objects/", admin.custom_objects_index, name="admin_custom_objects_index"),
+    path("admin/custom-objects/create/", admin.custom_objects_create, name="admin_custom_objects_create"),
+    path("admin/custom-objects/<int:object_id>/edit/", admin.custom_objects_edit, name="admin_custom_objects_edit"),
+    path("admin/custom-objects/<int:object_id>/delete/", admin.custom_objects_delete, name="admin_custom_objects_delete"),
+    path("admin/custom-objects/<int:object_id>/records/", admin.custom_object_records, name="admin_custom_object_records"),
+    path("admin/custom-objects/<int:object_id>/records/store/", admin.custom_object_records_store, name="admin_custom_object_records_store"),
+    path("admin/custom-objects/<int:object_id>/records/<int:record_id>/update/", admin.custom_object_records_update, name="admin_custom_object_records_update"),
+    path("admin/custom-objects/<int:object_id>/records/<int:record_id>/delete/", admin.custom_object_records_delete, name="admin_custom_object_records_delete"),
+    # Reports
+    path("admin/reports/dashboard/", admin.reports_dashboard, name="admin_reports_dashboard"),
 ]
 
 # Guest-facing URLs (no authentication required)

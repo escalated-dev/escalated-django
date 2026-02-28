@@ -181,6 +181,12 @@ class Ticket(models.Model):
         URGENT = "urgent", _("Urgent")
         CRITICAL = "critical", _("Critical")
 
+    class TicketType(models.TextChoices):
+        QUESTION = "question", _("Question")
+        PROBLEM = "problem", _("Problem")
+        INCIDENT = "incident", _("Incident")
+        TASK = "task", _("Task")
+
     # Requester via GenericForeignKey so any user model works
     requester_content_type = models.ForeignKey(
         ContentType,
@@ -232,6 +238,16 @@ class Ticket(models.Model):
     )
     channel = models.CharField(max_length=50, default="web")
     reference = models.CharField(max_length=20, unique=True, editable=False)
+    type = models.CharField(
+        max_length=50, choices=TicketType.choices, default=TicketType.QUESTION
+    )
+    merged_into = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="merged_tickets",
+    )
 
     # SLA tracking fields
     first_response_at = models.DateTimeField(null=True, blank=True)
@@ -883,3 +899,761 @@ class ApiToken(models.Model):
             return cls.objects.get(token=hashed)
         except cls.DoesNotExist:
             return None
+
+
+# ---------------------------------------------------------------------------
+# Audit Log
+# ---------------------------------------------------------------------------
+
+
+class AuditLog(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="escalated_audit_logs",
+    )
+    action = models.CharField(max_length=50)
+    auditable_content_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE,
+        related_name="escalated_audit_logs",
+    )
+    auditable_object_id = models.PositiveIntegerField()
+    auditable = GenericForeignKey("auditable_content_type", "auditable_object_id")
+    old_values = models.JSONField(null=True, blank=True)
+    new_values = models.JSONField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = get_table_name("audit_logs")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["auditable_content_type", "auditable_object_id"]),
+            models.Index(fields=["user"]),
+            models.Index(fields=["action"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.action} on {self.auditable_content_type} #{self.auditable_object_id}"
+
+
+# ---------------------------------------------------------------------------
+# Ticket Status
+# ---------------------------------------------------------------------------
+
+
+class TicketStatus(models.Model):
+    CATEGORY_CHOICES = [
+        ("new", _("New")),
+        ("open", _("Open")),
+        ("pending", _("Pending")),
+        ("on_hold", _("On Hold")),
+        ("solved", _("Solved")),
+    ]
+
+    label = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    color = models.CharField(max_length=20, default="#6b7280")
+    description = models.TextField(blank=True, default="")
+    position = models.IntegerField(default=0)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("ticket_statuses")
+        ordering = ["category", "position"]
+
+    def __str__(self):
+        return self.label
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.label).replace("-", "_")
+        super().save(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Business Schedule & Holiday
+# ---------------------------------------------------------------------------
+
+
+class BusinessSchedule(models.Model):
+    name = models.CharField(max_length=255)
+    timezone = models.CharField(max_length=100, default="UTC")
+    is_default = models.BooleanField(default=False)
+    schedule = models.JSONField(
+        default=dict,
+        help_text=_('Day schedules, e.g. {"monday": {"start": "09:00", "end": "17:00"}}'),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("business_schedules")
+
+    def __str__(self):
+        return self.name
+
+
+class Holiday(models.Model):
+    schedule = models.ForeignKey(
+        BusinessSchedule, on_delete=models.CASCADE, related_name="holidays",
+    )
+    name = models.CharField(max_length=255)
+    date = models.DateField()
+    recurring = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("holidays")
+
+    def __str__(self):
+        return f"{self.name} ({self.date})"
+
+
+# ---------------------------------------------------------------------------
+# Role & Permission
+# ---------------------------------------------------------------------------
+
+
+class Permission(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    group = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = get_table_name("permissions")
+        ordering = ["group", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Role(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    description = models.TextField(blank=True, default="")
+    is_system = models.BooleanField(default=False)
+    permissions = models.ManyToManyField(
+        "Permission", related_name="roles", blank=True,
+        db_table=get_table_name("role_permission"),
+    )
+    users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, related_name="escalated_roles", blank=True,
+        db_table=get_table_name("role_user"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("roles")
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name).replace("-", "_")
+        super().save(*args, **kwargs)
+
+    def has_permission(self, slug):
+        return self.permissions.filter(slug=slug).exists()
+
+
+# ---------------------------------------------------------------------------
+# Custom Fields
+# ---------------------------------------------------------------------------
+
+
+class CustomField(models.Model):
+    class FieldType(models.TextChoices):
+        TEXT = "text", _("Text")
+        TEXTAREA = "textarea", _("Textarea")
+        SELECT = "select", _("Select")
+        MULTI_SELECT = "multi_select", _("Multi Select")
+        CHECKBOX = "checkbox", _("Checkbox")
+        DATE = "date", _("Date")
+        NUMBER = "number", _("Number")
+
+    class Context(models.TextChoices):
+        TICKET = "ticket", _("Ticket")
+        USER = "user", _("User")
+        ORGANIZATION = "organization", _("Organization")
+
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    type = models.CharField(max_length=50, choices=FieldType.choices)
+    context = models.CharField(
+        max_length=50, choices=Context.choices, default=Context.TICKET
+    )
+    options = models.JSONField(null=True, blank=True)
+    required = models.BooleanField(default=False)
+    placeholder = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(blank=True, default="")
+    validation_rules = models.JSONField(null=True, blank=True)
+    conditions = models.JSONField(null=True, blank=True)
+    position = models.IntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("custom_fields")
+        ordering = ["position"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name).replace("-", "_")
+        super().save(*args, **kwargs)
+
+
+class CustomFieldValue(models.Model):
+    custom_field = models.ForeignKey(
+        CustomField,
+        on_delete=models.CASCADE,
+        related_name="values",
+    )
+    entity_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+    )
+    entity_object_id = models.PositiveIntegerField()
+    entity = GenericForeignKey("entity_content_type", "entity_object_id")
+    value = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("custom_field_values")
+
+    def __str__(self):
+        return f"{self.custom_field.name}: {self.value}"
+
+
+# ---------------------------------------------------------------------------
+# Ticket Links
+# ---------------------------------------------------------------------------
+
+
+class TicketLink(models.Model):
+    class LinkType(models.TextChoices):
+        PROBLEM_INCIDENT = "problem_incident", _("Problem / Incident")
+        PARENT_CHILD = "parent_child", _("Parent / Child")
+        RELATED = "related", _("Related")
+
+    parent_ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name="links_as_parent",
+    )
+    child_ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name="links_as_child",
+    )
+    link_type = models.CharField(max_length=50, choices=LinkType.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("ticket_links")
+        unique_together = [("parent_ticket", "child_ticket", "link_type")]
+
+    def __str__(self):
+        return f"{self.parent_ticket} -> {self.child_ticket} ({self.link_type})"
+
+
+# ---------------------------------------------------------------------------
+# Side Conversations
+# ---------------------------------------------------------------------------
+
+
+class SideConversationQuerySet(models.QuerySet):
+    def open(self):
+        return self.filter(status="open")
+
+
+class SideConversationManager(models.Manager):
+    def get_queryset(self):
+        return SideConversationQuerySet(self.model, using=self._db)
+
+    def open(self):
+        return self.get_queryset().open()
+
+
+class SideConversation(models.Model):
+    class Channel(models.TextChoices):
+        INTERNAL = "internal", _("Internal")
+        EMAIL = "email", _("Email")
+
+    class Status(models.TextChoices):
+        OPEN = "open", _("Open")
+        CLOSED = "closed", _("Closed")
+
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name="side_conversations",
+    )
+    subject = models.CharField(max_length=255)
+    channel = models.CharField(
+        max_length=50, choices=Channel.choices, default=Channel.INTERNAL
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.OPEN
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="escalated_side_conversations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = SideConversationManager()
+
+    class Meta:
+        db_table = get_table_name("side_conversations")
+
+    def __str__(self):
+        return f"Side conversation: {self.subject}"
+
+
+class SideConversationReply(models.Model):
+    side_conversation = models.ForeignKey(
+        SideConversation,
+        on_delete=models.CASCADE,
+        related_name="replies",
+    )
+    body = models.TextField()
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="escalated_side_conversation_replies",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("side_conversation_replies")
+
+    def __str__(self):
+        return f"Reply on {self.side_conversation.subject}"
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Base
+# ---------------------------------------------------------------------------
+
+
+class ArticleCategoryQuerySet(models.QuerySet):
+    def roots(self):
+        return self.filter(parent__isnull=True)
+
+    def ordered(self):
+        return self.order_by("position", "name")
+
+
+class ArticleCategoryManager(models.Manager):
+    def get_queryset(self):
+        return ArticleCategoryQuerySet(self.model, using=self._db)
+
+    def roots(self):
+        return self.get_queryset().roots()
+
+    def ordered(self):
+        return self.get_queryset().ordered()
+
+
+class ArticleCategory(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
+    position = models.IntegerField(default=0)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ArticleCategoryManager()
+
+    class Meta:
+        db_table = get_table_name("article_categories")
+        verbose_name_plural = _("Article categories")
+
+    def __str__(self):
+        return self.name
+
+
+class ArticleQuerySet(models.QuerySet):
+    def published(self):
+        return self.filter(status="published")
+
+    def draft(self):
+        return self.filter(status="draft")
+
+    def search(self, term):
+        return self.filter(
+            Q(title__icontains=term)
+            | Q(body__icontains=term)
+        )
+
+
+class ArticleManager(models.Manager):
+    def get_queryset(self):
+        return ArticleQuerySet(self.model, using=self._db)
+
+    def published(self):
+        return self.get_queryset().published()
+
+    def draft(self):
+        return self.get_queryset().draft()
+
+    def search(self, term):
+        return self.get_queryset().search(term)
+
+
+class Article(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", _("Draft")
+        PUBLISHED = "published", _("Published")
+
+    category = models.ForeignKey(
+        ArticleCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="articles",
+    )
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    body = models.TextField(blank=True, default="")
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.DRAFT
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="escalated_articles",
+    )
+    view_count = models.PositiveIntegerField(default=0)
+    helpful_count = models.PositiveIntegerField(default=0)
+    not_helpful_count = models.PositiveIntegerField(default=0)
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ArticleManager()
+
+    class Meta:
+        db_table = get_table_name("articles")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.title
+
+    def increment_views(self):
+        """Increment the view count by one."""
+        self.view_count += 1
+        self.save(update_fields=["view_count", "updated_at"])
+
+    def mark_helpful(self):
+        """Increment the helpful count by one."""
+        self.helpful_count += 1
+        self.save(update_fields=["helpful_count", "updated_at"])
+
+    def mark_not_helpful(self):
+        """Increment the not-helpful count by one."""
+        self.not_helpful_count += 1
+        self.save(update_fields=["not_helpful_count", "updated_at"])
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: Agent & Routing
+# ---------------------------------------------------------------------------
+
+
+class AgentProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="escalated_agent_profile",
+    )
+    agent_type = models.CharField(max_length=20, default="full")
+    max_tickets = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("agent_profiles")
+
+    def __str__(self):
+        return f"Agent profile for {self.user}"
+
+    def is_light_agent(self) -> bool:
+        return self.agent_type == "light"
+
+    def is_full_agent(self) -> bool:
+        return self.agent_type == "full"
+
+    @classmethod
+    def for_user(cls, user_id):
+        """Get or create an agent profile for the given user ID."""
+        obj, _ = cls.objects.get_or_create(
+            user_id=user_id,
+            defaults={"agent_type": "full"},
+        )
+        return obj
+
+
+class AgentSkill(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    skill = models.ForeignKey(
+        "Skill",
+        on_delete=models.CASCADE,
+        related_name="agent_skills",
+    )
+    proficiency = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        db_table = get_table_name("agent_skill")
+        unique_together = [("user", "skill")]
+
+    def __str__(self):
+        return f"{self.user} - {self.skill} ({self.proficiency})"
+
+
+class Skill(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    agents = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through="AgentSkill",
+        related_name="escalated_skills",
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("skills")
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class AgentCapacity(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="escalated_agent_capacities",
+    )
+    channel = models.CharField(max_length=50, default="default")
+    max_concurrent = models.PositiveIntegerField(default=10)
+    current_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("agent_capacity")
+        unique_together = [("user", "channel")]
+
+    def __str__(self):
+        return f"{self.user} - {self.channel}"
+
+    def load_percentage(self) -> float:
+        if self.max_concurrent <= 0:
+            return 100.0
+        return round((self.current_count / self.max_concurrent) * 100, 1)
+
+    def has_capacity(self) -> bool:
+        return self.current_count < self.max_concurrent
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: Automation & Integration
+# ---------------------------------------------------------------------------
+
+
+class WebhookQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(active=True)
+
+
+class WebhookManager(models.Manager):
+    def get_queryset(self):
+        return WebhookQuerySet(self.model, using=self._db)
+
+    def active(self):
+        return self.get_queryset().active()
+
+
+class Webhook(models.Model):
+    url = models.URLField(max_length=500)
+    events = models.JSONField(default=list)
+    secret = models.CharField(max_length=255, null=True, blank=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = WebhookManager()
+
+    class Meta:
+        db_table = get_table_name("webhooks")
+
+    def __str__(self):
+        return self.url
+
+    def subscribed_to(self, event: str) -> bool:
+        return event in (self.events or [])
+
+
+class WebhookDelivery(models.Model):
+    webhook = models.ForeignKey(
+        Webhook,
+        on_delete=models.CASCADE,
+        related_name="deliveries",
+    )
+    event = models.CharField(max_length=100)
+    payload = models.JSONField(null=True, blank=True)
+    response_code = models.PositiveSmallIntegerField(null=True, blank=True)
+    response_body = models.TextField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("webhook_deliveries")
+
+    def __str__(self):
+        return f"Delivery {self.pk} for {self.webhook}"
+
+    def is_success(self) -> bool:
+        return self.response_code is not None and 200 <= self.response_code <= 299
+
+
+class AutomationQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(active=True).order_by("position")
+
+
+class AutomationManager(models.Manager):
+    def get_queryset(self):
+        return AutomationQuerySet(self.model, using=self._db)
+
+    def active(self):
+        return self.get_queryset().active()
+
+
+class Automation(models.Model):
+    name = models.CharField(max_length=255)
+    conditions = models.JSONField(default=list)
+    actions = models.JSONField(default=list)
+    active = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = AutomationManager()
+
+    class Meta:
+        db_table = get_table_name("automations")
+        indexes = [
+            models.Index(fields=["active"]),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Security & Enterprise
+# ---------------------------------------------------------------------------
+
+
+class TwoFactor(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="escalated_two_factor",
+    )
+    secret = models.TextField()
+    recovery_codes = models.JSONField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("two_factor")
+
+    def __str__(self):
+        return f"2FA for {self.user}"
+
+    def is_confirmed(self) -> bool:
+        return self.confirmed_at is not None
+
+
+class CustomObject(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    fields_schema = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("custom_objects")
+
+    def __str__(self):
+        return self.name
+
+
+class CustomObjectRecord(models.Model):
+    object = models.ForeignKey(
+        CustomObject,
+        on_delete=models.CASCADE,
+        related_name="records",
+    )
+    data = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("custom_object_records")
+
+    def __str__(self):
+        return f"Record {self.pk} for {self.object.name}"

@@ -322,3 +322,452 @@ class SatisfactionRatingSerializer:
         except Exception:
             data["rated_by"] = None
         return data
+
+
+class AuditLogSerializer:
+    @staticmethod
+    def serialize(log):
+        return {
+            "id": log.pk,
+            "user": _user_dict(log.user),
+            "action": log.action,
+            "auditable_type": str(log.auditable_content_type),
+            "auditable_id": log.auditable_object_id,
+            "old_values": log.old_values,
+            "new_values": log.new_values,
+            "ip_address": log.ip_address,
+            "user_agent": log.user_agent,
+            "created_at": _format_dt(log.created_at),
+        }
+
+    @staticmethod
+    def serialize_list(logs):
+        return [AuditLogSerializer.serialize(l) for l in logs]
+
+
+class TicketStatusSerializer:
+    @staticmethod
+    def serialize(status):
+        return {
+            "id": status.pk,
+            "label": status.label,
+            "slug": status.slug,
+            "category": status.category,
+            "color": status.color,
+            "description": status.description,
+            "position": status.position,
+            "is_default": status.is_default,
+            "created_at": _format_dt(status.created_at),
+            "updated_at": _format_dt(status.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(statuses):
+        return [TicketStatusSerializer.serialize(s) for s in statuses]
+
+
+class HolidaySerializer:
+    @staticmethod
+    def serialize(holiday):
+        return {
+            "id": holiday.pk,
+            "name": holiday.name,
+            "date": str(holiday.date),
+            "recurring": holiday.recurring,
+        }
+
+
+class BusinessScheduleSerializer:
+    @staticmethod
+    def serialize(schedule, include_holidays=True):
+        data = {
+            "id": schedule.pk,
+            "name": schedule.name,
+            "timezone": schedule.timezone,
+            "is_default": schedule.is_default,
+            "schedule": schedule.schedule,
+            "created_at": _format_dt(schedule.created_at),
+            "updated_at": _format_dt(schedule.updated_at),
+        }
+        if include_holidays:
+            data["holidays"] = [
+                HolidaySerializer.serialize(h)
+                for h in schedule.holidays.all()
+            ]
+        return data
+
+    @staticmethod
+    def serialize_list(schedules):
+        return [BusinessScheduleSerializer.serialize(s) for s in schedules]
+
+
+class PermissionSerializer:
+    @staticmethod
+    def serialize(permission):
+        return {
+            "id": permission.pk,
+            "name": permission.name,
+            "slug": permission.slug,
+            "group": permission.group,
+            "description": permission.description,
+        }
+
+    @staticmethod
+    def serialize_list(permissions):
+        return [PermissionSerializer.serialize(p) for p in permissions]
+
+    @staticmethod
+    def serialize_grouped(permissions):
+        """Group permissions by their group field."""
+        grouped = {}
+        for p in permissions:
+            group = p.group
+            if group not in grouped:
+                grouped[group] = []
+            grouped[group].append(PermissionSerializer.serialize(p))
+        return grouped
+
+
+class RoleSerializer:
+    @staticmethod
+    def serialize(role, include_permissions=False):
+        data = {
+            "id": role.pk,
+            "name": role.name,
+            "slug": role.slug,
+            "description": role.description,
+            "is_system": role.is_system,
+            "users_count": role.users.count() if hasattr(role, '_prefetched_objects_cache') else getattr(role, 'users__count', role.users.count()),
+            "created_at": _format_dt(role.created_at),
+            "updated_at": _format_dt(role.updated_at),
+        }
+        if include_permissions:
+            data["permissions"] = PermissionSerializer.serialize_list(
+                role.permissions.all()
+            )
+        return data
+
+    @staticmethod
+    def serialize_list(roles):
+        return [RoleSerializer.serialize(r) for r in roles]
+
+
+class CustomFieldSerializer:
+    @staticmethod
+    def serialize(field):
+        return {
+            "id": field.pk,
+            "name": field.name,
+            "slug": field.slug,
+            "type": field.type,
+            "context": field.context,
+            "options": field.options,
+            "required": field.required,
+            "placeholder": field.placeholder,
+            "description": field.description,
+            "validation_rules": field.validation_rules,
+            "conditions": field.conditions,
+            "position": field.position,
+            "active": field.active,
+            "created_at": _format_dt(field.created_at),
+            "updated_at": _format_dt(field.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(fields):
+        return [CustomFieldSerializer.serialize(f) for f in fields]
+
+
+class CustomFieldValueSerializer:
+    @staticmethod
+    def serialize(value):
+        return {
+            "id": value.pk,
+            "custom_field_id": value.custom_field_id,
+            "entity_type": str(value.entity_content_type),
+            "entity_id": value.entity_object_id,
+            "value": value.value,
+        }
+
+    @staticmethod
+    def serialize_list(values):
+        return [CustomFieldValueSerializer.serialize(v) for v in values]
+
+
+class TicketLinkSerializer:
+    @staticmethod
+    def serialize(link, direction='parent'):
+        ticket = link.child_ticket if direction == 'parent' else link.parent_ticket
+        return {
+            "id": link.pk,
+            "link_type": link.link_type,
+            "direction": direction,
+            "ticket": {
+                "id": ticket.pk,
+                "reference": ticket.reference,
+                "subject": ticket.subject,
+                "status": ticket.status,
+                "type": getattr(ticket, 'type', 'question'),
+            },
+        }
+
+
+class SideConversationReplySerializer:
+    @staticmethod
+    def serialize(reply):
+        return {
+            "id": reply.pk,
+            "side_conversation_id": reply.side_conversation_id,
+            "body": reply.body,
+            "author": _user_dict(reply.author),
+            "created_at": _format_dt(reply.created_at),
+            "updated_at": _format_dt(reply.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(replies):
+        return [SideConversationReplySerializer.serialize(r) for r in replies]
+
+
+class SideConversationSerializer:
+    @staticmethod
+    def serialize(conversation, include_replies=True):
+        data = {
+            "id": conversation.pk,
+            "ticket_id": conversation.ticket_id,
+            "subject": conversation.subject,
+            "channel": conversation.channel,
+            "status": conversation.status,
+            "created_by": _user_dict(conversation.created_by),
+            "created_at": _format_dt(conversation.created_at),
+            "updated_at": _format_dt(conversation.updated_at),
+        }
+        if include_replies:
+            data["replies"] = SideConversationReplySerializer.serialize_list(
+                conversation.replies.all()
+            )
+        return data
+
+    @staticmethod
+    def serialize_list(conversations):
+        return [SideConversationSerializer.serialize(c) for c in conversations]
+
+
+class ArticleCategorySerializer:
+    @staticmethod
+    def serialize(category):
+        data = {
+            "id": category.pk,
+            "name": category.name,
+            "slug": category.slug,
+            "parent_id": category.parent_id,
+            "position": category.position,
+            "description": category.description,
+            "created_at": _format_dt(category.created_at),
+            "updated_at": _format_dt(category.updated_at),
+        }
+        if hasattr(category, 'articles__count'):
+            data["articles_count"] = category.articles__count
+        elif hasattr(category, 'articles_count'):
+            data["articles_count"] = category.articles_count
+        return data
+
+    @staticmethod
+    def serialize_list(categories):
+        return [ArticleCategorySerializer.serialize(c) for c in categories]
+
+
+class ArticleSerializer:
+    @staticmethod
+    def serialize(article):
+        return {
+            "id": article.pk,
+            "category": (
+                ArticleCategorySerializer.serialize(article.category)
+                if article.category
+                else None
+            ),
+            "title": article.title,
+            "slug": article.slug,
+            "body": article.body,
+            "status": article.status,
+            "author": _user_dict(article.author),
+            "view_count": article.view_count,
+            "helpful_count": article.helpful_count,
+            "not_helpful_count": article.not_helpful_count,
+            "published_at": _format_dt(article.published_at),
+            "created_at": _format_dt(article.created_at),
+            "updated_at": _format_dt(article.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(articles):
+        return [ArticleSerializer.serialize(a) for a in articles]
+
+
+class AgentProfileSerializer:
+    @staticmethod
+    def serialize(profile):
+        return {
+            "id": profile.pk,
+            "user_id": profile.user_id,
+            "user": _user_dict(profile.user) if hasattr(profile, 'user') else None,
+            "agent_type": profile.agent_type,
+            "max_tickets": profile.max_tickets,
+            "created_at": _format_dt(profile.created_at),
+            "updated_at": _format_dt(profile.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(profiles):
+        return [AgentProfileSerializer.serialize(p) for p in profiles]
+
+
+class SkillSerializer:
+    @staticmethod
+    def serialize(skill):
+        data = {
+            "id": skill.pk,
+            "name": skill.name,
+            "slug": skill.slug,
+            "created_at": _format_dt(skill.created_at),
+            "updated_at": _format_dt(skill.updated_at),
+        }
+        if hasattr(skill, 'agents_count'):
+            data["agents_count"] = skill.agents_count
+        elif hasattr(skill, 'agents__count'):
+            data["agents_count"] = skill.agents__count
+        return data
+
+    @staticmethod
+    def serialize_list(skills):
+        return [SkillSerializer.serialize(s) for s in skills]
+
+
+class AgentCapacitySerializer:
+    @staticmethod
+    def serialize(cap):
+        return {
+            "id": cap.pk,
+            "user_id": cap.user_id,
+            "agent_name": (cap.user.get_full_name() or cap.user.username) if cap.user else "Unknown",
+            "channel": cap.channel,
+            "max_concurrent": cap.max_concurrent,
+            "current_count": cap.current_count,
+            "load_percentage": cap.load_percentage(),
+        }
+
+    @staticmethod
+    def serialize_list(capacities):
+        return [AgentCapacitySerializer.serialize(c) for c in capacities]
+
+
+class WebhookSerializer:
+    AVAILABLE_EVENTS = [
+        "ticket.created", "ticket.updated", "ticket.status_changed",
+        "ticket.resolved", "ticket.closed", "ticket.reopened",
+        "ticket.assigned", "ticket.unassigned", "ticket.escalated",
+        "ticket.priority_changed", "ticket.department_changed",
+        "reply.created", "internal_note.added",
+        "sla.breached", "sla.warning", "tag.added", "tag.removed",
+    ]
+
+    @staticmethod
+    def serialize(webhook):
+        data = {
+            "id": webhook.pk,
+            "url": webhook.url,
+            "events": webhook.events,
+            "secret": bool(webhook.secret),
+            "active": webhook.active,
+            "created_at": _format_dt(webhook.created_at),
+            "updated_at": _format_dt(webhook.updated_at),
+        }
+        if hasattr(webhook, 'deliveries_count'):
+            data["deliveries_count"] = webhook.deliveries_count
+        elif hasattr(webhook, 'deliveries__count'):
+            data["deliveries_count"] = webhook.deliveries__count
+        return data
+
+    @staticmethod
+    def serialize_list(webhooks):
+        return [WebhookSerializer.serialize(w) for w in webhooks]
+
+
+class WebhookDeliverySerializer:
+    @staticmethod
+    def serialize(delivery):
+        return {
+            "id": delivery.pk,
+            "webhook_id": delivery.webhook_id,
+            "event": delivery.event,
+            "payload": delivery.payload,
+            "response_code": delivery.response_code,
+            "response_body": delivery.response_body,
+            "attempts": delivery.attempts,
+            "is_success": delivery.is_success(),
+            "delivered_at": _format_dt(delivery.delivered_at),
+            "created_at": _format_dt(delivery.created_at),
+        }
+
+    @staticmethod
+    def serialize_list(deliveries):
+        return [WebhookDeliverySerializer.serialize(d) for d in deliveries]
+
+
+class AutomationSerializer:
+    @staticmethod
+    def serialize(automation):
+        return {
+            "id": automation.pk,
+            "name": automation.name,
+            "conditions": automation.conditions,
+            "actions": automation.actions,
+            "active": automation.active,
+            "position": automation.position,
+            "last_run_at": _format_dt(automation.last_run_at),
+            "created_at": _format_dt(automation.created_at),
+            "updated_at": _format_dt(automation.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(automations):
+        return [AutomationSerializer.serialize(a) for a in automations]
+
+
+class CustomObjectSerializer:
+    @staticmethod
+    def serialize(obj):
+        data = {
+            "id": obj.pk,
+            "name": obj.name,
+            "slug": obj.slug,
+            "fields_schema": obj.fields_schema,
+            "created_at": _format_dt(obj.created_at),
+            "updated_at": _format_dt(obj.updated_at),
+        }
+        if hasattr(obj, 'records_count'):
+            data["records_count"] = obj.records_count
+        elif hasattr(obj, 'records__count'):
+            data["records_count"] = obj.records__count
+        return data
+
+    @staticmethod
+    def serialize_list(objects):
+        return [CustomObjectSerializer.serialize(o) for o in objects]
+
+
+class CustomObjectRecordSerializer:
+    @staticmethod
+    def serialize(record):
+        return {
+            "id": record.pk,
+            "object_id": record.object_id,
+            "data": record.data,
+            "created_at": _format_dt(record.created_at),
+            "updated_at": _format_dt(record.updated_at),
+        }
+
+    @staticmethod
+    def serialize_list(records):
+        return [CustomObjectRecordSerializer.serialize(r) for r in records]
