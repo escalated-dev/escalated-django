@@ -1129,6 +1129,7 @@ def settings_update(request):
         "guest_tickets_enabled",
         "allow_customer_close",
         "inbound_email_enabled",
+        "show_powered_by",
     ]
     for key in bool_keys:
         value = "1" if request.POST.get(key) in ("1", "true", "on") else "0"
