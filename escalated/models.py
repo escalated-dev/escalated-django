@@ -1657,3 +1657,264 @@ class CustomObjectRecord(models.Model):
 
     def __str__(self):
         return f"Record {self.pk} for {self.object.name}"
+
+
+# ---------------------------------------------------------------------------
+# Import Framework
+# ---------------------------------------------------------------------------
+
+
+class EncryptedJSONField(models.TextField):
+    """
+    A TextField that transparently encrypts/decrypts a JSON-serialisable
+    value using Fernet symmetric encryption derived from Django's SECRET_KEY.
+
+    The encrypted blob is stored as a base64 URL-safe string prefixed with
+    ``"enc::"`` so we can tell encrypted values from plain NULL/empty strings.
+    """
+
+    PREFIX = "enc::"
+
+    def _get_fernet(self):
+        import base64
+        import hashlib
+        from cryptography.fernet import Fernet
+        from django.conf import settings as django_settings
+
+        # Derive a 32-byte key from SECRET_KEY
+        raw = hashlib.sha256(django_settings.SECRET_KEY.encode()).digest()
+        key = base64.urlsafe_b64encode(raw)
+        return Fernet(key)
+
+    def from_db_value(self, value, expression, connection):
+        if value is None:
+            return None
+        if isinstance(value, str) and value.startswith(self.PREFIX):
+            import json
+            fernet = self._get_fernet()
+            decrypted = fernet.decrypt(value[len(self.PREFIX):].encode()).decode()
+            return json.loads(decrypted)
+        # Legacy plain JSON (shouldn't happen in prod, but handles dev fixtures)
+        import json
+        try:
+            return json.loads(value)
+        except Exception:
+            return value
+
+    def to_python(self, value):
+        if isinstance(value, (dict, list)) or value is None:
+            return value
+        return self.from_db_value(value, None, None)
+
+    def get_prep_value(self, value):
+        if value is None:
+            return None
+        import json
+        fernet = self._get_fernet()
+        plaintext = json.dumps(value).encode()
+        token = fernet.encrypt(plaintext).decode()
+        return self.PREFIX + token
+
+
+class ImportJob(models.Model):
+    """
+    Tracks a single platform import run from start to completion.
+
+    State machine
+    -------------
+    pending → authenticating → mapping → importing → completed
+                             ↘ failed ↙              ↘ paused ←→ importing
+    failed → mapping  (to allow re-mapping after credential fix)
+
+    Credentials are stored encrypted at rest.  They are purged once the
+    import completes successfully.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        AUTHENTICATING = "authenticating", _("Authenticating")
+        MAPPING = "mapping", _("Mapping")
+        IMPORTING = "importing", _("Importing")
+        PAUSED = "paused", _("Paused")
+        COMPLETED = "completed", _("Completed")
+        FAILED = "failed", _("Failed")
+
+    VALID_TRANSITIONS: dict[str, list[str]] = {
+        "pending": ["authenticating"],
+        "authenticating": ["mapping", "failed"],
+        "mapping": ["importing", "failed"],
+        "importing": ["paused", "completed", "failed"],
+        "paused": ["importing", "failed"],
+        "completed": [],
+        "failed": ["mapping"],
+    }
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    platform = models.CharField(max_length=100)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    credentials = EncryptedJSONField(null=True, blank=True)
+    field_mappings = models.JSONField(default=dict, blank=True)
+    progress = models.JSONField(default=dict, blank=True)
+    error_log = models.JSONField(default=list, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("import_jobs")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"ImportJob({self.platform}, {self.status}) [{self.id}]"
+
+    # ------------------------------------------------------------------
+    # State machine
+    # ------------------------------------------------------------------
+
+    def transition_to(self, new_status: str) -> None:
+        """
+        Transition to *new_status*, saving immediately.
+
+        Raises ``ValueError`` if the transition is not permitted by the
+        state machine.
+        """
+        current = self.status or "pending"
+        allowed = self.VALID_TRANSITIONS.get(current, [])
+
+        if new_status not in allowed:
+            raise ValueError(
+                f"Cannot transition ImportJob from '{current}' to '{new_status}'."
+            )
+
+        self.status = new_status
+        self.save(update_fields=["status", "updated_at"])
+
+    # ------------------------------------------------------------------
+    # Progress helpers
+    # ------------------------------------------------------------------
+
+    def update_entity_progress(
+        self,
+        entity_type: str,
+        *,
+        processed: int = None,
+        total: int = None,
+        skipped: int = None,
+        failed: int = None,
+        cursor: str = None,
+    ) -> None:
+        """Merge partial progress for a single entity type and save."""
+        progress = dict(self.progress or {})
+        current = progress.get(entity_type, {
+            "total": 0, "processed": 0, "skipped": 0, "failed": 0, "cursor": None,
+        })
+
+        if processed is not None:
+            current["processed"] = processed
+        if total is not None:
+            current["total"] = total
+        if skipped is not None:
+            current["skipped"] = skipped
+        if failed is not None:
+            current["failed"] = failed
+        if cursor is not None:
+            current["cursor"] = cursor
+
+        progress[entity_type] = current
+        self.progress = progress
+        self.save(update_fields=["progress", "updated_at"])
+
+    def get_entity_cursor(self, entity_type: str):
+        """Return the saved pagination cursor for *entity_type*, or ``None``."""
+        return (self.progress or {}).get(entity_type, {}).get("cursor")
+
+    def append_error(self, entity_type: str, source_id: str, error: str) -> None:
+        """Append an error entry to the log (capped at 10 000 entries)."""
+        log = list(self.error_log or [])
+        if len(log) < 10_000:
+            log.append({
+                "entity_type": entity_type,
+                "source_id": source_id,
+                "error": error,
+                "timestamp": timezone.now().isoformat(),
+            })
+            self.error_log = log
+            self.save(update_fields=["error_log", "updated_at"])
+
+    def purge_credentials(self) -> None:
+        """Remove stored credentials once the import is complete."""
+        self.credentials = None
+        self.save(update_fields=["credentials", "updated_at"])
+
+    def is_resumable(self) -> bool:
+        """Return True if this job can be resumed (paused or failed)."""
+        return self.status in (self.Status.PAUSED, self.Status.FAILED)
+
+
+class ImportSourceMap(models.Model):
+    """
+    Maps a source platform ID to an Escalated internal ID.
+
+    Used for:
+    - Skip-deduplication (resume after pause/failure).
+    - Cross-referencing during import (e.g. linking a reply to its ticket).
+
+    No ``updated_at`` column — records are write-once.
+    """
+
+    import_job = models.ForeignKey(
+        ImportJob,
+        on_delete=models.CASCADE,
+        related_name="source_maps",
+    )
+    entity_type = models.CharField(max_length=100)
+    source_id = models.CharField(max_length=255)
+    escalated_id = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = get_table_name("import_source_maps")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["import_job", "entity_type", "source_id"],
+                name="unique_import_source_map",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["import_job", "entity_type", "source_id"],
+                name="idx_import_source_map_lookup",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"ImportSourceMap({self.entity_type} "
+            f"{self.source_id} → {self.escalated_id})"
+        )
+
+    # ------------------------------------------------------------------
+    # Class-level helpers
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def resolve(cls, job_id, entity_type: str, source_id: str):
+        """
+        Return the Escalated ID for a given source ID, or ``None`` if not yet
+        imported.
+        """
+        return cls.objects.filter(
+            import_job_id=job_id,
+            entity_type=entity_type,
+            source_id=source_id,
+        ).values_list("escalated_id", flat=True).first()
+
+    @classmethod
+    def has_been_imported(cls, job_id, entity_type: str, source_id: str) -> bool:
+        """Return True if this source record has already been imported."""
+        return cls.resolve(job_id, entity_type, source_id) is not None

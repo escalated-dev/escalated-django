@@ -1,7 +1,7 @@
 from django.urls import path, include
 
 from escalated.conf import get_setting
-from escalated.views import customer, agent, admin, guest, inbound, admin_plugins
+from escalated.views import customer, agent, admin, guest, inbound, admin_plugins, import_views
 
 app_name = "escalated"
 
@@ -177,6 +177,18 @@ admin_patterns = [
     path("admin/custom-objects/<int:object_id>/records/<int:record_id>/delete/", admin.custom_object_records_delete, name="admin_custom_object_records_delete"),
     # Reports
     path("admin/reports/dashboard/", admin.reports_dashboard, name="admin_reports_dashboard"),
+    # Import
+    path("admin/import/", import_views.import_index, name="admin_import_index"),
+    path("admin/import/create/", import_views.import_create, name="admin_import_create"),
+    path("admin/import/store/", import_views.import_store, name="admin_import_store"),
+    path("admin/import/<uuid:job_uuid>/", import_views.import_show, name="admin_import_show"),
+    path("admin/import/<uuid:job_uuid>/authenticate/", import_views.import_authenticate, name="admin_import_authenticate"),
+    path("admin/import/<uuid:job_uuid>/mapping/", import_views.import_mapping, name="admin_import_mapping"),
+    path("admin/import/<uuid:job_uuid>/mapping/save/", import_views.import_mapping_save, name="admin_import_mapping_save"),
+    path("admin/import/<uuid:job_uuid>/run/", import_views.import_run, name="admin_import_run"),
+    path("admin/import/<uuid:job_uuid>/pause/", import_views.import_pause, name="admin_import_pause"),
+    path("admin/import/<uuid:job_uuid>/progress/", import_views.import_progress, name="admin_import_progress"),
+    path("admin/import/<uuid:job_uuid>/delete/", import_views.import_delete, name="admin_import_delete"),
 ]
 
 # Guest-facing URLs (no authentication required)

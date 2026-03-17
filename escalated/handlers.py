@@ -15,6 +15,7 @@ from escalated.signals import (
     ticket_closed,
     ticket_escalated,
 )
+from escalated.support.import_context import ImportContext
 
 logger = logging.getLogger("escalated")
 
@@ -22,6 +23,9 @@ logger = logging.getLogger("escalated")
 @receiver(ticket_created)
 def on_ticket_created(sender, ticket, user, **kwargs):
     """Attach default SLA policy and send notification when a ticket is created."""
+    if ImportContext.is_importing():
+        return
+
     from escalated.models import SlaPolicy, TicketActivity
     from escalated.services.sla_service import SlaService
     from escalated.services.notification_service import NotificationService
@@ -58,6 +62,9 @@ def on_ticket_created(sender, ticket, user, **kwargs):
 @receiver(reply_created)
 def on_reply_created(sender, reply, ticket, user, **kwargs):
     """Record first response time and send notification when a reply is added."""
+    if ImportContext.is_importing():
+        return
+
     from escalated.models import TicketActivity
     from escalated.services.notification_service import NotificationService
 
@@ -87,6 +94,9 @@ def on_reply_created(sender, reply, ticket, user, **kwargs):
 @receiver(ticket_status_changed)
 def on_status_changed(sender, ticket, user, old_status, new_status, **kwargs):
     """Log status change activity and send notification."""
+    if ImportContext.is_importing():
+        return
+
     from escalated.models import TicketActivity
     from escalated.services.notification_service import NotificationService
 
@@ -105,6 +115,9 @@ def on_status_changed(sender, ticket, user, old_status, new_status, **kwargs):
 @receiver(ticket_assigned)
 def on_ticket_assigned(sender, ticket, user, agent, **kwargs):
     """Log assignment activity and notify the assigned agent."""
+    if ImportContext.is_importing():
+        return
+
     from escalated.models import TicketActivity
     from escalated.services.notification_service import NotificationService
 
@@ -124,6 +137,9 @@ def on_ticket_assigned(sender, ticket, user, agent, **kwargs):
 @receiver(sla_breached)
 def on_sla_breached(sender, ticket, breach_type, **kwargs):
     """Log SLA breach and send notification."""
+    if ImportContext.is_importing():
+        return
+
     from escalated.models import TicketActivity
     from escalated.services.notification_service import NotificationService
 
@@ -140,6 +156,9 @@ def on_sla_breached(sender, ticket, breach_type, **kwargs):
 @receiver(ticket_resolved)
 def on_ticket_resolved(sender, ticket, user, **kwargs):
     """Send resolved notification."""
+    if ImportContext.is_importing():
+        return
+
     from escalated.services.notification_service import NotificationService
 
     NotificationService.notify_ticket_resolved(ticket)
@@ -149,12 +168,18 @@ def on_ticket_resolved(sender, ticket, user, **kwargs):
 @receiver(ticket_closed)
 def on_ticket_closed(sender, ticket, user, **kwargs):
     """Log ticket closed."""
+    if ImportContext.is_importing():
+        return
+
     logger.info(f"Ticket {ticket.reference} closed by {user}")
 
 
 @receiver(ticket_escalated)
 def on_ticket_escalated(sender, ticket, user, reason, **kwargs):
     """Log escalation and send notification."""
+    if ImportContext.is_importing():
+        return
+
     from escalated.models import TicketActivity
     from escalated.services.notification_service import NotificationService
 
@@ -171,6 +196,9 @@ def on_ticket_escalated(sender, ticket, user, reason, **kwargs):
 @receiver(ticket_updated)
 def on_ticket_updated(sender, ticket, user, changes, **kwargs):
     """Log ticket update and fire webhook."""
+    if ImportContext.is_importing():
+        return
+
     from escalated.services.notification_service import NotificationService
 
     NotificationService._fire_webhook("ticket.updated", {
@@ -184,6 +212,9 @@ def on_ticket_updated(sender, ticket, user, changes, **kwargs):
 @receiver(ticket_priority_changed)
 def on_ticket_priority_changed(sender, ticket, user, old_priority, new_priority, **kwargs):
     """Log priority change and fire webhook."""
+    if ImportContext.is_importing():
+        return
+
     from escalated.services.notification_service import NotificationService
 
     NotificationService._fire_webhook("ticket.priority_changed", {
