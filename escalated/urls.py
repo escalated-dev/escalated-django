@@ -213,6 +213,17 @@ urlpatterns = (
     + inbound_patterns
 )
 
+# Inject plugin bridge routes (pages, API endpoints, webhooks) if the SDK
+# bridge has booted and registered patterns from plugin manifests.
+try:
+    from escalated.bridge.plugin_bridge import get_bridge as _get_bridge
+    _bridge = _get_bridge()
+    _plugin_urls = _bridge.get_plugin_urls()
+    if _plugin_urls:
+        urlpatterns = list(urlpatterns) + _plugin_urls
+except Exception:
+    pass
+
 # Conditionally include API URLs when API is enabled
 if get_setting("API_ENABLED"):
     from escalated.api_urls import api_patterns, admin_api_token_patterns

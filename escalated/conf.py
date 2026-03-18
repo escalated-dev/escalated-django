@@ -53,6 +53,10 @@ DEFAULTS = {
     # Plugin system settings
     "PLUGINS_ENABLED": True,
     "PLUGINS_PATH": None,  # Defaults to <BASE_DIR>/plugins/escalated at runtime
+    # SDK plugin bridge (Node.js runtime) — opt-in
+    "SDK_ENABLED": False,
+    "RUNTIME_COMMAND": "node node_modules/@escalated-dev/plugin-runtime/dist/index.js",
+    "RUNTIME_CWD": None,  # Defaults to settings.BASE_DIR at runtime
 }
 
 
