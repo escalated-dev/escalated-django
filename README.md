@@ -287,6 +287,61 @@ def on_ticket_resolved(sender, ticket, user, **kwargs):
 
 Available signals: `ticket_created`, `ticket_updated`, `ticket_status_changed`, `ticket_assigned`, `ticket_unassigned`, `ticket_priority_changed`, `ticket_escalated`, `ticket_resolved`, `ticket_closed`, `ticket_reopened`, `reply_created`, `internal_note_added`, `sla_breached`, `sla_warning`, `tag_added`, `tag_removed`, `department_changed`.
 
+## Plugin SDK
+
+Escalated supports framework-agnostic plugins built with the [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk). Plugins are written once in TypeScript and work across all Escalated backends.
+
+### Requirements
+
+- Node.js 20+
+- `@escalated-dev/plugin-runtime` installed in your project
+
+### Installing Plugins
+
+```bash
+npm install @escalated-dev/plugin-runtime
+npm install @escalated-dev/plugin-slack
+npm install @escalated-dev/plugin-jira
+```
+
+### Enabling SDK Plugins
+
+```python
+# settings.py
+ESCALATED = {
+    # ... existing config ...
+    "SDK_ENABLED": True,
+}
+```
+
+### How It Works
+
+SDK plugins run as a long-lived Node.js subprocess managed by `@escalated-dev/plugin-runtime`, communicating with Django over JSON-RPC 2.0 via stdio. Every ticket lifecycle signal is dual-dispatched — first to Django signal handlers, then forwarded to the plugin runtime.
+
+### Building Your Own Plugin
+
+```typescript
+import { definePlugin } from '@escalated-dev/plugin-sdk'
+
+export default definePlugin({
+  name: 'my-plugin',
+  version: '1.0.0',
+  actions: {
+    'ticket.created': async (event, ctx) => {
+      ctx.log.info('New ticket!', event)
+    },
+  },
+})
+```
+
+### Resources
+
+- [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk) — TypeScript SDK for building plugins
+- [Plugin Runtime](https://github.com/escalated-dev/escalated-plugin-runtime) — Runtime host for plugins
+- [Plugin Development Guide](https://github.com/escalated-dev/escalated-docs) — Full documentation
+
+See the detailed [SDK Plugin Bridge](#sdk-plugin-bridge) section below for the full architecture, supported `ctx.*` callbacks, hook event mapping, and resilience documentation.
+
 ## SDK Plugin Bridge
 
 The Plugin Bridge connects your Django app to the Node.js
