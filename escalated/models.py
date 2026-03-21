@@ -62,6 +62,9 @@ class TicketQuerySet(models.QuerySet):
     def by_status(self, status):
         return self.filter(status=status)
 
+    def by_ticket_type(self, ticket_type):
+        return self.filter(ticket_type=ticket_type)
+
     def followed_by(self, user_id):
         """Filter tickets that are followed by a specific user."""
         return self.filter(ticket_followers__user_id=user_id)
@@ -238,7 +241,7 @@ class Ticket(models.Model):
     )
     channel = models.CharField(max_length=50, default="web")
     reference = models.CharField(max_length=20, unique=True, editable=False)
-    type = models.CharField(
+    ticket_type = models.CharField(
         max_length=50, choices=TicketType.choices, default=TicketType.QUESTION
     )
     merged_into = models.ForeignKey(
@@ -291,6 +294,7 @@ class Ticket(models.Model):
             models.Index(fields=["priority"]),
             models.Index(fields=["reference"]),
             models.Index(fields=["assigned_to"]),
+            models.Index(fields=["ticket_type"]),
             models.Index(fields=["created_at"]),
         ]
 

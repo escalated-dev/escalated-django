@@ -242,6 +242,10 @@ def tickets_index(request):
     if tag:
         tickets = tickets.filter(tags__slug=tag)
 
+    ticket_type = request.GET.get("ticket_type")
+    if ticket_type:
+        tickets = tickets.filter(ticket_type=ticket_type)
+
     search = request.GET.get("search")
     if search:
         tickets = tickets.search(search)
