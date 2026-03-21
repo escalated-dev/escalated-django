@@ -119,6 +119,7 @@ class TicketFactory(factory.django.DjangoModelFactory):
     description = factory.Faker("paragraph")
     status = Ticket.Status.OPEN
     priority = Ticket.Priority.MEDIUM
+    ticket_type = Ticket.TicketType.QUESTION
     channel = "web"
 
     @classmethod

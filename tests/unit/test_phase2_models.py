@@ -320,12 +320,12 @@ class TestArticleModel:
 class TestTicketTypeAndMergedFields:
     def test_ticket_type_default(self):
         t = TicketFactory()
-        assert t.type == "question"
+        assert t.ticket_type == "question"
 
     def test_ticket_type_choices(self):
         for tt in ["question", "problem", "incident", "task"]:
-            t = TicketFactory(type=tt)
-            assert t.type == tt
+            t = TicketFactory(ticket_type=tt)
+            assert t.ticket_type == tt
 
     def test_merged_into_field(self):
         source = TicketFactory()

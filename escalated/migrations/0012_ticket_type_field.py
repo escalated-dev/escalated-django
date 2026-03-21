@@ -8,19 +8,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
+        # Rename the 'type' column (added in 0008) to 'ticket_type'
+        migrations.RenameField(
             model_name="ticket",
-            name="ticket_type",
-            field=models.CharField(
-                max_length=50,
-                choices=[
-                    ("question", "Question"),
-                    ("problem", "Problem"),
-                    ("incident", "Incident"),
-                    ("task", "Task"),
-                ],
-                default="question",
-                db_index=True,
-            ),
+            old_name="type",
+            new_name="ticket_type",
         ),
     ]
