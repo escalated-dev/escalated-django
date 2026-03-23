@@ -2893,17 +2893,24 @@ def automations_create(request):
     if check:
         return check
     if request.method == "POST":
+        errors = {}
         name = request.POST.get("name", "").strip()
         if not name:
-            return render(request, "Escalated/Admin/Automations/Form", props={"errors": {"name": _("Name is required.")}})
+            errors["name"] = _("Name is required.")
         try:
             conditions = json.loads(request.POST.get("conditions", "[]"))
         except (json.JSONDecodeError, TypeError):
             conditions = []
+        if not isinstance(conditions, list) or len(conditions) < 1:
+            errors["conditions"] = _("At least one condition is required.")
         try:
             actions = json.loads(request.POST.get("actions", "[]"))
         except (json.JSONDecodeError, TypeError):
             actions = []
+        if not isinstance(actions, list) or len(actions) < 1:
+            errors["actions"] = _("At least one action is required.")
+        if errors:
+            return render(request, "Escalated/Admin/Automations/Form", props={"errors": errors})
         max_pos = Automation.objects.aggregate(max_pos=Max("position"))["max_pos"] or 0
         Automation.objects.create(
             name=name,
@@ -2926,15 +2933,27 @@ def automations_edit(request, automation_id):
     except Automation.DoesNotExist:
         return HttpResponseNotFound(_("Automation not found"))
     if request.method == "POST":
-        automation.name = request.POST.get("name", automation.name)
+        errors = {}
+        name = request.POST.get("name", "").strip()
+        if not name:
+            errors["name"] = _("Name is required.")
         try:
-            automation.conditions = json.loads(request.POST.get("conditions", "[]"))
+            conditions = json.loads(request.POST.get("conditions", "[]"))
         except (json.JSONDecodeError, TypeError):
-            pass
+            conditions = automation.conditions
+        if not isinstance(conditions, list) or len(conditions) < 1:
+            errors["conditions"] = _("At least one condition is required.")
         try:
-            automation.actions = json.loads(request.POST.get("actions", "[]"))
+            actions = json.loads(request.POST.get("actions", "[]"))
         except (json.JSONDecodeError, TypeError):
-            pass
+            actions = automation.actions
+        if not isinstance(actions, list) or len(actions) < 1:
+            errors["actions"] = _("At least one action is required.")
+        if errors:
+            return render(request, "Escalated/Admin/Automations/Form", props={"automation": AutomationSerializer.serialize(automation), "errors": errors})
+        automation.name = name
+        automation.conditions = conditions
+        automation.actions = actions
         automation.active = request.POST.get("active", "true") == "true"
         automation.save()
         return redirect("escalated:admin_automations_index")

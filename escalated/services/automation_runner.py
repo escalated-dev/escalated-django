@@ -40,10 +40,17 @@ class AutomationRunner:
 
             if field == "hours_since_created":
                 threshold = timezone.now() - timedelta(hours=int(value))
-                query = query.filter(created_at__lte=threshold) if operator in (">", ">=") else query.filter(created_at__gte=threshold)
+                op = self._resolve_operator(operator)
+                query = query.filter(**{f"created_at{op}": threshold})
             elif field == "hours_since_updated":
                 threshold = timezone.now() - timedelta(hours=int(value))
-                query = query.filter(updated_at__lte=threshold) if operator in (">", ">=") else query.filter(updated_at__gte=threshold)
+                op = self._resolve_operator(operator)
+                query = query.filter(**{f"updated_at{op}": threshold})
+            elif field == "hours_since_assigned":
+                # Approximation: use updated_at where assigned_to is set
+                threshold = timezone.now() - timedelta(hours=int(value))
+                op = self._resolve_operator(operator)
+                query = query.filter(assigned_to__isnull=False).filter(**{f"updated_at{op}": threshold})
             elif field == "status":
                 query = query.filter(status=value)
             elif field == "priority":
@@ -53,11 +60,15 @@ class AutomationRunner:
                     query = query.filter(assigned_to__isnull=True)
                 elif value == "assigned":
                     query = query.filter(assigned_to__isnull=False)
+            elif field == "ticket_type":
+                query = query.filter(ticket_type=value)
+            elif field == "subject_contains":
+                query = query.filter(subject__icontains=value)
 
         return query
 
     def _execute_actions(self, automation, ticket):
-        from escalated.models import Reply, Tag
+        from escalated.models import Reply, Tag, Ticket
 
         for action in automation.actions or []:
             action_type = action.get("type", "")
@@ -85,6 +96,11 @@ class AutomationRunner:
                         is_pinned=False,
                         metadata={"system_note": True, "automation_id": automation.pk},
                     )
+                elif action_type == "set_ticket_type":
+                    valid_types = [choice.value for choice in Ticket.TicketType]
+                    if value in valid_types:
+                        ticket.ticket_type = value
+                        ticket.save(update_fields=["ticket_type", "updated_at"])
             except Exception as e:
                 logger.warning(
                     "Escalated automation action failed",
@@ -95,3 +111,18 @@ class AutomationRunner:
                         "error": str(e),
                     },
                 )
+
+    @staticmethod
+    def _resolve_operator(operator):
+        """
+        Resolve a condition operator to a Django ORM lookup suffix.
+        For hours_since fields, > hours means < datetime (older).
+        """
+        mapping = {
+            ">": "__lte",   # more hours ago = earlier datetime
+            ">=": "__lte",
+            "<": "__gte",
+            "<=": "__gte",
+            "=": "",
+        }
+        return mapping.get(operator, "__lte")
