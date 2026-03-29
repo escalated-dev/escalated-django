@@ -35,6 +35,14 @@ from escalated.models import (
 )
 from escalated.permissions import is_agent, is_admin
 from escalated.services.ticket_service import TicketService
+from escalated.validators import (
+    CreateTicketValidator,
+    ReplyToTicketValidator,
+    ChangeStatusValidator,
+    ChangePriorityValidator,
+    AssignTicketValidator,
+    UpdateTagsValidator,
+)
 
 User = get_user_model()
 
@@ -342,46 +350,23 @@ def ticket_create(request):
     JSON body:
         subject (required), description (required), priority, department_id, tags (array of IDs)
     """
-    data = _json_body(request)
-
-    # Validation
-    subject = (data.get("subject") or "").strip()
-    description = (data.get("description") or "").strip()
-
-    if not subject:
-        return JsonResponse(
-            {"message": "Validation failed.", "errors": {"subject": "Subject is required."}},
-            status=422,
-        )
-    if not description:
-        return JsonResponse(
-            {"message": "Validation failed.", "errors": {"description": "Description is required."}},
-            status=422,
-        )
-
-    priority = data.get("priority", "medium")
-    valid_priorities = [p.value for p in Ticket.Priority]
-    if priority not in valid_priorities:
-        return JsonResponse(
-            {"message": "Validation failed.", "errors": {"priority": "Invalid priority."}},
-            status=422,
-        )
+    data, error = CreateTicketValidator.validate_request(request)
+    if error:
+        return error
 
     service = TicketService()
     ticket_data = {
-        "subject": subject,
-        "description": description,
-        "priority": priority,
+        "subject": data["subject"],
+        "description": data["description"],
+        "priority": data["priority"],
         "channel": "api",
     }
 
-    department_id = data.get("department_id")
-    if department_id:
-        ticket_data["department_id"] = department_id
+    if data.get("department_id"):
+        ticket_data["department_id"] = data["department_id"]
 
-    tag_ids = data.get("tags", [])
-    if tag_ids:
-        ticket_data["tag_ids"] = tag_ids
+    if data.get("tags"):
+        ticket_data["tag_ids"] = data["tags"]
 
     ticket = service.create(request.user, ticket_data)
 
@@ -412,25 +397,20 @@ def ticket_reply(request, reference):
     JSON body:
         body (required), is_internal_note (optional bool)
     """
-    ticket, error = _resolve_ticket(reference)
+    ticket, resolve_error = _resolve_ticket(reference)
+    if resolve_error:
+        return resolve_error
+
+    data, error = ReplyToTicketValidator.validate_request(request)
     if error:
         return error
 
-    data = _json_body(request)
-    body = (data.get("body") or "").strip()
-    if not body:
-        return JsonResponse(
-            {"message": "Validation failed.", "errors": {"body": "Body is required."}},
-            status=422,
-        )
-
-    is_note = data.get("is_internal_note", False)
     service = TicketService()
 
-    if is_note:
-        reply = service.add_note(ticket, request.user, body)
+    if data["is_internal_note"]:
+        reply = service.add_note(ticket, request.user, data["body"])
     else:
-        reply = service.reply(ticket, request.user, {"body": body})
+        reply = service.reply(ticket, request.user, {"body": data["body"]})
 
     user = request.user
     return JsonResponse(
@@ -445,7 +425,7 @@ def ticket_reply(request, reference):
                 },
                 "created_at": reply.created_at.isoformat(),
             },
-            "message": "Note added." if is_note else "Reply sent.",
+            "message": "Note added." if data["is_internal_note"] else "Reply sent.",
         },
         status=201,
     )
@@ -462,23 +442,18 @@ def ticket_status(request, reference):
     JSON body:
         status (required)
     """
-    ticket, error = _resolve_ticket(reference)
+    ticket, resolve_error = _resolve_ticket(reference)
+    if resolve_error:
+        return resolve_error
+
+    data, error = ChangeStatusValidator.validate_request(request)
     if error:
         return error
 
-    data = _json_body(request)
-    new_status = data.get("status")
-    valid_statuses = [s.value for s in Ticket.Status]
-    if new_status not in valid_statuses:
-        return JsonResponse(
-            {"message": "Validation failed.", "errors": {"status": "Invalid status."}},
-            status=422,
-        )
-
     service = TicketService()
-    service.change_status(ticket, request.user, new_status)
+    service.change_status(ticket, request.user, data["status"])
 
-    return JsonResponse({"message": "Status updated.", "status": new_status})
+    return JsonResponse({"message": "Status updated.", "status": data["status"]})
 
 
 @csrf_exempt
@@ -492,23 +467,18 @@ def ticket_priority(request, reference):
     JSON body:
         priority (required)
     """
-    ticket, error = _resolve_ticket(reference)
+    ticket, resolve_error = _resolve_ticket(reference)
+    if resolve_error:
+        return resolve_error
+
+    data, error = ChangePriorityValidator.validate_request(request)
     if error:
         return error
 
-    data = _json_body(request)
-    new_priority = data.get("priority")
-    valid_priorities = [p.value for p in Ticket.Priority]
-    if new_priority not in valid_priorities:
-        return JsonResponse(
-            {"message": "Validation failed.", "errors": {"priority": "Invalid priority."}},
-            status=422,
-        )
-
     service = TicketService()
-    service.change_priority(ticket, request.user, new_priority)
+    service.change_priority(ticket, request.user, data["priority"])
 
-    return JsonResponse({"message": "Priority updated.", "priority": new_priority})
+    return JsonResponse({"message": "Priority updated.", "priority": data["priority"]})
 
 
 @csrf_exempt
@@ -522,21 +492,17 @@ def ticket_assign(request, reference):
     JSON body:
         agent_id (required, integer)
     """
-    ticket, error = _resolve_ticket(reference)
+    ticket, resolve_error = _resolve_ticket(reference)
+    if resolve_error:
+        return resolve_error
+
+    data, error = AssignTicketValidator.validate_request(request)
     if error:
         return error
 
-    data = _json_body(request)
-    agent_id = data.get("agent_id")
-    if not agent_id:
-        return JsonResponse(
-            {"message": "Validation failed.", "errors": {"agent_id": "Agent ID is required."}},
-            status=422,
-        )
-
     try:
-        agent = User.objects.get(pk=int(agent_id))
-    except (User.DoesNotExist, ValueError, TypeError):
+        agent = User.objects.get(pk=data["agent_id"])
+    except User.DoesNotExist:
         return JsonResponse({"message": "Agent not found."}, status=404)
 
     service = TicketService()
@@ -617,19 +583,15 @@ def ticket_tags(request, reference):
     JSON body:
         tag_ids (required, array of integers)
     """
-    ticket, error = _resolve_ticket(reference)
+    ticket, resolve_error = _resolve_ticket(reference)
+    if resolve_error:
+        return resolve_error
+
+    data, error = UpdateTagsValidator.validate_request(request)
     if error:
         return error
 
-    data = _json_body(request)
-    tag_ids = data.get("tag_ids")
-    if tag_ids is None or not isinstance(tag_ids, list):
-        return JsonResponse(
-            {"message": "Validation failed.", "errors": {"tag_ids": "tag_ids array is required."}},
-            status=422,
-        )
-
-    new_tag_ids = set(int(t) for t in tag_ids)
+    new_tag_ids = set(int(t) for t in data["tag_ids"])
     current_tag_ids = set(ticket.tags.values_list("pk", flat=True))
 
     to_add = list(new_tag_ids - current_tag_ids)
