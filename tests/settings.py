@@ -1,4 +1,5 @@
 DEBUG = True
+USE_TZ = True
 
 DATABASES = {
     "default": {
