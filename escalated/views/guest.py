@@ -3,7 +3,7 @@ import secrets
 from django.http import HttpResponseForbidden, HttpResponseNotFound
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
-from inertia import render
+from escalated.rendering import render_page
 
 from escalated.conf import get_setting
 from escalated.models import Ticket, Department, EscalatedSetting, SatisfactionRating
@@ -25,7 +25,7 @@ def ticket_create(request):
     if not _guest_tickets_enabled():
         return HttpResponseNotFound(_("Guest tickets are not enabled."))
 
-    return render(request, "Escalated/Guest/Create", props={
+    return render_page(request, "Escalated/Guest/Create", props={
         "departments": DepartmentSerializer.serialize_list(
             Department.objects.filter(is_active=True)
         ),
@@ -63,7 +63,7 @@ def ticket_store(request):
         errors["description"] = _("Description is required.")
 
     if errors:
-        return render(request, "Escalated/Guest/Create", props={
+        return render_page(request, "Escalated/Guest/Create", props={
             "errors": errors,
             "old": {
                 "name": name,
@@ -126,7 +126,7 @@ def ticket_show(request, token):
     # Filter out internal notes for guest users
     replies = ticket.replies.filter(is_deleted=False, is_internal_note=False)
 
-    return render(request, "Escalated/Guest/Show", props={
+    return render_page(request, "Escalated/Guest/Show", props={
         "ticket": TicketSerializer.serialize(ticket),
         "replies": ReplySerializer.serialize_list(replies),
         "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),

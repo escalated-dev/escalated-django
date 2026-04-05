@@ -8,7 +8,7 @@ from django.db.models import Count, Q, Avg
 from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
-from inertia import render
+from escalated.rendering import render_page
 
 from escalated.models import (
     Ticket,
@@ -86,7 +86,7 @@ def dashboard(request):
         "department"
     ).prefetch_related("tags")[:10]
 
-    return render(request, "Escalated/Agent/Dashboard", props={
+    return render_page(request, "Escalated/Agent/Dashboard", props={
         "stats": stats,
         "recent_tickets": TicketSerializer.serialize_list(recent_tickets),
     })
@@ -152,7 +152,7 @@ def ticket_list(request):
     paginator = Paginator(tickets, 25)
     page = paginator.get_page(request.GET.get("page", 1))
 
-    return render(request, "Escalated/Agent/Tickets/Index", props={
+    return render_page(request, "Escalated/Agent/Tickets/Index", props={
         "tickets": TicketSerializer.serialize_list(page.object_list),
         "pagination": {
             "current_page": page.number,
@@ -232,7 +232,7 @@ def ticket_show(request, ticket_id):
     except SatisfactionRating.DoesNotExist:
         satisfaction_data = None
 
-    return render(request, "Escalated/Agent/Tickets/Show", props={
+    return render_page(request, "Escalated/Agent/Tickets/Show", props={
         "ticket": TicketSerializer.serialize(ticket),
         "replies": ReplySerializer.serialize_list(replies),
         "activities": [ActivitySerializer.serialize(a) for a in activities],
