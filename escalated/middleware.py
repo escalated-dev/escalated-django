@@ -66,14 +66,18 @@ class EscalatedInertiaShareMiddleware:
         return self.get_response(request)
 
     def process_view(self, request, view_func, view_args, view_kwargs):
+        from escalated.conf import get_setting
+
+        if not get_setting("UI_ENABLED"):
+            return None
+
         try:
             from inertia import share
 
-            from escalated.conf import get_setting
             from escalated.models import EscalatedSetting
 
             data = {
-                "prefix": get_setting("ROUTES_PREFIX") or "support",
+                "prefix": get_setting("ROUTE_PREFIX") or "support",
                 "is_agent": False,
                 "is_admin": False,
             }

@@ -49,7 +49,7 @@ def _make_admin_request(rf, method, path, data=None, user=None, content_type=Non
 
 @pytest.mark.django_db
 class TestSkillsAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_skills(self, mock_render, rf):
         SkillFactory(slug="skill-idx-test")
         mock_render.return_value = MagicMock(status_code=200)
@@ -96,7 +96,7 @@ class TestSkillsAdminViews:
 
 @pytest.mark.django_db
 class TestCapacityAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_capacities(self, mock_render, rf):
         AgentCapacityFactory()
         mock_render.return_value = MagicMock(status_code=200)
@@ -126,7 +126,7 @@ class TestCapacityAdminViews:
 
 @pytest.mark.django_db
 class TestWebhooksAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_webhooks(self, mock_render, rf):
         WebhookFactory()
         mock_render.return_value = MagicMock(status_code=200)
@@ -168,7 +168,7 @@ class TestWebhooksAdminViews:
         assert response.status_code == 302
         assert not Webhook.objects.filter(pk=wh.pk).exists()
 
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_deliveries(self, mock_render, rf):
         wh = WebhookFactory()
         WebhookDeliveryFactory(webhook=wh)
@@ -191,7 +191,7 @@ class TestWebhooksAdminViews:
 
 @pytest.mark.django_db
 class TestAutomationsAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_automations(self, mock_render, rf):
         AutomationFactory()
         mock_render.return_value = MagicMock(status_code=200)
@@ -286,7 +286,7 @@ class TestTwoFactorAdminViews:
 
 @pytest.mark.django_db
 class TestCustomObjectsAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_objects(self, mock_render, rf):
         CustomObjectFactory()
         mock_render.return_value = MagicMock(status_code=200)
@@ -326,7 +326,7 @@ class TestCustomObjectsAdminViews:
         assert response.status_code == 302
         assert not CustomObject.objects.filter(pk=obj.pk).exists()
 
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_records_list(self, mock_render, rf):
         obj = CustomObjectFactory()
         CustomObjectRecordFactory(object=obj)

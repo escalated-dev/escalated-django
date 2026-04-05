@@ -48,7 +48,7 @@ def _make_admin_request(rf, method, path, data=None, user=None, content_type=Non
 
 @pytest.mark.django_db
 class TestCustomFieldsAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_fields(self, mock_render, rf):
         CustomFieldFactory(slug="cf-test-idx")
         mock_render.return_value = MagicMock(status_code=200)
@@ -387,7 +387,7 @@ class TestSideConversationsAdminViews:
 
 @pytest.mark.django_db
 class TestArticlesAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_articles(self, mock_render, rf):
         ArticleFactory(slug="art-test-idx")
         mock_render.return_value = MagicMock(status_code=200)
@@ -465,7 +465,7 @@ class TestArticlesAdminViews:
 
 @pytest.mark.django_db
 class TestKBCategoriesAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_categories(self, mock_render, rf):
         ArticleCategoryFactory(slug="kbcat-test-idx")
         mock_render.return_value = MagicMock(status_code=200)

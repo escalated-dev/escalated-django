@@ -11,7 +11,7 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
-from inertia import render
+from escalated.rendering import render_page
 
 from escalated.conf import get_setting
 from escalated.permissions import is_admin
@@ -55,7 +55,7 @@ def plugin_list(request):
     service = PluginService()
     plugins = service.get_all_plugins()
 
-    return render(request, "Escalated/Admin/Plugins/Index", props={
+    return render_page(request, "Escalated/Admin/Plugins/Index", props={
         "plugins": plugins,
     })
 

@@ -41,7 +41,7 @@ def _make_admin_request(rf, method, path, data=None, user=None):
 
 @pytest.mark.django_db
 class TestStatusesAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_statuses(self, mock_render, rf):
         TicketStatusFactory(slug="test-s1")
         mock_render.return_value = MagicMock(status_code=200)
@@ -56,7 +56,7 @@ class TestStatusesAdminViews:
         assert "statuses" in props
         assert "categories" in props
 
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_create_get_renders_form(self, mock_render, rf):
         mock_render.return_value = MagicMock(status_code=200)
 
@@ -131,7 +131,7 @@ class TestStatusesAdminViews:
 
 @pytest.mark.django_db
 class TestBusinessHoursAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_schedules(self, mock_render, rf):
         BusinessScheduleFactory()
         mock_render.return_value = MagicMock(status_code=200)
@@ -213,7 +213,7 @@ class TestBusinessHoursAdminViews:
 
 @pytest.mark.django_db
 class TestRolesAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_roles(self, mock_render, rf):
         RoleFactory(slug="test-role-idx")
         mock_render.return_value = MagicMock(status_code=200)
@@ -296,7 +296,7 @@ class TestRolesAdminViews:
 
 @pytest.mark.django_db
 class TestAuditLogsAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_returns_logs(self, mock_render, rf):
         user = UserFactory(username="audit_admin", is_staff=True, is_superuser=True)
         ticket = TicketFactory()
@@ -320,7 +320,7 @@ class TestAuditLogsAdminViews:
         assert "actions" in props
         assert "resource_types" in props
 
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_index_with_filters(self, mock_render, rf):
         user = UserFactory(username="audit_filter", is_staff=True, is_superuser=True)
         mock_render.return_value = MagicMock(status_code=200)
