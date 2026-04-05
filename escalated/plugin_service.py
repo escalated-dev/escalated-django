@@ -60,6 +60,31 @@ class PluginService:
             logger.warning("Failed to read manifest for plugin '%s': %s", slug, exc)
             return None
 
+    def _get_manifest_for_slug(self, slug):
+        """
+        Read the plugin.json manifest for *slug*, checking both the local
+        plugins directory and pip-installed packages.
+        """
+        # Try local first
+        manifest = self._get_manifest(slug)
+        if manifest is not None:
+            return manifest
+
+        # Try resolved path (covers pip packages)
+        plugin_dir = self._resolve_plugin_path(slug)
+        if plugin_dir is None:
+            return None
+
+        manifest_path = os.path.join(plugin_dir, "plugin.json")
+        if not os.path.isfile(manifest_path):
+            return None
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as fh:
+                return json.load(fh)
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Failed to read manifest for plugin '%s': %s", slug, exc)
+            return None
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -206,17 +231,36 @@ class PluginService:
         """
         from escalated.plugin_models import EscalatedPlugin
 
-        plugin, _created = EscalatedPlugin.objects.get_or_create(
+        manifest = self._get_manifest_for_slug(slug) or {}
+
+        plugin, created = EscalatedPlugin.objects.get_or_create(
             slug=slug,
-            defaults={"is_active": False},
+            defaults={
+                "is_active": False,
+                "name": manifest.get("name", slug),
+                "version": manifest.get("version", ""),
+                "description": manifest.get("description", ""),
+                "author": manifest.get("author", ""),
+                "installed_at": timezone.now(),
+            },
         )
+
+        # Sync cached manifest fields on every activation
+        plugin.name = manifest.get("name", slug)
+        plugin.version = manifest.get("version", plugin.version)
+        plugin.description = manifest.get("description", plugin.description)
+        plugin.author = manifest.get("author", plugin.author)
+        if created:
+            plugin.installed_at = timezone.now()
 
         if not plugin.is_active:
             plugin.is_active = True
             plugin.activated_at = timezone.now()
             plugin.deactivated_at = None
             plugin.save(update_fields=[
-                "is_active", "activated_at", "deactivated_at", "updated_at",
+                "name", "version", "description", "author",
+                "is_active", "activated_at", "deactivated_at",
+                "installed_at", "updated_at",
             ])
 
             # Load the plugin so its hooks get registered
@@ -345,6 +389,27 @@ class PluginService:
                 raise Exception(
                     "Invalid plugin: missing plugin.json in root directory."
                 )
+
+            # Create a DB record so the plugin appears immediately
+            from escalated.plugin_models import EscalatedPlugin
+
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as fh:
+                    manifest = json.load(fh)
+            except (json.JSONDecodeError, OSError):
+                manifest = {}
+
+            EscalatedPlugin.objects.get_or_create(
+                slug=root_folder,
+                defaults={
+                    "is_active": False,
+                    "name": manifest.get("name", root_folder),
+                    "version": manifest.get("version", ""),
+                    "description": manifest.get("description", ""),
+                    "author": manifest.get("author", ""),
+                    "installed_at": timezone.now(),
+                },
+            )
 
             return {"slug": root_folder, "path": extract_path}
 
