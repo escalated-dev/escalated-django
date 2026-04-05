@@ -32,7 +32,7 @@ def _attach_session(request):
 
 @pytest.mark.django_db
 class TestCustomerViews:
-    @patch("escalated.views.customer.render")
+    @patch("escalated.views.customer.render_page")
     def test_ticket_list_returns_user_tickets(self, mock_render, rf):
         user = UserFactory(username="cust_list")
         ticket = TicketFactory(requester=user)
@@ -51,7 +51,7 @@ class TestCustomerViews:
         assert "tickets" in props
         assert "pagination" in props
 
-    @patch("escalated.views.customer.render")
+    @patch("escalated.views.customer.render_page")
     def test_ticket_create_shows_form(self, mock_render, rf):
         user = UserFactory(username="cust_create")
 
@@ -66,7 +66,7 @@ class TestCustomerViews:
         call_args = mock_render.call_args
         assert call_args[0][1] == "Escalated/Customer/Create"
 
-    @patch("escalated.views.customer.render")
+    @patch("escalated.views.customer.render_page")
     def test_ticket_show_returns_ticket(self, mock_render, rf):
         user = UserFactory(username="cust_show")
         ticket = TicketFactory(requester=user)
@@ -139,7 +139,7 @@ class TestCustomerViews:
 
 @pytest.mark.django_db
 class TestAgentViews:
-    @patch("escalated.views.agent.render")
+    @patch("escalated.views.agent.render_page")
     def test_dashboard_returns_stats(self, mock_render, rf):
         department = DepartmentFactory()
         agent_user = UserFactory(username="agent_dash")
@@ -158,7 +158,7 @@ class TestAgentViews:
         props = call_args[1]["props"] if "props" in call_args[1] else call_args[0][2]
         assert "stats" in props
 
-    @patch("escalated.views.agent.render")
+    @patch("escalated.views.agent.render_page")
     def test_ticket_list_with_filters(self, mock_render, rf):
         department = DepartmentFactory()
         agent_user = UserFactory(username="agent_list")
@@ -247,7 +247,7 @@ class TestAgentViews:
 
 @pytest.mark.django_db
 class TestAdminViews:
-    @patch("escalated.views.admin.render")
+    @patch("escalated.views.admin.render_page")
     def test_reports_returns_stats(self, mock_render, rf):
         admin_user = UserFactory(
             username="admin_reports", is_staff=True, is_superuser=True

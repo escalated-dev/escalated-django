@@ -35,7 +35,7 @@ def _attach_session(request):
 
 @pytest.mark.django_db
 class TestAdminApiTokensIndex:
-    @patch("escalated.views.admin_api_tokens.render")
+    @patch("escalated.views.admin_api_tokens.render_page")
     def test_index_returns_tokens_for_admin(self, mock_render, rf):
         admin = UserFactory(username="admin_idx", is_staff=True, is_superuser=True)
         user = UserFactory(username="token_owner")

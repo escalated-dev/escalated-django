@@ -17,12 +17,7 @@ from escalated.api_serializers import ApiTokenSerializer
 from escalated.conf import get_setting
 from escalated.models import ApiToken
 from escalated.permissions import is_admin, is_agent
-
-try:
-    from inertia import render
-except ImportError:
-    # Fallback for environments without inertia-django
-    render = None
+from escalated.rendering import render_page
 
 User = get_user_model()
 
@@ -58,15 +53,7 @@ def api_tokens_index(request):
     tokens = ApiToken.objects.order_by("-created_at")
     token_data = ApiTokenSerializer.serialize_list(tokens)
 
-    if render:
-        return render(request, "Escalated/Admin/ApiTokens/Index", props={
-            "tokens": token_data,
-            "users": _get_agent_users(),
-            "api_enabled": get_setting("API_ENABLED"),
-        })
-
-    # JSON fallback for non-Inertia setups
-    return JsonResponse({
+    return render_page(request, "Escalated/Admin/ApiTokens/Index", props={
         "tokens": token_data,
         "users": _get_agent_users(),
         "api_enabled": get_setting("API_ENABLED"),
