@@ -4,7 +4,7 @@ from django.core.paginator import Paginator
 from django.http import HttpResponseForbidden, HttpResponseNotFound
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
-from inertia import render
+from escalated.rendering import render_page
 
 from escalated.conf import get_setting
 from escalated.models import Ticket, Tag, Department, SatisfactionRating
@@ -34,7 +34,7 @@ def ticket_list(request):
     paginator = Paginator(tickets, 15)
     page = paginator.get_page(request.GET.get("page", 1))
 
-    return render(request, "Escalated/Customer/Index", props={
+    return render_page(request, "Escalated/Customer/Index", props={
         "tickets": TicketSerializer.serialize_list(page.object_list),
         "pagination": {
             "current_page": page.number,
@@ -56,7 +56,7 @@ def ticket_list(request):
 @login_required
 def ticket_create(request):
     """Show the ticket creation form."""
-    return render(request, "Escalated/Customer/Create", props={
+    return render_page(request, "Escalated/Customer/Create", props={
         "departments": DepartmentSerializer.serialize_list(
             Department.objects.filter(is_active=True)
         ),
@@ -89,7 +89,7 @@ def ticket_store(request):
         errors["description"] = _("Description is required.")
 
     if errors:
-        return render(request, "Escalated/Customer/Create", props={
+        return render_page(request, "Escalated/Customer/Create", props={
             "errors": errors,
             "old": data,
             "departments": DepartmentSerializer.serialize_list(
@@ -136,7 +136,7 @@ def ticket_show(request, ticket_id):
     replies = ticket.replies.filter(is_deleted=False, is_internal_note=False)
 
     from escalated.serializers import ReplySerializer, AttachmentSerializer
-    return render(request, "Escalated/Customer/Show", props={
+    return render_page(request, "Escalated/Customer/Show", props={
         "ticket": TicketSerializer.serialize(ticket),
         "replies": ReplySerializer.serialize_list(replies),
         "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),

@@ -8,6 +8,8 @@ DEFAULTS = {
     "USER_MODEL": None,  # Falls back to settings.AUTH_USER_MODEL
     "TABLE_PREFIX": "escalated_",
     "ROUTE_PREFIX": "support",
+    "UI_ENABLED": True,
+    "UI_RENDERER": None,
     "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
     "HOSTED_API_KEY": None,
     "ALLOW_CUSTOMER_CLOSE": True,

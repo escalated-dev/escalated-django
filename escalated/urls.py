@@ -205,13 +205,18 @@ inbound_patterns = [
     path("inbound/<str:adapter_name>/", inbound.inbound_webhook, name="inbound_webhook"),
 ]
 
-urlpatterns = (
-    customer_patterns
-    + agent_patterns
-    + admin_patterns
-    + guest_patterns
-    + inbound_patterns
-)
+# Core routes (always registered)
+urlpatterns = list(inbound_patterns)
+
+# UI routes (only when UI is enabled)
+if get_setting("UI_ENABLED"):
+    urlpatterns = (
+        customer_patterns
+        + agent_patterns
+        + admin_patterns
+        + guest_patterns
+        + urlpatterns
+    )
 
 # Inject plugin bridge routes (pages, API endpoints, webhooks) if the SDK
 # bridge has booted and registered patterns from plugin manifests.

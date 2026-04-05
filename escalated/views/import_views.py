@@ -28,7 +28,7 @@ from django.http import (
 )
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
-from inertia import render
+from escalated.rendering import render_page
 
 from escalated.models import ImportJob
 from escalated.permissions import is_admin
@@ -92,7 +92,7 @@ def import_index(request):
             if job[ts_field]:
                 job[ts_field] = job[ts_field].isoformat()
 
-    return render(request, "Escalated/Admin/Import/Index", props={
+    return render_page(request, "Escalated/Admin/Import/Index", props={
         "jobs": jobs,
         "adapters": adapters,
     })
@@ -120,7 +120,7 @@ def import_create(request):
         for a in service.available_adapters()
     ]
 
-    return render(request, "Escalated/Admin/Import/Create", props={
+    return render_page(request, "Escalated/Admin/Import/Create", props={
         "adapters": adapters,
     })
 
@@ -234,7 +234,7 @@ def import_mapping(request, job_uuid):
             "current": mappings.get(et, adapter.default_field_mappings(et)),
         }
 
-    return render(request, "Escalated/Admin/Import/Mapping", props={
+    return render_page(request, "Escalated/Admin/Import/Mapping", props={
         "job": {
             "id": str(job.id),
             "platform": job.platform,
@@ -379,7 +379,7 @@ def import_show(request, job_uuid):
     adapter = service.resolve_adapter(job.platform)
     entity_types = adapter.entity_types() if adapter else []
 
-    return render(request, "Escalated/Admin/Import/Show", props={
+    return render_page(request, "Escalated/Admin/Import/Show", props={
         "job": {
             "id": str(job.id),
             "platform": job.platform,
