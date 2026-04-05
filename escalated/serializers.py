@@ -543,9 +543,11 @@ class SideConversationSerializer:
             "updated_at": _format_dt(conversation.updated_at),
         }
         if include_replies:
-            data["replies"] = SideConversationReplySerializer.serialize_list(
-                conversation.replies.all()
-            )
+            replies = conversation.replies.all()
+            data["replies"] = SideConversationReplySerializer.serialize_list(replies)
+            data["reply_count"] = len(data["replies"])
+        elif hasattr(conversation, "reply_count"):
+            data["reply_count"] = conversation.reply_count
         return data
 
     @staticmethod
@@ -718,13 +720,24 @@ class WebhookDeliverySerializer:
 class AutomationSerializer:
     @staticmethod
     def serialize(automation):
+        conditions = automation.conditions or []
+        actions = automation.actions or []
+        # Extract the trigger type from the first condition if available
+        trigger_type = None
+        if conditions and isinstance(conditions, list) and len(conditions) > 0:
+            first = conditions[0]
+            if isinstance(first, dict):
+                trigger_type = first.get("type") or first.get("field")
         return {
             "id": automation.pk,
             "name": automation.name,
-            "conditions": automation.conditions,
-            "actions": automation.actions,
+            "conditions": conditions,
+            "actions": actions,
             "active": automation.active,
             "position": automation.position,
+            "trigger_type": trigger_type,
+            "condition_count": len(conditions) if isinstance(conditions, list) else 0,
+            "action_count": len(actions) if isinstance(actions, list) else 0,
             "last_run_at": _format_dt(automation.last_run_at),
             "created_at": _format_dt(automation.created_at),
             "updated_at": _format_dt(automation.updated_at),
