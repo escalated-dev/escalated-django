@@ -43,6 +43,7 @@ class PluginUIService:
     def __init__(self):
         self._menu_items = []
         self._dashboard_widgets = []
+        self._custom_pages = {}  # {route: page_config}
         self._page_components = {}  # {page: {slot: [component, ...]}}
 
     # ------------------------------------------------------------------
@@ -58,6 +59,7 @@ class PluginUIService:
         "position": 100,
         "parent": None,
         "badge": None,
+        "target": "agent",  # 'agent' or 'admin'
         "active_routes": [],
         "submenu": [],
     }
@@ -104,9 +106,18 @@ class PluginUIService:
                 menu_item["submenu"].append(merged)
                 break
 
-    def get_menu_items(self):
-        """Return all registered menu items, sorted by position."""
-        return sorted(self._menu_items, key=lambda m: m.get("position", 100))
+    def get_menu_items(self, target=None):
+        """
+        Return registered menu items, sorted by position.
+
+        Args:
+            target: Optional filter — ``'agent'`` or ``'admin'``.
+                    When *None*, all items are returned.
+        """
+        items = self._menu_items
+        if target is not None:
+            items = [m for m in items if m.get("target") == target]
+        return sorted(items, key=lambda m: m.get("position", 100))
 
     # ------------------------------------------------------------------
     # Dashboard Widgets
@@ -119,6 +130,7 @@ class PluginUIService:
         "position": 100,
         "width": "full",  # 'full', 'half', 'third', 'quarter'
         "permission": None,
+        "target": "agent",  # 'agent' or 'admin'
     }
 
     def add_dashboard_widget(self, widget):
@@ -140,9 +152,50 @@ class PluginUIService:
             merged["id"] = f"widget_{uuid.uuid4().hex[:8]}"
         self._dashboard_widgets.append(merged)
 
-    def get_dashboard_widgets(self):
-        """Return all registered dashboard widgets, sorted by position."""
-        return sorted(self._dashboard_widgets, key=lambda w: w.get("position", 100))
+    def get_dashboard_widgets(self, target=None):
+        """
+        Return registered dashboard widgets, sorted by position.
+
+        Args:
+            target: Optional filter — ``'agent'`` or ``'admin'``.
+                    When *None*, all widgets are returned.
+        """
+        widgets = self._dashboard_widgets
+        if target is not None:
+            widgets = [w for w in widgets if w.get("target") == target]
+        return sorted(widgets, key=lambda w: w.get("position", 100))
+
+    # ------------------------------------------------------------------
+    # Custom Pages
+    # ------------------------------------------------------------------
+
+    _PAGE_DEFAULTS = {
+        "middleware": ["auth"],
+        "permission": None,
+        "title": "Custom Page",
+    }
+
+    def register_page(self, route, component, **options):
+        """
+        Register a custom page route that a plugin provides.
+
+        Args:
+            route: Route name / URL path, e.g. ``'/my-plugin/dashboard'``.
+            component: Inertia component name to render.
+            **options: Extra keys merged into the page config (e.g.
+                       ``title``, ``permission``, ``middleware``).
+        """
+        merged = {
+            **self._PAGE_DEFAULTS,
+            "route": route,
+            "component": component,
+            **options,
+        }
+        self._custom_pages[route] = merged
+
+    def get_custom_pages(self):
+        """Return all registered custom pages as a dict keyed by route."""
+        return dict(self._custom_pages)
 
     # ------------------------------------------------------------------
     # Page Components (Slots)
@@ -190,6 +243,7 @@ class PluginUIService:
         """Remove all registered UI elements. Useful for testing."""
         self._menu_items.clear()
         self._dashboard_widgets.clear()
+        self._custom_pages.clear()
         self._page_components.clear()
 
 
@@ -213,6 +267,11 @@ def register_menu_item(item):
 def register_dashboard_widget(widget):
     """Shortcut: register a dashboard widget on the global PluginUIService."""
     plugin_ui.add_dashboard_widget(widget)
+
+
+def register_page(route, component, **options):
+    """Shortcut: register a custom page on the global PluginUIService."""
+    plugin_ui.register_page(route, component, **options)
 
 
 def add_page_component(page, slot, component):

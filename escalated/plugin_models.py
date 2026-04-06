@@ -43,8 +43,8 @@ class EscalatedPlugin(models.Model):
     Tracks which plugins are installed and their activation state.
 
     The actual plugin code lives on disk (in the host app's plugins directory).
-    This model only stores the slug and activation metadata so the system
-    knows which plugins to load on startup.
+    This model stores the slug, cached manifest metadata, activation state,
+    and an optional per-plugin JSON config blob.
     """
 
     slug = models.SlugField(
@@ -52,9 +52,42 @@ class EscalatedPlugin(models.Model):
         unique=True,
         help_text="Unique identifier matching the plugin directory name.",
     )
+    name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Human-readable plugin name (cached from plugin.json).",
+    )
+    version = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        help_text="Plugin version string (cached from plugin.json).",
+    )
+    description = models.TextField(
+        blank=True,
+        default="",
+        help_text="Short plugin description (cached from plugin.json).",
+    )
+    author = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Plugin author (cached from plugin.json).",
+    )
     is_active = models.BooleanField(
         default=False,
         help_text="Whether this plugin is currently active.",
+    )
+    config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Per-plugin configuration stored as JSON.",
+    )
+    installed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this plugin was first installed.",
     )
     activated_at = models.DateTimeField(null=True, blank=True)
     deactivated_at = models.DateTimeField(null=True, blank=True)

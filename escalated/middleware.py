@@ -63,6 +63,11 @@ class EscalatedInertiaShareMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        from escalated.conf import get_setting
+
+        if not get_setting("UI_ENABLED"):
+            return self.get_response(request)
+
         return self.get_response(request)
 
     def process_view(self, request, view_func, view_args, view_kwargs):
