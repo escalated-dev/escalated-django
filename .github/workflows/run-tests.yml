@@ -5,6 +5,12 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or ref to test'
+        required: false
+        default: 'main'
 
 jobs:
   tests:

@@ -2268,7 +2268,7 @@ def ticket_merge(request, ticket_id):
 
 @login_required
 def side_conversations_index(request, ticket_id):
-    """List all side conversations for a ticket."""
+    """List all side conversations for a ticket with reply counts."""
     check = _require_admin(request)
     if check:
         return check
@@ -2282,7 +2282,8 @@ def side_conversations_index(request, ticket_id):
         ticket.side_conversations
         .select_related("created_by")
         .prefetch_related("replies__author")
-        .all()
+        .annotate(reply_count=Count("replies"))
+        .order_by("-created_at")
     )
 
     return JsonResponse({
@@ -2880,11 +2881,39 @@ def webhooks_retry(request, delivery_id):
 
 @login_required
 def automations_index(request):
+    """List all automation rules with status, trigger type, and action count."""
     check = _require_admin(request)
     if check:
         return check
+
     automations = Automation.objects.order_by("position")
-    return render_page(request, "Escalated/Admin/Automations/Index", props={"automations": AutomationSerializer.serialize_list(automations)})
+
+    # Filter by active status
+    active_filter = request.GET.get("active")
+    if active_filter is not None:
+        automations = automations.filter(active=active_filter == "true")
+
+    search = request.GET.get("search")
+    if search:
+        automations = automations.filter(name__icontains=search)
+
+    paginator = Paginator(automations, 20)
+    page = paginator.get_page(request.GET.get("page", 1))
+
+    return render_page(request, "Escalated/Admin/Automations/Index", props={
+        "automations": AutomationSerializer.serialize_list(page.object_list),
+        "pagination": {
+            "current_page": page.number,
+            "total_pages": paginator.num_pages,
+            "total_count": paginator.count,
+            "has_next": page.has_next(),
+            "has_previous": page.has_previous(),
+        },
+        "filters": {
+            "active": active_filter,
+            "search": search,
+        },
+    })
 
 
 @login_required
