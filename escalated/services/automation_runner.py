@@ -25,7 +25,6 @@ class AutomationRunner:
         return affected
 
     def _find_matching_tickets(self, automation):
-        from django.db.models import Q
 
         from escalated.models import Ticket
 
@@ -119,7 +118,7 @@ class AutomationRunner:
         For hours_since fields, > hours means < datetime (older).
         """
         mapping = {
-            ">": "__lte",   # more hours ago = earlier datetime
+            ">": "__lte",  # more hours ago = earlier datetime
             ">=": "__lte",
             "<": "__gte",
             "<=": "__gte",

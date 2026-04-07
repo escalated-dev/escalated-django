@@ -1,11 +1,11 @@
 from escalated.permissions import (
-    is_admin,
-    is_agent,
-    can_view_ticket,
-    can_update_ticket,
-    can_reply_ticket,
     can_add_note,
     can_close_ticket,
+    can_reply_ticket,
+    can_update_ticket,
+    can_view_ticket,
+    is_admin,
+    is_agent,
 )
 
 

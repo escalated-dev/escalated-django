@@ -1,7 +1,3 @@
-import hashlib
-import json
-import time
-
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.utils import timezone
@@ -106,9 +102,7 @@ class ApiRateLimit:
 
     def process_response(self, request, response):
         # Only add rate-limit headers to API responses
-        if not hasattr(request, "api_token") and not request.path.startswith(
-            "/" + get_setting("API_PREFIX")
-        ):
+        if not hasattr(request, "api_token") and not request.path.startswith("/" + get_setting("API_PREFIX")):
             return response
 
         max_attempts = get_setting("API_RATE_LIMIT")

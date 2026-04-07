@@ -33,10 +33,7 @@ class BaseValidator(forms.Form):
 
         form = cls(raw)
         if not form.is_valid():
-            errors = {
-                field: msgs[0] if isinstance(msgs, list) else msgs
-                for field, msgs in form.errors.items()
-            }
+            errors = {field: msgs[0] if isinstance(msgs, list) else msgs for field, msgs in form.errors.items()}
             return None, JsonResponse(
                 {"message": "Validation failed.", "errors": errors},
                 status=422,
@@ -104,8 +101,12 @@ class UpdateTagsValidator(BaseValidator):
 
 class BulkActionValidator(BaseValidator):
     ALLOWED_ACTIONS = [
-        "change_status", "change_priority", "assign",
-        "add_tags", "remove_tags", "delete",
+        "change_status",
+        "change_priority",
+        "assign",
+        "add_tags",
+        "remove_tags",
+        "delete",
     ]
 
     ticket_ids = forms.JSONField(required=True)

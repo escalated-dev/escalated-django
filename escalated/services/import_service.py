@@ -23,7 +23,7 @@ an import is running.
 """
 
 import logging
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -82,7 +82,7 @@ class ImportService:
     def run(
         self,
         job: ImportJob,
-        on_progress: Optional[Callable[[str, dict], None]] = None,
+        on_progress: Callable[[str, dict], None] | None = None,
     ) -> None:
         """
         Execute (or resume) the import for *job*.
@@ -150,7 +150,7 @@ class ImportService:
         job: ImportJob,
         adapter,
         entity_type: str,
-        on_progress: Optional[Callable],
+        on_progress: Callable | None,
     ) -> None:
         cursor = job.get_entity_cursor(entity_type)
         progress = (job.progress or {}).get(entity_type, {})
@@ -188,7 +188,10 @@ class ImportService:
                     job.append_error(entity_type, source_id, str(exc))
                     logger.warning(
                         "Import error [job=%s entity=%s source_id=%s]: %s",
-                        job.id, entity_type, source_id, exc,
+                        job.id,
+                        entity_type,
+                        source_id,
+                        exc,
                     )
 
             cursor = result.cursor
@@ -256,9 +259,7 @@ class ImportService:
         try:
             user = User.objects.get(email=record["email"])
         except User.DoesNotExist:
-            raise RuntimeError(
-                f"Agent with email '{record['email']}' not found in host application."
-            )
+            raise RuntimeError(f"Agent with email '{record['email']}' not found in host application.")
         return user.pk
 
     def _persist_contact(self, record: dict, mappings: dict):
@@ -294,21 +295,15 @@ class ImportService:
 
         requester_id = None
         if record.get("requester_source_id"):
-            requester_id = ImportSourceMap.resolve(
-                job.id, "contacts", record["requester_source_id"]
-            )
+            requester_id = ImportSourceMap.resolve(job.id, "contacts", record["requester_source_id"])
 
         assignee_id = None
         if record.get("assignee_source_id"):
-            assignee_id = ImportSourceMap.resolve(
-                job.id, "agents", record["assignee_source_id"]
-            )
+            assignee_id = ImportSourceMap.resolve(job.id, "agents", record["assignee_source_id"])
 
         department_id = None
         if record.get("department_source_id"):
-            department_id = ImportSourceMap.resolve(
-                job.id, "departments", record["department_source_id"]
-            )
+            department_id = ImportSourceMap.resolve(job.id, "departments", record["department_source_id"])
 
         ticket = Ticket(
             subject=record.get("title") or record.get("subject") or "Imported ticket",
@@ -334,20 +329,13 @@ class ImportService:
             if record.get("created_at"):
                 update_fields.append("created_at")
             Ticket.objects.filter(pk=ticket.pk).update(
-                **{
-                    k: record[k[:-3] if k.endswith("_at") else k]
-                    for k in update_fields
-                    if record.get(k)
-                }
+                **{k: record[k[:-3] if k.endswith("_at") else k] for k in update_fields if record.get(k)}
             )
 
         # Attach tags
         if record.get("tag_source_ids"):
-            Tag = apps.get_model("escalated", "Tag")
-            tag_ids = [
-                ImportSourceMap.resolve(job.id, "tags", sid)
-                for sid in record["tag_source_ids"]
-            ]
+            apps.get_model("escalated", "Tag")
+            tag_ids = [ImportSourceMap.resolve(job.id, "tags", sid) for sid in record["tag_source_ids"]]
             tag_ids = [tid for tid in tag_ids if tid]
             if tag_ids:
                 ticket.tags.set(tag_ids)
@@ -357,18 +345,15 @@ class ImportService:
     def _persist_reply(self, job: ImportJob, record: dict, mappings: dict):
         Reply = apps.get_model("escalated", "Reply")
 
-        ticket_id = ImportSourceMap.resolve(
-            job.id, "tickets", record.get("ticket_source_id", "")
-        )
+        ticket_id = ImportSourceMap.resolve(job.id, "tickets", record.get("ticket_source_id", ""))
         if not ticket_id:
             raise RuntimeError("Parent ticket not found for reply.")
 
         author_id = None
         if record.get("author_source_id"):
-            author_id = (
-                ImportSourceMap.resolve(job.id, "agents", record["author_source_id"])
-                or ImportSourceMap.resolve(job.id, "contacts", record["author_source_id"])
-            )
+            author_id = ImportSourceMap.resolve(
+                job.id, "agents", record["author_source_id"]
+            ) or ImportSourceMap.resolve(job.id, "contacts", record["author_source_id"])
 
         reply = Reply(
             ticket_id=ticket_id,
@@ -420,9 +405,7 @@ class ImportService:
     def _persist_satisfaction_rating(self, job: ImportJob, record: dict, mappings: dict):
         SatisfactionRating = apps.get_model("escalated", "SatisfactionRating")
 
-        ticket_id = ImportSourceMap.resolve(
-            job.id, "tickets", record.get("ticket_source_id", "")
-        )
+        ticket_id = ImportSourceMap.resolve(job.id, "tickets", record.get("ticket_source_id", ""))
         if not ticket_id:
             raise RuntimeError("Ticket not found for satisfaction rating.")
 
@@ -436,8 +419,6 @@ class ImportService:
         rating.save()
 
         if record.get("created_at"):
-            SatisfactionRating.objects.filter(pk=rating.pk).update(
-                created_at=record["created_at"]
-            )
+            SatisfactionRating.objects.filter(pk=rating.pk).update(created_at=record["created_at"])
 
         return rating.pk

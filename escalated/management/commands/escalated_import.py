@@ -22,10 +22,8 @@ Usage examples::
 """
 
 import json
-import sys
 
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from escalated.models import ImportJob
@@ -100,18 +98,13 @@ class Command(BaseCommand):
         # ------------------------------------------------------------------
         platform = options.get("platform")
         if not platform:
-            raise CommandError(
-                _("Please provide a platform slug, e.g.: escalated_import zendesk")
-            )
+            raise CommandError(_("Please provide a platform slug, e.g.: escalated_import zendesk"))
 
         adapter = service.resolve_adapter(platform)
         if not adapter:
             available = [a.name() for a in service.available_adapters()]
             raise CommandError(
-                _(
-                    "No adapter found for platform '%(platform)s'. "
-                    "Available: %(available)s"
-                )
+                _("No adapter found for platform '%(platform)s'. Available: %(available)s")
                 % {"platform": platform, "available": ", ".join(available) or "(none)"}
             )
 
@@ -122,9 +115,7 @@ class Command(BaseCommand):
             status="pending",
             credentials=credentials,
         )
-        self.stdout.write(
-            self.style.SUCCESS(_("Created import job %(id)s.") % {"id": job.id})
-        )
+        self.stdout.write(self.style.SUCCESS(_("Created import job %(id)s.") % {"id": job.id}))
 
         # Test connection
         job.transition_to("authenticating")
@@ -158,8 +149,7 @@ class Command(BaseCommand):
             failed = progress_data.get("failed", 0)
             pct = f"{processed / total * 100:.1f}%" if total else "?"
             self.stdout.write(
-                f"  {entity_type}: {processed}/{total} ({pct}) "
-                f"skipped={skipped} failed={failed}",
+                f"  {entity_type}: {processed}/{total} ({pct}) skipped={skipped} failed={failed}",
                 ending="\r",
             )
             self.stdout.flush()
@@ -173,18 +163,9 @@ class Command(BaseCommand):
         job.refresh_from_db()
 
         if job.status == "paused":
-            self.stdout.write(
-                self.style.WARNING(
-                    _("\nImport paused. Resume with: "
-                      "--resume=%(id)s") % {"id": job.id}
-                )
-            )
+            self.stdout.write(self.style.WARNING(_("\nImport paused. Resume with: --resume=%(id)s") % {"id": job.id}))
         else:
-            self.stdout.write(
-                self.style.SUCCESS(
-                    _("\nImport completed successfully (job %(id)s).") % {"id": job.id}
-                )
-            )
+            self.stdout.write(self.style.SUCCESS(_("\nImport completed successfully (job %(id)s).") % {"id": job.id}))
             for entity_type, progress_data in (job.progress or {}).items():
                 self.stdout.write(
                     f"  {entity_type}: "
@@ -201,10 +182,7 @@ class Command(BaseCommand):
 
         if not job.is_resumable():
             raise CommandError(
-                _(
-                    "Job %(id)s is not resumable (status: %(status)s). "
-                    "Only 'paused' or 'failed' jobs can be resumed."
-                )
+                _("Job %(id)s is not resumable (status: %(status)s). Only 'paused' or 'failed' jobs can be resumed.")
                 % {"id": job_uuid, "status": job.status}
             )
 
@@ -220,9 +198,7 @@ class Command(BaseCommand):
             self.stdout.write(_("No import jobs found."))
             return
 
-        self.stdout.write(
-            f"{'ID':<38}  {'Platform':<15}  {'Status':<15}  {'Created'}"
-        )
+        self.stdout.write(f"{'ID':<38}  {'Platform':<15}  {'Status':<15}  {'Created'}")
         self.stdout.write("-" * 90)
         for job in jobs:
             self.stdout.write(
@@ -236,9 +212,7 @@ class Command(BaseCommand):
         except ImportJob.DoesNotExist:
             raise CommandError(_("ImportJob '%(id)s' not found.") % {"id": job_uuid})
 
-        self.stdout.write(
-            json.dumps(job.field_mappings or {}, indent=2, default=str)
-        )
+        self.stdout.write(json.dumps(job.field_mappings or {}, indent=2, default=str))
 
     def _parse_credentials(self, options: dict, adapter) -> dict:
         """
@@ -249,9 +223,7 @@ class Command(BaseCommand):
             try:
                 return json.loads(options["credentials"])
             except json.JSONDecodeError as exc:
-                raise CommandError(
-                    _("Invalid JSON for --credentials: %(err)s") % {"err": exc}
-                )
+                raise CommandError(_("Invalid JSON for --credentials: %(err)s") % {"err": exc})
 
         # Fall back: prompt interactively for each declared credential field
         creds = {}
@@ -262,6 +234,7 @@ class Command(BaseCommand):
 
             if is_secret:
                 import getpass
+
                 value = getpass.getpass(f"{label}: ")
             else:
                 value = input(f"{label}: ")

@@ -64,8 +64,7 @@ class HostedApiClient:
             except (ValueError, AttributeError):
                 pass
             raise HostedApiError(
-                f"API returned {e.response.status_code}: "
-                f"{error_body.get('message', str(e))}",
+                f"API returned {e.response.status_code}: {error_body.get('message', str(e))}",
                 status_code=e.response.status_code,
                 response_body=error_body,
             )
@@ -85,9 +84,7 @@ class HostedApiClient:
         return self._request("GET", "/tickets", params=params)
 
     def transition_status(self, ticket_id, status):
-        return self._request(
-            "POST", f"/tickets/{ticket_id}/status", data={"status": status}
-        )
+        return self._request("POST", f"/tickets/{ticket_id}/status", data={"status": status})
 
     def assign_ticket(self, ticket_id, agent_id):
         return self._request(
@@ -107,14 +104,10 @@ class HostedApiClient:
     # ----- Tag endpoints -----
 
     def add_tags(self, ticket_id, tag_ids):
-        return self._request(
-            "POST", f"/tickets/{ticket_id}/tags", data={"tag_ids": tag_ids}
-        )
+        return self._request("POST", f"/tickets/{ticket_id}/tags", data={"tag_ids": tag_ids})
 
     def remove_tags(self, ticket_id, tag_ids):
-        return self._request(
-            "DELETE", f"/tickets/{ticket_id}/tags", data={"tag_ids": tag_ids}
-        )
+        return self._request("DELETE", f"/tickets/{ticket_id}/tags", data={"tag_ids": tag_ids})
 
     # ----- Department endpoints -----
 

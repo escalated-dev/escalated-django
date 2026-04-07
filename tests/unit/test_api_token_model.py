@@ -3,14 +3,13 @@ Unit tests for the ApiToken model.
 """
 
 import hashlib
-import secrets
 from datetime import timedelta
 
 import pytest
 from django.utils import timezone
 
 from escalated.models import ApiToken
-from tests.factories import UserFactory, ApiTokenFactory
+from tests.factories import UserFactory
 
 
 @pytest.mark.django_db
@@ -109,7 +108,8 @@ class TestApiTokenModel:
         user = UserFactory(username="qs_active")
         result_active = ApiToken.create_token(user, "Active")
         result_expired = ApiToken.create_token(
-            user, "Expired",
+            user,
+            "Expired",
             expires_at=timezone.now() - timedelta(days=1),
         )
 
@@ -121,7 +121,8 @@ class TestApiTokenModel:
         user = UserFactory(username="qs_expired")
         result_active = ApiToken.create_token(user, "Active")
         result_expired = ApiToken.create_token(
-            user, "Expired",
+            user,
+            "Expired",
             expires_at=timezone.now() - timedelta(days=1),
         )
 

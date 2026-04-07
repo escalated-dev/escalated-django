@@ -6,7 +6,6 @@ from escalated.conf import get_table_name
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("escalated", "0006_merge_api_tokens_and_plugins"),

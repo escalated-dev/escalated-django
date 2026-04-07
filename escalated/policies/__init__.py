@@ -28,6 +28,7 @@ def check_policy(policy_class, action, obj_arg=None, lookup_model=None, lookup_f
     If obj_arg is None, calls the policy method with just (user,).
     Otherwise resolves the object and calls with (user, obj).
     """
+
     def decorator(view_func):
         @functools.wraps(view_func)
         def wrapper(request, *args, **kwargs):
@@ -49,5 +50,7 @@ def check_policy(policy_class, action, obj_arg=None, lookup_model=None, lookup_f
             if obj is not None:
                 request.policy_object = obj
             return view_func(request, *args, **kwargs)
+
         return wrapper
+
     return decorator

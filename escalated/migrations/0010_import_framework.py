@@ -14,7 +14,6 @@ from escalated.conf import get_table_name
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("escalated", "0009_platform_parity_phase3_5"),
     ]

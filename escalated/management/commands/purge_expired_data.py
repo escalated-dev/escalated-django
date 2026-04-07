@@ -72,6 +72,4 @@ class Command(BaseCommand):
         if total_purged == 0:
             self.stdout.write("No expired data to purge.")
         else:
-            self.stdout.write(
-                self.style.SUCCESS(f"Purge complete: {total_purged} total records removed.")
-            )
+            self.stdout.write(self.style.SUCCESS(f"Purge complete: {total_purged} total records removed."))

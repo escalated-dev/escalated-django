@@ -18,7 +18,6 @@ def seed_default_settings(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("escalated", "0001_initial"),
     ]

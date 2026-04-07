@@ -1,20 +1,28 @@
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock
-
 from django.test import RequestFactory
 
 from escalated.models import (
-    Skill, AgentCapacity, Webhook, WebhookDelivery,
-    Automation, TwoFactor, CustomObject, CustomObjectRecord,
+    Automation,
+    CustomObject,
+    CustomObjectRecord,
+    Skill,
+    TwoFactor,
+    Webhook,
 )
 from escalated.views import admin
 from tests.factories import (
-    UserFactory, SkillFactory, AgentCapacityFactory,
-    WebhookFactory, WebhookDeliveryFactory,
-    AutomationFactory, TwoFactorFactory,
-    CustomObjectFactory, CustomObjectRecordFactory,
+    AgentCapacityFactory,
+    AutomationFactory,
+    CustomObjectFactory,
+    CustomObjectRecordFactory,
+    SkillFactory,
+    TwoFactorFactory,
+    UserFactory,
+    WebhookDeliveryFactory,
+    WebhookFactory,
 )
 
 
@@ -38,6 +46,7 @@ def _make_admin_request(rf, method, path, data=None, user=None, content_type=Non
         request = rf.post(path, data=data or {})
     request.user = user
     from django.contrib.sessions.backends.db import SessionStore
+
     request.session = SessionStore()
     return request
 
@@ -64,18 +73,28 @@ class TestSkillsAdminViews:
         assert "skills" in props
 
     def test_create_post(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/skills/create/", data={
-            "name": "Networking",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/skills/create/",
+            data={
+                "name": "Networking",
+            },
+        )
         response = admin.skills_create(request)
         assert response.status_code == 302
         assert Skill.objects.filter(name="Networking").exists()
 
     def test_edit_post(self, rf):
         skill = SkillFactory(name="Old Skill", slug="old-skill")
-        request = _make_admin_request(rf, "POST", f"/admin/skills/{skill.pk}/edit/", data={
-            "name": "New Skill",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/skills/{skill.pk}/edit/",
+            data={
+                "name": "New Skill",
+            },
+        )
         response = admin.skills_edit(request, skill.pk)
         assert response.status_code == 302
         skill.refresh_from_db()
@@ -105,14 +124,21 @@ class TestCapacityAdminViews:
         admin.capacity_index(request)
 
         mock_render.assert_called_once()
-        props = mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        props = (
+            mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        )
         assert "capacities" in props
 
     def test_update(self, rf):
         cap = AgentCapacityFactory(max_concurrent=5)
-        request = _make_admin_request(rf, "POST", f"/admin/capacity/{cap.pk}/update/", data={
-            "max_concurrent": "20",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/capacity/{cap.pk}/update/",
+            data={
+                "max_concurrent": "20",
+            },
+        )
         response = admin.capacity_update(request, cap.pk)
         assert response.status_code == 302
         cap.refresh_from_db()
@@ -135,27 +161,39 @@ class TestWebhooksAdminViews:
         admin.webhooks_index(request)
 
         mock_render.assert_called_once()
-        props = mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        props = (
+            mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        )
         assert "webhooks" in props
         assert "available_events" in props
 
     def test_create_post(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/webhooks/create/", data={
-            "url": "https://example.com/hook",
-            "events": json.dumps(["ticket.created"]),
-            "active": "true",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/webhooks/create/",
+            data={
+                "url": "https://example.com/hook",
+                "events": json.dumps(["ticket.created"]),
+                "active": "true",
+            },
+        )
         response = admin.webhooks_create(request)
         assert response.status_code == 302
         assert Webhook.objects.filter(url="https://example.com/hook").exists()
 
     def test_edit_post(self, rf):
         wh = WebhookFactory(url="https://old.com/hook")
-        request = _make_admin_request(rf, "POST", f"/admin/webhooks/{wh.pk}/edit/", data={
-            "url": "https://new.com/hook",
-            "events": json.dumps(["ticket.updated"]),
-            "active": "true",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/webhooks/{wh.pk}/edit/",
+            data={
+                "url": "https://new.com/hook",
+                "events": json.dumps(["ticket.updated"]),
+                "active": "true",
+            },
+        )
         response = admin.webhooks_edit(request, wh.pk)
         assert response.status_code == 302
         wh.refresh_from_db()
@@ -178,7 +216,9 @@ class TestWebhooksAdminViews:
         admin.webhooks_deliveries(request, wh.pk)
 
         mock_render.assert_called_once()
-        props = mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        props = (
+            mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        )
         assert "webhook" in props
         assert "deliveries" in props
         assert "pagination" in props
@@ -200,28 +240,40 @@ class TestAutomationsAdminViews:
         admin.automations_index(request)
 
         mock_render.assert_called_once()
-        props = mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        props = (
+            mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        )
         assert "automations" in props
 
     def test_create_post(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/automations/create/", data={
-            "name": "Auto-close",
-            "conditions": json.dumps([{"field": "status", "value": "open"}]),
-            "actions": json.dumps([{"type": "change_status", "value": "closed"}]),
-            "active": "true",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/automations/create/",
+            data={
+                "name": "Auto-close",
+                "conditions": json.dumps([{"field": "status", "value": "open"}]),
+                "actions": json.dumps([{"type": "change_status", "value": "closed"}]),
+                "active": "true",
+            },
+        )
         response = admin.automations_create(request)
         assert response.status_code == 302
         assert Automation.objects.filter(name="Auto-close").exists()
 
     def test_edit_post(self, rf):
         auto = AutomationFactory(name="Old Name")
-        request = _make_admin_request(rf, "POST", f"/admin/automations/{auto.pk}/edit/", data={
-            "name": "New Name",
-            "conditions": json.dumps(auto.conditions),
-            "actions": json.dumps(auto.actions),
-            "active": "true",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/automations/{auto.pk}/edit/",
+            data={
+                "name": "New Name",
+                "conditions": json.dumps(auto.conditions),
+                "actions": json.dumps(auto.actions),
+                "active": "true",
+            },
+        )
         response = admin.automations_edit(request, auto.pk)
         assert response.status_code == 302
         auto.refresh_from_db()
@@ -261,7 +313,9 @@ class TestTwoFactorAdminViews:
 
         # Try invalid code
         confirm_request = _make_admin_request(
-            rf, "POST", "/admin/settings/two-factor/confirm/",
+            rf,
+            "POST",
+            "/admin/settings/two-factor/confirm/",
             data={"code": "000000"},
             user=user,
             content_type="application/json",
@@ -295,25 +349,37 @@ class TestCustomObjectsAdminViews:
         admin.custom_objects_index(request)
 
         mock_render.assert_called_once()
-        props = mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        props = (
+            mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        )
         assert "custom_objects" in props
 
     def test_create_post(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/custom-objects/create/", data={
-            "name": "Company",
-            "slug": "company",
-            "fields_schema": json.dumps([{"name": "name", "type": "text"}]),
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/custom-objects/create/",
+            data={
+                "name": "Company",
+                "slug": "company",
+                "fields_schema": json.dumps([{"name": "name", "type": "text"}]),
+            },
+        )
         response = admin.custom_objects_create(request)
         assert response.status_code == 302
         assert CustomObject.objects.filter(name="Company").exists()
 
     def test_edit_post(self, rf):
         obj = CustomObjectFactory(name="Old Obj", slug="old-obj")
-        request = _make_admin_request(rf, "POST", f"/admin/custom-objects/{obj.pk}/edit/", data={
-            "name": "New Obj",
-            "fields_schema": json.dumps([{"name": "updated", "type": "text"}]),
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/custom-objects/{obj.pk}/edit/",
+            data={
+                "name": "New Obj",
+                "fields_schema": json.dumps([{"name": "updated", "type": "text"}]),
+            },
+        )
         response = admin.custom_objects_edit(request, obj.pk)
         assert response.status_code == 302
         obj.refresh_from_db()
@@ -336,14 +402,18 @@ class TestCustomObjectsAdminViews:
         admin.custom_object_records(request, obj.pk)
 
         mock_render.assert_called_once()
-        props = mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        props = (
+            mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
+        )
         assert "records" in props
         assert "custom_object" in props
 
     def test_records_store(self, rf):
         obj = CustomObjectFactory()
         request = _make_admin_request(
-            rf, "POST", f"/admin/custom-objects/{obj.pk}/records/store/",
+            rf,
+            "POST",
+            f"/admin/custom-objects/{obj.pk}/records/store/",
             data={"data": {"field1": "value1"}},
             content_type="application/json",
         )
@@ -355,7 +425,8 @@ class TestCustomObjectsAdminViews:
         obj = CustomObjectFactory()
         record = CustomObjectRecordFactory(object=obj, data={"field1": "old"})
         request = _make_admin_request(
-            rf, "POST",
+            rf,
+            "POST",
             f"/admin/custom-objects/{obj.pk}/records/{record.pk}/update/",
             data={"data": {"field1": "new"}},
             content_type="application/json",
@@ -369,7 +440,8 @@ class TestCustomObjectsAdminViews:
         obj = CustomObjectFactory()
         record = CustomObjectRecordFactory(object=obj)
         request = _make_admin_request(
-            rf, "POST",
+            rf,
+            "POST",
             f"/admin/custom-objects/{obj.pk}/records/{record.pk}/delete/",
         )
         response = admin.custom_object_records_delete(request, obj.pk, record.pk)

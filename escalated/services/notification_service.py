@@ -25,7 +25,7 @@ class NotificationService:
 
         if "email" in channels:
             NotificationService._send_email(
-                subject="[%s] %s" % (
+                subject="[{}] {}".format(
                     ticket.reference,
                     _("New ticket: %(subject)s") % {"subject": ticket.subject},
                 ),
@@ -34,12 +34,15 @@ class NotificationService:
                 recipient=NotificationService._get_requester_email(ticket),
             )
 
-        NotificationService._fire_webhook("ticket.created", {
-            "ticket_id": ticket.pk,
-            "reference": ticket.reference,
-            "subject": ticket.subject,
-            "priority": ticket.priority,
-        })
+        NotificationService._fire_webhook(
+            "ticket.created",
+            {
+                "ticket_id": ticket.pk,
+                "reference": ticket.reference,
+                "subject": ticket.subject,
+                "priority": ticket.priority,
+            },
+        )
 
     @staticmethod
     def notify_reply_added(ticket, reply):
@@ -51,7 +54,7 @@ class NotificationService:
             requester_email = NotificationService._get_requester_email(ticket)
             if requester_email and reply.author != ticket.requester:
                 NotificationService._send_email(
-                    subject="[%s] %s" % (
+                    subject="[{}] {}".format(
                         ticket.reference,
                         _("New reply on: %(subject)s") % {"subject": ticket.subject},
                     ),
@@ -65,7 +68,7 @@ class NotificationService:
                 agent_email = getattr(ticket.assigned_to, "email", None)
                 if agent_email:
                     NotificationService._send_email(
-                        subject="[%s] %s" % (
+                        subject="[{}] {}".format(
                             ticket.reference,
                             _("Customer reply on: %(subject)s") % {"subject": ticket.subject},
                         ),
@@ -78,7 +81,7 @@ class NotificationService:
             NotificationService._notify_followers(
                 ticket,
                 reply.author,
-                subject="[%s] %s" % (
+                subject="[{}] {}".format(
                     ticket.reference,
                     _("New reply on: %(subject)s") % {"subject": ticket.subject},
                 ),
@@ -86,15 +89,20 @@ class NotificationService:
                 context={"ticket": ticket, "reply": reply},
                 exclude_user_ids=[
                     ticket.assigned_to_id,
-                ] if ticket.assigned_to_id else [],
+                ]
+                if ticket.assigned_to_id
+                else [],
             )
 
-        NotificationService._fire_webhook("reply.created", {
-            "ticket_id": ticket.pk,
-            "reference": ticket.reference,
-            "reply_id": reply.pk,
-            "is_internal": reply.is_internal_note,
-        })
+        NotificationService._fire_webhook(
+            "reply.created",
+            {
+                "ticket_id": ticket.pk,
+                "reference": ticket.reference,
+                "reply_id": reply.pk,
+                "is_internal": reply.is_internal_note,
+            },
+        )
 
     @staticmethod
     def notify_ticket_assigned(ticket, agent):
@@ -105,7 +113,7 @@ class NotificationService:
             agent_email = getattr(agent, "email", None)
             if agent_email:
                 NotificationService._send_email(
-                    subject="[%s] %s" % (
+                    subject="[{}] {}".format(
                         ticket.reference,
                         _("Ticket assigned to you: %(subject)s") % {"subject": ticket.subject},
                     ),
@@ -114,11 +122,14 @@ class NotificationService:
                     recipient=agent_email,
                 )
 
-        NotificationService._fire_webhook("ticket.assigned", {
-            "ticket_id": ticket.pk,
-            "reference": ticket.reference,
-            "agent_id": agent.pk,
-        })
+        NotificationService._fire_webhook(
+            "ticket.assigned",
+            {
+                "ticket_id": ticket.pk,
+                "reference": ticket.reference,
+                "agent_id": agent.pk,
+            },
+        )
 
     @staticmethod
     def notify_status_changed(ticket, old_status, new_status):
@@ -129,7 +140,7 @@ class NotificationService:
             requester_email = NotificationService._get_requester_email(ticket)
             if requester_email:
                 NotificationService._send_email(
-                    subject="[%s] %s" % (
+                    subject="[{}] {}".format(
                         ticket.reference,
                         _("Status updated: %(subject)s") % {"subject": ticket.subject},
                     ),
@@ -146,7 +157,7 @@ class NotificationService:
             NotificationService._notify_followers(
                 ticket,
                 causer=None,
-                subject="[%s] %s" % (
+                subject="[{}] {}".format(
                     ticket.reference,
                     _("Status updated: %(subject)s") % {"subject": ticket.subject},
                 ),
@@ -158,12 +169,15 @@ class NotificationService:
                 },
             )
 
-        NotificationService._fire_webhook("ticket.status_changed", {
-            "ticket_id": ticket.pk,
-            "reference": ticket.reference,
-            "old_status": old_status,
-            "new_status": new_status,
-        })
+        NotificationService._fire_webhook(
+            "ticket.status_changed",
+            {
+                "ticket_id": ticket.pk,
+                "reference": ticket.reference,
+                "old_status": old_status,
+                "new_status": new_status,
+            },
+        )
 
     @staticmethod
     def notify_sla_breach(ticket, breach_type):
@@ -174,9 +188,10 @@ class NotificationService:
             agent_email = getattr(ticket.assigned_to, "email", None)
             if agent_email:
                 NotificationService._send_email(
-                    subject="[SLA BREACH] [%s] %s" % (
+                    subject="[SLA BREACH] [{}] {}".format(
                         ticket.reference,
-                        _("%(breach_type)s: %(subject)s") % {
+                        _("%(breach_type)s: %(subject)s")
+                        % {
                             "breach_type": breach_type,
                             "subject": ticket.subject,
                         },
@@ -186,11 +201,14 @@ class NotificationService:
                     recipient=agent_email,
                 )
 
-        NotificationService._fire_webhook("sla.breached", {
-            "ticket_id": ticket.pk,
-            "reference": ticket.reference,
-            "breach_type": breach_type,
-        })
+        NotificationService._fire_webhook(
+            "sla.breached",
+            {
+                "ticket_id": ticket.pk,
+                "reference": ticket.reference,
+                "breach_type": breach_type,
+            },
+        )
 
     @staticmethod
     def notify_ticket_escalated(ticket, reason):
@@ -201,17 +219,20 @@ class NotificationService:
             agent_email = getattr(ticket.assigned_to, "email", None)
             if agent_email:
                 NotificationService._send_email(
-                    subject="[ESCALATED] [%s] %s" % (ticket.reference, ticket.subject),
+                    subject=f"[ESCALATED] [{ticket.reference}] {ticket.subject}",
                     template="escalated/emails/escalated.html",
                     context={"ticket": ticket, "reason": reason},
                     recipient=agent_email,
                 )
 
-        NotificationService._fire_webhook("ticket.escalated", {
-            "ticket_id": ticket.pk,
-            "reference": ticket.reference,
-            "reason": reason,
-        })
+        NotificationService._fire_webhook(
+            "ticket.escalated",
+            {
+                "ticket_id": ticket.pk,
+                "reference": ticket.reference,
+                "reason": reason,
+            },
+        )
 
     @staticmethod
     def notify_ticket_resolved(ticket):
@@ -222,7 +243,7 @@ class NotificationService:
             requester_email = NotificationService._get_requester_email(ticket)
             if requester_email:
                 NotificationService._send_email(
-                    subject="[%s] %s" % (
+                    subject="[{}] {}".format(
                         ticket.reference,
                         _("Status updated: %(subject)s") % {"subject": ticket.subject},
                     ),
@@ -231,10 +252,13 @@ class NotificationService:
                     recipient=requester_email,
                 )
 
-        NotificationService._fire_webhook("ticket.resolved", {
-            "ticket_id": ticket.pk,
-            "reference": ticket.reference,
-        })
+        NotificationService._fire_webhook(
+            "ticket.resolved",
+            {
+                "ticket_id": ticket.pk,
+                "reference": ticket.reference,
+            },
+        )
 
     # ----- Internal helpers -----
 
@@ -293,9 +317,7 @@ class NotificationService:
             send_mail(
                 subject=subject,
                 message="",  # Plain text fallback
-                from_email=getattr(
-                    settings, "DEFAULT_FROM_EMAIL", "support@escalated.dev"
-                ),
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@escalated.dev"),
                 recipient_list=[recipient],
                 html_message=html_body,
                 fail_silently=True,
@@ -320,9 +342,7 @@ class NotificationService:
             }
 
             # Add HMAC-SHA256 signature if a webhook secret is configured
-            secret = get_setting("WEBHOOK_SECRET") or getattr(
-                settings, "ESCALATED_WEBHOOK_SECRET", None
-            )
+            secret = get_setting("WEBHOOK_SECRET") or getattr(settings, "ESCALATED_WEBHOOK_SECRET", None)
             if secret:
                 body_bytes = json.dumps(body, default=str).encode("utf-8")
                 signature = hmac.new(

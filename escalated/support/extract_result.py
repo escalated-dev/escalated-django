@@ -6,7 +6,6 @@ source is exhausted), and an optional total-count hint for progress display.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -25,8 +24,8 @@ class ExtractResult:
     """
 
     records: list = field(default_factory=list)
-    cursor: Optional[str] = None
-    total_count: Optional[int] = None
+    cursor: str | None = None
+    total_count: int | None = None
 
     def is_exhausted(self) -> bool:
         """Return True when there are no more pages to fetch."""

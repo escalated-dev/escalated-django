@@ -4,16 +4,16 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from escalated.signals import (
-    ticket_created,
-    ticket_updated,
-    ticket_status_changed,
-    ticket_assigned,
-    ticket_priority_changed,
     reply_created,
     sla_breached,
-    ticket_resolved,
+    ticket_assigned,
     ticket_closed,
+    ticket_created,
     ticket_escalated,
+    ticket_priority_changed,
+    ticket_resolved,
+    ticket_status_changed,
+    ticket_updated,
 )
 from escalated.support.import_context import ImportContext
 
@@ -29,6 +29,7 @@ def _bridge_dispatch(hook: str, event: dict) -> None:
     """
     try:
         from escalated.bridge.plugin_bridge import get_bridge
+
         bridge = get_bridge()
         if bridge.is_booted():
             bridge.dispatch_action(hook, event)
@@ -43,14 +44,12 @@ def on_ticket_created(sender, ticket, user, **kwargs):
         return
 
     from escalated.models import SlaPolicy, TicketActivity
-    from escalated.services.sla_service import SlaService
     from escalated.services.notification_service import NotificationService
+    from escalated.services.sla_service import SlaService
 
     # Attach default SLA policy if none set
     if not ticket.sla_policy:
-        default_policy = SlaPolicy.objects.filter(
-            is_default=True, is_active=True
-        ).first()
+        default_policy = SlaPolicy.objects.filter(is_default=True, is_active=True).first()
         if default_policy:
             ticket.sla_policy = default_policy
             SlaService.apply_sla_deadlines(ticket)
@@ -75,14 +74,17 @@ def on_ticket_created(sender, ticket, user, **kwargs):
     logger.info(f"Ticket {ticket.reference} created by user {user}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("ticket.created", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "subject": ticket.subject,
-        "status": ticket.status,
-        "priority": ticket.priority,
-        "user_id": getattr(user, "pk", None),
-    })
+    _bridge_dispatch(
+        "ticket.created",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "subject": ticket.subject,
+            "status": ticket.status,
+            "priority": ticket.priority,
+            "user_id": getattr(user, "pk", None),
+        },
+    )
 
 
 @receiver(reply_created)
@@ -95,11 +97,7 @@ def on_reply_created(sender, reply, ticket, user, **kwargs):
     from escalated.services.notification_service import NotificationService
 
     # Record first response if this is the first agent reply
-    if (
-        not ticket.first_response_at
-        and ticket.assigned_to
-        and user == ticket.assigned_to
-    ):
+    if not ticket.first_response_at and ticket.assigned_to and user == ticket.assigned_to:
         ticket.first_response_at = timezone.now()
         ticket.save(update_fields=["first_response_at", "updated_at"])
 
@@ -117,13 +115,16 @@ def on_reply_created(sender, reply, ticket, user, **kwargs):
     logger.info(f"Reply added to ticket {ticket.reference} by user {user}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("reply.created", {
-        "reply_id": reply.pk,
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "is_internal": reply.is_internal_note,
-        "user_id": getattr(user, "pk", None),
-    })
+    _bridge_dispatch(
+        "reply.created",
+        {
+            "reply_id": reply.pk,
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "is_internal": reply.is_internal_note,
+            "user_id": getattr(user, "pk", None),
+        },
+    )
 
 
 @receiver(ticket_status_changed)
@@ -142,18 +143,19 @@ def on_status_changed(sender, ticket, user, old_status, new_status, **kwargs):
     )
 
     NotificationService.notify_status_changed(ticket, old_status, new_status)
-    logger.info(
-        f"Ticket {ticket.reference} status changed: {old_status} -> {new_status}"
-    )
+    logger.info(f"Ticket {ticket.reference} status changed: {old_status} -> {new_status}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("ticket.status_changed", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "old_status": old_status,
-        "new_status": new_status,
-        "user_id": getattr(user, "pk", None),
-    })
+    _bridge_dispatch(
+        "ticket.status_changed",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "old_status": old_status,
+            "new_status": new_status,
+            "user_id": getattr(user, "pk", None),
+        },
+    )
 
 
 @receiver(ticket_assigned)
@@ -178,12 +180,15 @@ def on_ticket_assigned(sender, ticket, user, agent, **kwargs):
     logger.info(f"Ticket {ticket.reference} assigned to {agent}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("ticket.assigned", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "agent_id": agent.pk,
-        "user_id": getattr(user, "pk", None),
-    })
+    _bridge_dispatch(
+        "ticket.assigned",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "agent_id": agent.pk,
+            "user_id": getattr(user, "pk", None),
+        },
+    )
 
 
 @receiver(sla_breached)
@@ -205,11 +210,14 @@ def on_sla_breached(sender, ticket, breach_type, **kwargs):
     logger.warning(f"SLA breached on ticket {ticket.reference}: {breach_type}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("sla.breached", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "breach_type": breach_type,
-    })
+    _bridge_dispatch(
+        "sla.breached",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "breach_type": breach_type,
+        },
+    )
 
 
 @receiver(ticket_resolved)
@@ -224,11 +232,14 @@ def on_ticket_resolved(sender, ticket, user, **kwargs):
     logger.info(f"Ticket {ticket.reference} resolved by {user}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("ticket.resolved", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "user_id": getattr(user, "pk", None),
-    })
+    _bridge_dispatch(
+        "ticket.resolved",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "user_id": getattr(user, "pk", None),
+        },
+    )
 
 
 @receiver(ticket_closed)
@@ -240,11 +251,14 @@ def on_ticket_closed(sender, ticket, user, **kwargs):
     logger.info(f"Ticket {ticket.reference} closed by {user}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("ticket.closed", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "user_id": getattr(user, "pk", None),
-    })
+    _bridge_dispatch(
+        "ticket.closed",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "user_id": getattr(user, "pk", None),
+        },
+    )
 
 
 @receiver(ticket_escalated)
@@ -266,12 +280,15 @@ def on_ticket_escalated(sender, ticket, user, reason, **kwargs):
     logger.warning(f"Ticket {ticket.reference} escalated: {reason}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("ticket.escalated", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "reason": reason,
-        "user_id": getattr(user, "pk", None),
-    })
+    _bridge_dispatch(
+        "ticket.escalated",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "reason": reason,
+            "user_id": getattr(user, "pk", None),
+        },
+    )
 
 
 @receiver(ticket_updated)
@@ -282,20 +299,26 @@ def on_ticket_updated(sender, ticket, user, changes, **kwargs):
 
     from escalated.services.notification_service import NotificationService
 
-    NotificationService._fire_webhook("ticket.updated", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "changes": {k: v["new"] for k, v in changes.items()},
-    })
+    NotificationService._fire_webhook(
+        "ticket.updated",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "changes": {k: v["new"] for k, v in changes.items()},
+        },
+    )
     logger.info(f"Ticket {ticket.reference} updated: {list(changes.keys())}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("ticket.updated", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "changes": {k: v["new"] for k, v in changes.items()},
-        "user_id": getattr(user, "pk", None),
-    })
+    _bridge_dispatch(
+        "ticket.updated",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "changes": {k: v["new"] for k, v in changes.items()},
+            "user_id": getattr(user, "pk", None),
+        },
+    )
 
 
 @receiver(ticket_priority_changed)
@@ -306,21 +329,25 @@ def on_ticket_priority_changed(sender, ticket, user, old_priority, new_priority,
 
     from escalated.services.notification_service import NotificationService
 
-    NotificationService._fire_webhook("ticket.priority_changed", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "old_priority": old_priority,
-        "new_priority": new_priority,
-    })
-    logger.info(
-        f"Ticket {ticket.reference} priority changed: {old_priority} -> {new_priority}"
+    NotificationService._fire_webhook(
+        "ticket.priority_changed",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "old_priority": old_priority,
+            "new_priority": new_priority,
+        },
     )
+    logger.info(f"Ticket {ticket.reference} priority changed: {old_priority} -> {new_priority}")
 
     # Dual dispatch to SDK plugin bridge
-    _bridge_dispatch("ticket.priority_changed", {
-        "ticket_id": ticket.pk,
-        "reference": ticket.reference,
-        "old_priority": old_priority,
-        "new_priority": new_priority,
-        "user_id": getattr(user, "pk", None),
-    })
+    _bridge_dispatch(
+        "ticket.priority_changed",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "old_priority": old_priority,
+            "new_priority": new_priority,
+            "user_id": getattr(user, "pk", None),
+        },
+    )

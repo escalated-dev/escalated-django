@@ -33,10 +33,7 @@ class IMAPAdapter(BaseAdapter):
 
     def parse_request(self, request) -> InboundMessage:
         """IMAP adapter does not parse webhook requests."""
-        raise NotImplementedError(
-            "IMAPAdapter does not handle webhook requests. "
-            "Use fetch_messages() instead."
-        )
+        raise NotImplementedError("IMAPAdapter does not handle webhook requests. Use fetch_messages() instead.")
 
     def connect(self) -> imaplib.IMAP4_SSL | imaplib.IMAP4:
         """
@@ -72,9 +69,7 @@ class IMAPAdapter(BaseAdapter):
             logger.info(f"Connected to IMAP server {host}:{port}")
             return conn
         except (imaplib.IMAP4.error, OSError) as exc:
-            raise ConnectionError(
-                f"Failed to connect to IMAP server {host}:{port}: {exc}"
-            ) from exc
+            raise ConnectionError(f"Failed to connect to IMAP server {host}:{port}: {exc}") from exc
 
     def fetch_messages(self) -> list[InboundMessage]:
         """
@@ -166,12 +161,14 @@ class IMAPAdapter(BaseAdapter):
                 if "attachment" in content_disposition:
                     filename = part.get_filename() or "unnamed"
                     payload = part.get_payload(decode=True)
-                    attachments.append({
-                        "filename": filename,
-                        "content_type": content_type,
-                        "size": len(payload) if payload else 0,
-                        "data": payload,
-                    })
+                    attachments.append(
+                        {
+                            "filename": filename,
+                            "content_type": content_type,
+                            "size": len(payload) if payload else 0,
+                            "data": payload,
+                        }
+                    )
                     continue
 
                 if content_type == "text/plain" and text_body is None:

@@ -16,8 +16,8 @@ Delete it whenever you want -- it will not be offended.
 
 import logging
 
-from escalated.hooks import add_action, add_filter
-from escalated.plugin_ui_service import add_page_component, register_menu_item
+from escalated.hooks import add_action
+from escalated.plugin_ui_service import add_page_component
 
 logger = logging.getLogger("escalated.plugins.hello-world")
 
@@ -75,11 +75,15 @@ def on_plugin_loaded(slug, manifest):
     )
 
     # Register a component to appear on the agent dashboard header slot
-    add_page_component("dashboard", "header", {
-        "component": "HelloWorldBanner",
-        "plugin": "hello-world",
-        "position": 1,
-    })
+    add_page_component(
+        "dashboard",
+        "header",
+        {
+            "component": "HelloWorldBanner",
+            "plugin": "hello-world",
+            "position": 1,
+        },
+    )
 
 
 add_action("plugin_loaded", on_plugin_loaded)

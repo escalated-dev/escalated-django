@@ -5,7 +5,6 @@ from escalated.conf import get_table_name
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("escalated", "0002_settings_and_guest_tickets"),
     ]
@@ -25,9 +24,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "message_id",
-                    models.CharField(
-                        blank=True, max_length=500, null=True, unique=True
-                    ),
+                    models.CharField(blank=True, max_length=500, null=True, unique=True),
                 ),
                 ("from_email", models.CharField(max_length=500)),
                 (
@@ -88,20 +85,14 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="inboundemail",
-            index=models.Index(
-                fields=["status"], name="escalated_ie_status_idx"
-            ),
+            index=models.Index(fields=["status"], name="escalated_ie_status_idx"),
         ),
         migrations.AddIndex(
             model_name="inboundemail",
-            index=models.Index(
-                fields=["from_email"], name="escalated_ie_from_idx"
-            ),
+            index=models.Index(fields=["from_email"], name="escalated_ie_from_idx"),
         ),
         migrations.AddIndex(
             model_name="inboundemail",
-            index=models.Index(
-                fields=["message_id"], name="escalated_ie_msgid_idx"
-            ),
+            index=models.Index(fields=["message_id"], name="escalated_ie_msgid_idx"),
         ),
     ]

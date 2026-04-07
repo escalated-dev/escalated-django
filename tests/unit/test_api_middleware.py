@@ -10,9 +10,9 @@ import pytest
 from django.test import RequestFactory
 from django.utils import timezone
 
-from escalated.api_middleware import AuthenticateApiToken, ApiRateLimit
+from escalated.api_middleware import ApiRateLimit, AuthenticateApiToken
 from escalated.models import ApiToken
-from tests.factories import UserFactory, DepartmentFactory, ApiTokenFactory
+from tests.factories import ApiTokenFactory, DepartmentFactory, UserFactory
 
 
 @pytest.fixture
@@ -74,7 +74,8 @@ class TestAuthenticateApiToken:
         department.agents.add(user)
 
         result = ApiToken.create_token(
-            user, "Expired",
+            user,
+            "Expired",
             expires_at=timezone.now() - timedelta(days=1),
         )
 
@@ -170,6 +171,7 @@ class TestApiRateLimit:
         token = ApiTokenFactory(user=user)
 
         from django.core.cache import cache
+
         cache.clear()
 
         # Set cache to already have 2 hits
@@ -191,6 +193,7 @@ class TestApiRateLimit:
         token = ApiTokenFactory(user=user)
 
         from django.core.cache import cache
+
         cache.clear()
 
         request = rf.get("/api/test/")
@@ -200,7 +203,7 @@ class TestApiRateLimit:
         mock_response.__setitem__ = MagicMock()
         mock_response.__getitem__ = MagicMock()
 
-        result = rate.process_response(request, mock_response)
+        rate.process_response(request, mock_response)
         # Should have set X-RateLimit-Limit and X-RateLimit-Remaining
         calls = {c[0][0] for c in mock_response.__setitem__.call_args_list}
         assert "X-RateLimit-Limit" in calls

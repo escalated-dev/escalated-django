@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone as dt_tz
+from datetime import UTC, timedelta
 from zoneinfo import ZoneInfo
 
 
@@ -31,36 +31,34 @@ class BusinessHoursCalculator:
             max_iterations -= 1
 
             if self._is_holiday(current, schedule):
-                current = (current + timedelta(days=1)).replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
+                current = (current + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
                 continue
 
             day_schedule = self._get_day_schedule(current, schedule)
             if not day_schedule or not day_schedule.get("start") or not day_schedule.get("end"):
-                current = (current + timedelta(days=1)).replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
+                current = (current + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
                 continue
 
             start_parts = day_schedule["start"].split(":")
             end_parts = day_schedule["end"].split(":")
             day_start = current.replace(
-                hour=int(start_parts[0]), minute=int(start_parts[1]),
-                second=0, microsecond=0,
+                hour=int(start_parts[0]),
+                minute=int(start_parts[1]),
+                second=0,
+                microsecond=0,
             )
             day_end = current.replace(
-                hour=int(end_parts[0]), minute=int(end_parts[1]),
-                second=0, microsecond=0,
+                hour=int(end_parts[0]),
+                minute=int(end_parts[1]),
+                second=0,
+                microsecond=0,
             )
 
             if current < day_start:
                 current = day_start
 
             if current >= day_end:
-                current = (current + timedelta(days=1)).replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
+                current = (current + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
                 continue
 
             available_minutes = (day_end - current).total_seconds() / 60
@@ -70,11 +68,9 @@ class BusinessHoursCalculator:
                 remaining_minutes = 0
             else:
                 remaining_minutes -= available_minutes
-                current = (current + timedelta(days=1)).replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
+                current = (current + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
-        return current.astimezone(dt_tz.utc)
+        return current.astimezone(UTC)
 
     def _get_day_schedule(self, dt_local, schedule):
         """Get the schedule for a specific day of the week."""
@@ -84,7 +80,7 @@ class BusinessHoursCalculator:
 
     def _is_holiday(self, dt_local, schedule):
         """Check if a date is a holiday."""
-        if not hasattr(schedule, '_prefetched_holidays'):
+        if not hasattr(schedule, "_prefetched_holidays"):
             schedule._prefetched_holidays = list(schedule.holidays.all())
 
         for holiday in schedule._prefetched_holidays:

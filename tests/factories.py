@@ -6,37 +6,37 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 
 from escalated.models import (
+    AgentCapacity,
+    AgentProfile,
     ApiToken,
-    Ticket,
-    Reply,
-    Tag,
-    Department,
-    SlaPolicy,
-    EscalationRule,
-    CannedResponse,
-    Macro,
+    Article,
+    ArticleCategory,
     AuditLog,
-    TicketStatus,
+    Automation,
     BusinessSchedule,
-    Holiday,
-    Role,
-    Permission,
+    CannedResponse,
     CustomField,
     CustomFieldValue,
-    TicketLink,
-    SideConversation,
-    SideConversationReply,
-    ArticleCategory,
-    Article,
-    AgentProfile,
-    Skill,
-    AgentCapacity,
-    Webhook,
-    WebhookDelivery,
-    Automation,
-    TwoFactor,
     CustomObject,
     CustomObjectRecord,
+    Department,
+    EscalationRule,
+    Holiday,
+    Macro,
+    Permission,
+    Reply,
+    Role,
+    SideConversation,
+    SideConversationReply,
+    Skill,
+    SlaPolicy,
+    Tag,
+    Ticket,
+    TicketLink,
+    TicketStatus,
+    TwoFactor,
+    Webhook,
+    WebhookDelivery,
 )
 
 
@@ -197,9 +197,7 @@ class ApiTokenFactory(factory.django.DjangoModelFactory):
     user = factory.SubFactory(UserFactory)
     plain_text = factory.LazyFunction(lambda: secrets.token_hex(32))
     name = factory.Sequence(lambda n: f"Test Token {n}")
-    token = factory.LazyAttribute(
-        lambda o: hashlib.sha256(o.plain_text.encode()).hexdigest()
-    )
+    token = factory.LazyAttribute(lambda o: hashlib.sha256(o.plain_text.encode()).hexdigest())
     abilities = factory.LazyFunction(lambda: ["*"])
     expires_at = None
 
@@ -241,13 +239,15 @@ class BusinessScheduleFactory(factory.django.DjangoModelFactory):
     name = factory.Sequence(lambda n: f"Schedule {n}")
     timezone = "UTC"
     is_default = False
-    schedule = factory.LazyFunction(lambda: {
-        "monday": {"start": "09:00", "end": "17:00"},
-        "tuesday": {"start": "09:00", "end": "17:00"},
-        "wednesday": {"start": "09:00", "end": "17:00"},
-        "thursday": {"start": "09:00", "end": "17:00"},
-        "friday": {"start": "09:00", "end": "17:00"},
-    })
+    schedule = factory.LazyFunction(
+        lambda: {
+            "monday": {"start": "09:00", "end": "17:00"},
+            "tuesday": {"start": "09:00", "end": "17:00"},
+            "wednesday": {"start": "09:00", "end": "17:00"},
+            "thursday": {"start": "09:00", "end": "17:00"},
+            "friday": {"start": "09:00", "end": "17:00"},
+        }
+    )
 
 
 class HolidayFactory(factory.django.DjangoModelFactory):
@@ -256,7 +256,7 @@ class HolidayFactory(factory.django.DjangoModelFactory):
 
     schedule = factory.SubFactory(BusinessScheduleFactory)
     name = factory.Sequence(lambda n: f"Holiday {n}")
-    date = factory.LazyFunction(lambda: __import__('datetime').date(2026, 12, 25))
+    date = factory.LazyFunction(lambda: __import__("datetime").date(2026, 12, 25))
     recurring = False
 
 
@@ -287,9 +287,7 @@ class AuditLogFactory(factory.django.DjangoModelFactory):
 
     user = factory.SubFactory(UserFactory)
     action = "created"
-    auditable_content_type = factory.LazyAttribute(
-        lambda o: ContentType.objects.get_for_model(Ticket)
-    )
+    auditable_content_type = factory.LazyAttribute(lambda o: ContentType.objects.get_for_model(Ticket))
     auditable_object_id = 1
     old_values = None
     new_values = factory.LazyFunction(lambda: {"status": "open"})
@@ -315,9 +313,7 @@ class CustomFieldValueFactory(factory.django.DjangoModelFactory):
         model = CustomFieldValue
 
     custom_field = factory.SubFactory(CustomFieldFactory)
-    entity_content_type = factory.LazyAttribute(
-        lambda o: ContentType.objects.get_for_model(Ticket)
-    )
+    entity_content_type = factory.LazyAttribute(lambda o: ContentType.objects.get_for_model(Ticket))
     entity_object_id = 1
     value = factory.Faker("word")
 

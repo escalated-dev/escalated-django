@@ -2,7 +2,7 @@ import logging
 
 from django.db.models import Count, Q
 
-from escalated.models import Ticket, Department
+from escalated.models import Department, Ticket
 
 logger = logging.getLogger("escalated")
 
@@ -24,10 +24,7 @@ class AssignmentService:
 
         agents = department.agents.all()
         if not agents.exists():
-            logger.info(
-                f"No agents in department '{department.name}' for auto-assign "
-                f"on ticket {ticket.reference}"
-            )
+            logger.info(f"No agents in department '{department.name}' for auto-assign on ticket {ticket.reference}")
             return None
 
         # Find agent with fewest open tickets
@@ -56,10 +53,7 @@ class AssignmentService:
             if ticket.status == Ticket.Status.OPEN:
                 ticket.status = Ticket.Status.IN_PROGRESS
             ticket.save(update_fields=["assigned_to", "status", "updated_at"])
-            logger.info(
-                f"Auto-assigned ticket {ticket.reference} to {agent} "
-                f"in department '{department.name}'"
-            )
+            logger.info(f"Auto-assigned ticket {ticket.reference} to {agent} in department '{department.name}'")
 
         return agent
 
@@ -81,10 +75,9 @@ class AssignmentService:
         if department:
             agents = department.agents.filter(is_active=True)
         else:
-            agents = Department.objects.filter(is_active=True).values_list(
-                "agents", flat=True
-            )
+            agents = Department.objects.filter(is_active=True).values_list("agents", flat=True)
             from django.contrib.auth import get_user_model
+
             User = get_user_model()
             agents = User.objects.filter(pk__in=agents, is_active=True)
 

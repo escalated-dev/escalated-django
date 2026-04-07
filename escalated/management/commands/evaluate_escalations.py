@@ -13,8 +13,5 @@ class Command(BaseCommand):
         actions_taken = EscalationService.evaluate_all()
 
         self.stdout.write(
-            self.style.SUCCESS(
-                _("Escalation evaluation complete: %(count)d actions taken.")
-                % {"count": actions_taken}
-            )
+            self.style.SUCCESS(_("Escalation evaluation complete: %(count)d actions taken.") % {"count": actions_taken})
         )

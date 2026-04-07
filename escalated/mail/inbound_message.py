@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -10,14 +9,14 @@ class InboundMessage:
     """
 
     from_email: str
-    from_name: Optional[str]
+    from_name: str | None
     to_email: str
     subject: str
-    body_text: Optional[str]
-    body_html: Optional[str]
-    message_id: Optional[str] = None
-    in_reply_to: Optional[str] = None
-    references: Optional[str] = None
+    body_text: str | None
+    body_html: str | None
+    message_id: str | None = None
+    in_reply_to: str | None = None
+    references: str | None = None
     headers: dict = field(default_factory=dict)
     attachments: list = field(default_factory=list)
 

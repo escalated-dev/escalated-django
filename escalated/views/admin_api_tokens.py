@@ -53,11 +53,15 @@ def api_tokens_index(request):
     tokens = ApiToken.objects.order_by("-created_at")
     token_data = ApiTokenSerializer.serialize_list(tokens)
 
-    return render_page(request, "Escalated/Admin/ApiTokens/Index", props={
-        "tokens": token_data,
-        "users": _get_agent_users(),
-        "api_enabled": get_setting("API_ENABLED"),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/ApiTokens/Index",
+        props={
+            "tokens": token_data,
+            "users": _get_agent_users(),
+            "api_enabled": get_setting("API_ENABLED"),
+        },
+    )
 
 
 @login_required

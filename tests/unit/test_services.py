@@ -1,19 +1,17 @@
-import pytest
 from datetime import timedelta
-from unittest.mock import patch
 
+import pytest
 from django.utils import timezone
 
-from escalated.models import Ticket, SlaPolicy, EscalationRule
-from escalated.services.sla_service import SlaService
+from escalated.models import EscalationRule, Ticket
 from escalated.services.escalation_service import EscalationService
+from escalated.services.sla_service import SlaService
 from escalated.services.ticket_service import TicketService
 from tests.factories import (
-    UserFactory,
-    TicketFactory,
-    SlaPolicyFactory,
-    DepartmentFactory,
     EscalationRuleFactory,
+    SlaPolicyFactory,
+    TicketFactory,
+    UserFactory,
 )
 
 
@@ -33,9 +31,7 @@ class TestSlaService:
 
         # Verify the deadline is approximately 8 hours from now
         expected_first_response = timezone.now() + timedelta(hours=8)
-        delta = abs(
-            (ticket.first_response_due_at - expected_first_response).total_seconds()
-        )
+        delta = abs((ticket.first_response_due_at - expected_first_response).total_seconds())
         assert delta < 5  # Within 5 seconds
 
     def test_apply_sla_deadlines_no_policy(self):
@@ -122,7 +118,7 @@ class TestSlaService:
 
     def test_get_default_policy(self):
         SlaPolicyFactory(is_default=False, name="Non-default")
-        default = SlaPolicyFactory(is_default=True, name="Default")
+        SlaPolicyFactory(is_default=True, name="Default")
 
         result = SlaService.get_default_policy()
         assert result is not None
@@ -156,7 +152,7 @@ class TestSlaService:
 @pytest.mark.django_db
 class TestEscalationService:
     def test_evaluate_sla_breach_rule(self):
-        rule = EscalationRuleFactory(
+        EscalationRuleFactory(
             trigger_type=EscalationRule.TriggerType.SLA_BREACH,
             conditions={},
             actions={"escalate": True},
@@ -173,7 +169,7 @@ class TestEscalationService:
         assert ticket.status == Ticket.Status.ESCALATED
 
     def test_evaluate_no_response_rule(self):
-        rule = EscalationRuleFactory(
+        EscalationRuleFactory(
             trigger_type=EscalationRule.TriggerType.NO_RESPONSE,
             conditions={"no_response_hours": 1},
             actions={"set_priority": "high"},
@@ -183,9 +179,7 @@ class TestEscalationService:
             priority=Ticket.Priority.MEDIUM,
         )
         # Make the ticket old enough
-        Ticket.objects.filter(pk=ticket.pk).update(
-            created_at=timezone.now() - timedelta(hours=2)
-        )
+        Ticket.objects.filter(pk=ticket.pk).update(created_at=timezone.now() - timedelta(hours=2))
         ticket.refresh_from_db()
 
         actions = EscalationService.evaluate_ticket(ticket)
@@ -195,7 +189,7 @@ class TestEscalationService:
         assert ticket.priority == Ticket.Priority.HIGH
 
     def test_evaluate_rule_with_status_condition(self):
-        rule = EscalationRuleFactory(
+        EscalationRuleFactory(
             trigger_type=EscalationRule.TriggerType.SLA_BREACH,
             conditions={"status": ["open"]},
             actions={"escalate": True},
@@ -210,7 +204,7 @@ class TestEscalationService:
         assert actions == 0
 
     def test_evaluate_rule_inactive_is_skipped(self):
-        rule = EscalationRuleFactory(
+        EscalationRuleFactory(
             trigger_type=EscalationRule.TriggerType.SLA_BREACH,
             conditions={},
             actions={"escalate": True},
@@ -226,7 +220,7 @@ class TestEscalationService:
 
     def test_evaluate_assigns_to_agent(self):
         agent = UserFactory(username="escalation_agent")
-        rule = EscalationRuleFactory(
+        EscalationRuleFactory(
             trigger_type=EscalationRule.TriggerType.SLA_BREACH,
             conditions={},
             actions={"assign_to_id": agent.pk},
@@ -241,7 +235,7 @@ class TestEscalationService:
         assert ticket.assigned_to == agent
 
     def test_evaluate_all(self):
-        rule = EscalationRuleFactory(
+        EscalationRuleFactory(
             trigger_type=EscalationRule.TriggerType.SLA_BREACH,
             conditions={},
             actions={"escalate": True},
@@ -265,10 +259,13 @@ class TestTicketService:
         user = UserFactory(username="ticket_svc_user")
         service = TicketService()
 
-        ticket = service.create(user, {
-            "subject": "Test ticket",
-            "description": "Test description",
-        })
+        ticket = service.create(
+            user,
+            {
+                "subject": "Test ticket",
+                "description": "Test description",
+            },
+        )
 
         assert ticket.pk is not None
         assert ticket.subject == "Test ticket"
@@ -279,11 +276,14 @@ class TestTicketService:
         user = UserFactory(username="priority_user")
         service = TicketService()
 
-        ticket = service.create(user, {
-            "subject": "Urgent issue",
-            "description": "Needs attention",
-            "priority": "urgent",
-        })
+        ticket = service.create(
+            user,
+            {
+                "subject": "Urgent issue",
+                "description": "Needs attention",
+                "priority": "urgent",
+            },
+        )
 
         assert ticket.priority == Ticket.Priority.URGENT
 

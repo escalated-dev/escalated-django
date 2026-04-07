@@ -14,7 +14,5 @@ class Command(BaseCommand):
         count = runner.run()
 
         self.stdout.write(
-            self.style.SUCCESS(
-                _("Automations complete: %(count)d ticket(s) affected") % {"count": count}
-            )
+            self.style.SUCCESS(_("Automations complete: %(count)d ticket(s) affected") % {"count": count})
         )

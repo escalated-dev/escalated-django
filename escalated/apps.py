@@ -34,6 +34,7 @@ class EscalatedConfig(AppConfig):
                 return
 
             from escalated.plugin_service import PluginService
+
             service = PluginService()
             service.load_active_plugins()
         except Exception as exc:
@@ -50,8 +51,9 @@ class EscalatedConfig(AppConfig):
         misconfigured runtime never prevents the Django app from starting.
         """
         try:
-            from escalated.conf import get_setting
             from django.conf import settings
+
+            from escalated.conf import get_setting
 
             escalated_settings = getattr(settings, "ESCALATED", {})
 
@@ -63,9 +65,8 @@ class EscalatedConfig(AppConfig):
                 return
 
             from escalated.bridge.plugin_bridge import get_bridge
+
             bridge = get_bridge()
             bridge.boot()
         except Exception as exc:
-            logger.debug(
-                "Could not boot SDK plugin bridge on startup: %s", exc
-            )
+            logger.debug("Could not boot SDK plugin bridge on startup: %s", exc)

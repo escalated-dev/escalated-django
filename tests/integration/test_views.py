@@ -1,17 +1,15 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-
 from django.test import RequestFactory
-from django.contrib.auth.models import AnonymousUser
 
-from escalated.models import Ticket, Department, Tag
-from escalated.views import customer, agent, admin
+from escalated.models import Department, Tag, Ticket
+from escalated.views import admin, agent, customer
 from tests.factories import (
-    UserFactory,
-    TicketFactory,
     DepartmentFactory,
     TagFactory,
-    SlaPolicyFactory,
+    TicketFactory,
+    UserFactory,
 )
 
 
@@ -23,6 +21,7 @@ def rf():
 def _attach_session(request):
     """Attach a mock session to the request for middleware compat."""
     from django.contrib.sessions.backends.db import SessionStore
+
     request.session = SessionStore()
 
 
@@ -30,12 +29,13 @@ def _attach_session(request):
 # Customer views
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestCustomerViews:
     @patch("escalated.views.customer.render_page")
     def test_ticket_list_returns_user_tickets(self, mock_render, rf):
         user = UserFactory(username="cust_list")
-        ticket = TicketFactory(requester=user)
+        TicketFactory(requester=user)
 
         request = rf.get("/tickets/")
         request.user = user
@@ -106,11 +106,14 @@ class TestCustomerViews:
     def test_ticket_store_creates_ticket(self, rf):
         user = UserFactory(username="cust_store")
 
-        request = rf.post("/tickets/store/", {
-            "subject": "New Issue",
-            "description": "I need help with something",
-            "priority": "high",
-        })
+        request = rf.post(
+            "/tickets/store/",
+            {
+                "subject": "New Issue",
+                "description": "I need help with something",
+                "priority": "high",
+            },
+        )
         request.user = user
         _attach_session(request)
 
@@ -136,6 +139,7 @@ class TestCustomerViews:
 # ---------------------------------------------------------------------------
 # Agent views
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestAgentViews:
@@ -192,9 +196,12 @@ class TestAgentViews:
 
         ticket = TicketFactory(status=Ticket.Status.OPEN)
 
-        request = rf.post(f"/agent/tickets/{ticket.pk}/assign/", {
-            "agent_id": target_agent.pk,
-        })
+        request = rf.post(
+            f"/agent/tickets/{ticket.pk}/assign/",
+            {
+                "agent_id": target_agent.pk,
+            },
+        )
         request.user = agent_user
         _attach_session(request)
 
@@ -210,9 +217,12 @@ class TestAgentViews:
         department.agents.add(agent_user)
         ticket = TicketFactory(status=Ticket.Status.OPEN)
 
-        request = rf.post(f"/agent/tickets/{ticket.pk}/status/", {
-            "status": "in_progress",
-        })
+        request = rf.post(
+            f"/agent/tickets/{ticket.pk}/status/",
+            {
+                "status": "in_progress",
+            },
+        )
         request.user = agent_user
         _attach_session(request)
 
@@ -228,9 +238,12 @@ class TestAgentViews:
         department.agents.add(agent_user)
         ticket = TicketFactory(priority=Ticket.Priority.MEDIUM)
 
-        request = rf.post(f"/agent/tickets/{ticket.pk}/priority/", {
-            "priority": "urgent",
-        })
+        request = rf.post(
+            f"/agent/tickets/{ticket.pk}/priority/",
+            {
+                "priority": "urgent",
+            },
+        )
         request.user = agent_user
         _attach_session(request)
 
@@ -245,13 +258,12 @@ class TestAgentViews:
 # Admin views
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestAdminViews:
     @patch("escalated.views.admin.render_page")
     def test_reports_returns_stats(self, mock_render, rf):
-        admin_user = UserFactory(
-            username="admin_reports", is_staff=True, is_superuser=True
-        )
+        admin_user = UserFactory(username="admin_reports", is_staff=True, is_superuser=True)
 
         request = rf.get("/admin/reports/")
         request.user = admin_user
@@ -275,16 +287,17 @@ class TestAdminViews:
         assert response.status_code == 403
 
     def test_departments_create(self, rf):
-        admin_user = UserFactory(
-            username="admin_dept", is_staff=True, is_superuser=True
-        )
+        admin_user = UserFactory(username="admin_dept", is_staff=True, is_superuser=True)
 
-        request = rf.post("/admin/departments/create/", {
-            "name": "Engineering",
-            "slug": "engineering",
-            "description": "Engineering team",
-            "is_active": "true",
-        })
+        request = rf.post(
+            "/admin/departments/create/",
+            {
+                "name": "Engineering",
+                "slug": "engineering",
+                "description": "Engineering team",
+                "is_active": "true",
+            },
+        )
         request.user = admin_user
         _attach_session(request)
 
@@ -293,15 +306,16 @@ class TestAdminViews:
         assert Department.objects.filter(slug="engineering").exists()
 
     def test_tags_create(self, rf):
-        admin_user = UserFactory(
-            username="admin_tag", is_staff=True, is_superuser=True
-        )
+        admin_user = UserFactory(username="admin_tag", is_staff=True, is_superuser=True)
 
-        request = rf.post("/admin/tags/create/", {
-            "name": "Bug",
-            "slug": "bug",
-            "color": "#ef4444",
-        })
+        request = rf.post(
+            "/admin/tags/create/",
+            {
+                "name": "Bug",
+                "slug": "bug",
+                "color": "#ef4444",
+            },
+        )
         request.user = admin_user
         _attach_session(request)
 
@@ -310,9 +324,7 @@ class TestAdminViews:
         assert Tag.objects.filter(slug="bug").exists()
 
     def test_tags_delete(self, rf):
-        admin_user = UserFactory(
-            username="admin_tag_del", is_staff=True, is_superuser=True
-        )
+        admin_user = UserFactory(username="admin_tag_del", is_staff=True, is_superuser=True)
         tag = TagFactory(name="ToDelete", slug="to-delete")
 
         request = rf.post(f"/admin/tags/{tag.pk}/delete/")

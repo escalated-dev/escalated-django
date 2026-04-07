@@ -42,10 +42,7 @@ class PostmarkAdapter(BaseAdapter):
         expected_token = get_setting("POSTMARK_INBOUND_TOKEN")
         if not expected_token:
             # No token configured — reject request for security
-            logger.warning(
-                "Escalated: Postmark inbound token not configured — "
-                "rejecting request."
-            )
+            logger.warning("Escalated: Postmark inbound token not configured — rejecting request.")
             return False
 
         # Postmark can include the token as a query param or header
@@ -86,18 +83,17 @@ class PostmarkAdapter(BaseAdapter):
         # Collect attachments (Postmark sends base64-encoded content)
         attachments = []
         for att in data.get("Attachments", []):
-            attachments.append({
-                "filename": att.get("Name", "unnamed"),
-                "content_type": att.get("ContentType", "application/octet-stream"),
-                "size": att.get("ContentLength", 0),
-                "content_base64": att.get("Content"),
-            })
+            attachments.append(
+                {
+                    "filename": att.get("Name", "unnamed"),
+                    "content_type": att.get("ContentType", "application/octet-stream"),
+                    "size": att.get("ContentLength", 0),
+                    "content_base64": att.get("Content"),
+                }
+            )
 
         # Build raw headers string for storage
-        raw_headers = "\n".join(
-            f"{h.get('Name', '')}: {h.get('Value', '')}"
-            for h in data.get("Headers", [])
-        )
+        "\n".join(f"{h.get('Name', '')}: {h.get('Value', '')}" for h in data.get("Headers", []))
 
         return InboundMessage(
             from_email=from_email,

@@ -21,9 +21,7 @@ class SkillRoutingService:
 
         # Find user IDs who have these skills
         agent_user_ids = list(
-            AgentSkill.objects.filter(skill_id__in=skill_ids)
-            .values_list("user_id", flat=True)
-            .distinct()
+            AgentSkill.objects.filter(skill_id__in=skill_ids).values_list("user_id", flat=True).distinct()
         )
         if not agent_user_ids:
             return User.objects.none()

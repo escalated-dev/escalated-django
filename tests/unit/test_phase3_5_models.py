@@ -2,17 +2,25 @@ import pytest
 from django.db import IntegrityError
 
 from escalated.models import (
-    AgentProfile, Skill, AgentSkill, AgentCapacity,
-    Webhook, WebhookDelivery, Automation,
-    TwoFactor, CustomObject, CustomObjectRecord,
+    AgentProfile,
+    AgentSkill,
+    Automation,
+    CustomObjectRecord,
+    Webhook,
+    WebhookDelivery,
 )
 from tests.factories import (
-    UserFactory, AgentProfileFactory, SkillFactory,
-    AgentCapacityFactory, WebhookFactory, WebhookDeliveryFactory,
-    AutomationFactory, TwoFactorFactory, CustomObjectFactory,
+    AgentCapacityFactory,
+    AgentProfileFactory,
+    AutomationFactory,
+    CustomObjectFactory,
     CustomObjectRecordFactory,
+    SkillFactory,
+    TwoFactorFactory,
+    UserFactory,
+    WebhookDeliveryFactory,
+    WebhookFactory,
 )
-
 
 # ---------------------------------------------------------------------------
 # Phase 3: Agent & Routing
@@ -143,7 +151,7 @@ class TestWebhookModel:
     def test_deliveries_relationship(self):
         wh = WebhookFactory()
         d1 = WebhookDeliveryFactory(webhook=wh)
-        d2 = WebhookDeliveryFactory(webhook=wh)
+        WebhookDeliveryFactory(webhook=wh)
 
         assert wh.deliveries.count() == 2
         assert d1 in wh.deliveries.all()
@@ -224,6 +232,7 @@ class TestTwoFactorModel:
 
     def test_is_confirmed_true(self):
         from django.utils import timezone
+
         tf = TwoFactorFactory(confirmed_at=timezone.now())
         assert tf.is_confirmed() is True
 
@@ -257,7 +266,7 @@ class TestCustomObjectModel:
     def test_records_relationship(self):
         obj = CustomObjectFactory()
         r1 = CustomObjectRecordFactory(object=obj)
-        r2 = CustomObjectRecordFactory(object=obj)
+        CustomObjectRecordFactory(object=obj)
 
         assert obj.records.count() == 2
         assert r1 in obj.records.all()

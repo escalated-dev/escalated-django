@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import requests
 
@@ -25,11 +25,13 @@ class WebhookDispatcher:
         """Send a single webhook delivery."""
         from escalated.models import WebhookDelivery
 
-        body = json.dumps({
-            "event": event,
-            "payload": payload,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        body = json.dumps(
+            {
+                "event": event,
+                "payload": payload,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
 
         headers = {
             "Content-Type": "application/json",
@@ -37,9 +39,7 @@ class WebhookDispatcher:
         }
 
         if webhook.secret:
-            signature = hmac.new(
-                webhook.secret.encode(), body.encode(), hashlib.sha256
-            ).hexdigest()
+            signature = hmac.new(webhook.secret.encode(), body.encode(), hashlib.sha256).hexdigest()
             headers["X-Escalated-Signature"] = signature
 
         delivery = WebhookDelivery.objects.create(
@@ -50,12 +50,10 @@ class WebhookDispatcher:
         )
 
         try:
-            response = requests.post(
-                webhook.url, data=body, headers=headers, timeout=10
-            )
+            response = requests.post(webhook.url, data=body, headers=headers, timeout=10)
             delivery.response_code = response.status_code
             delivery.response_body = response.text[:2000]
-            delivery.delivered_at = datetime.now(timezone.utc)
+            delivery.delivered_at = datetime.now(UTC)
             delivery.attempts = attempt
             delivery.save()
 

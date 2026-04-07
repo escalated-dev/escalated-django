@@ -1,5 +1,5 @@
-from escalated.drivers import get_driver
 from escalated.conf import get_setting
+from escalated.drivers import get_driver
 
 
 class TicketService:
@@ -49,10 +49,14 @@ class TicketService:
 
     def add_note(self, ticket, user, body):
         """Add an internal note to a ticket."""
-        return self.driver.add_reply(ticket, user, {
-            "body": body,
-            "is_internal_note": True,
-        })
+        return self.driver.add_reply(
+            ticket,
+            user,
+            {
+                "body": body,
+                "is_internal_note": True,
+            },
+        )
 
     def get(self, ticket_id):
         """Retrieve a ticket by ID."""
@@ -81,19 +85,23 @@ class TicketService:
     def close(self, ticket, user):
         """Close a ticket."""
         from escalated.models import Ticket
+
         return self.driver.transition_status(ticket, user, Ticket.Status.CLOSED)
 
     def resolve(self, ticket, user):
         """Resolve a ticket."""
         from escalated.models import Ticket
+
         return self.driver.transition_status(ticket, user, Ticket.Status.RESOLVED)
 
     def reopen(self, ticket, user):
         """Reopen a closed or resolved ticket."""
         from escalated.models import Ticket
+
         return self.driver.transition_status(ticket, user, Ticket.Status.REOPENED)
 
     def escalate(self, ticket, user):
         """Escalate a ticket."""
         from escalated.models import Ticket
+
         return self.driver.transition_status(ticket, user, Ticket.Status.ESCALATED)

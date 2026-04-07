@@ -1,7 +1,7 @@
-from django.urls import path, include
+from django.urls import include, path
 
 from escalated.conf import get_setting
-from escalated.views import customer, agent, admin, guest, inbound, admin_plugins, import_views
+from escalated.views import admin, admin_plugins, agent, customer, guest, import_views, inbound
 
 app_name = "escalated"
 
@@ -59,14 +59,34 @@ admin_patterns = [
     # Ticket Links
     path("admin/tickets/<int:ticket_id>/links/", admin.ticket_links_index, name="admin_ticket_links_index"),
     path("admin/tickets/<int:ticket_id>/links/store/", admin.ticket_links_store, name="admin_ticket_links_store"),
-    path("admin/tickets/<int:ticket_id>/links/<int:link_id>/delete/", admin.ticket_links_destroy, name="admin_ticket_links_destroy"),
+    path(
+        "admin/tickets/<int:ticket_id>/links/<int:link_id>/delete/",
+        admin.ticket_links_destroy,
+        name="admin_ticket_links_destroy",
+    ),
     # Ticket Merging
     path("admin/tickets/<int:ticket_id>/merge/", admin.ticket_merge, name="admin_ticket_merge"),
     # Side Conversations
-    path("admin/tickets/<int:ticket_id>/side-conversations/", admin.side_conversations_index, name="admin_side_conversations_index"),
-    path("admin/tickets/<int:ticket_id>/side-conversations/store/", admin.side_conversations_store, name="admin_side_conversations_store"),
-    path("admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/reply/", admin.side_conversations_reply, name="admin_side_conversations_reply"),
-    path("admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/close/", admin.side_conversations_close, name="admin_side_conversations_close"),
+    path(
+        "admin/tickets/<int:ticket_id>/side-conversations/",
+        admin.side_conversations_index,
+        name="admin_side_conversations_index",
+    ),
+    path(
+        "admin/tickets/<int:ticket_id>/side-conversations/store/",
+        admin.side_conversations_store,
+        name="admin_side_conversations_store",
+    ),
+    path(
+        "admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/reply/",
+        admin.side_conversations_reply,
+        name="admin_side_conversations_reply",
+    ),
+    path(
+        "admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/close/",
+        admin.side_conversations_close,
+        name="admin_side_conversations_close",
+    ),
     # Departments
     path("admin/departments/", admin.departments_index, name="admin_departments_index"),
     path("admin/departments/create/", admin.departments_create, name="admin_departments_create"),
@@ -81,7 +101,11 @@ admin_patterns = [
     path("admin/escalation-rules/", admin.escalation_rules_index, name="admin_escalation_rules_index"),
     path("admin/escalation-rules/create/", admin.escalation_rules_create, name="admin_escalation_rules_create"),
     path("admin/escalation-rules/<int:rule_id>/edit/", admin.escalation_rules_edit, name="admin_escalation_rules_edit"),
-    path("admin/escalation-rules/<int:rule_id>/delete/", admin.escalation_rules_delete, name="admin_escalation_rules_delete"),
+    path(
+        "admin/escalation-rules/<int:rule_id>/delete/",
+        admin.escalation_rules_delete,
+        name="admin_escalation_rules_delete",
+    ),
     # Tags
     path("admin/tags/", admin.tags_index, name="admin_tags_index"),
     path("admin/tags/create/", admin.tags_create, name="admin_tags_create"),
@@ -90,8 +114,16 @@ admin_patterns = [
     # Canned Responses
     path("admin/canned-responses/", admin.canned_responses_index, name="admin_canned_responses_index"),
     path("admin/canned-responses/create/", admin.canned_responses_create, name="admin_canned_responses_create"),
-    path("admin/canned-responses/<int:response_id>/edit/", admin.canned_responses_edit, name="admin_canned_responses_edit"),
-    path("admin/canned-responses/<int:response_id>/delete/", admin.canned_responses_delete, name="admin_canned_responses_delete"),
+    path(
+        "admin/canned-responses/<int:response_id>/edit/",
+        admin.canned_responses_edit,
+        name="admin_canned_responses_edit",
+    ),
+    path(
+        "admin/canned-responses/<int:response_id>/delete/",
+        admin.canned_responses_delete,
+        name="admin_canned_responses_delete",
+    ),
     # Macros
     path("admin/macros/", admin.macros_index, name="admin_macros_index"),
     path("admin/macros/create/", admin.macros_create, name="admin_macros_create"),
@@ -111,7 +143,11 @@ admin_patterns = [
     path("admin/business-hours/", admin.business_hours_index, name="admin_business_hours_index"),
     path("admin/business-hours/create/", admin.business_hours_create, name="admin_business_hours_create"),
     path("admin/business-hours/<int:schedule_id>/edit/", admin.business_hours_edit, name="admin_business_hours_edit"),
-    path("admin/business-hours/<int:schedule_id>/delete/", admin.business_hours_delete, name="admin_business_hours_delete"),
+    path(
+        "admin/business-hours/<int:schedule_id>/delete/",
+        admin.business_hours_delete,
+        name="admin_business_hours_delete",
+    ),
     # Roles
     path("admin/roles/", admin.roles_index, name="admin_roles_index"),
     path("admin/roles/create/", admin.roles_create, name="admin_roles_create"),
@@ -131,8 +167,12 @@ admin_patterns = [
     # Knowledge Base - Categories
     path("admin/kb/categories/", admin.kb_categories_index, name="admin_kb_categories_index"),
     path("admin/kb/categories/store/", admin.kb_categories_store, name="admin_kb_categories_store"),
-    path("admin/kb/categories/<int:category_id>/update/", admin.kb_categories_update, name="admin_kb_categories_update"),
-    path("admin/kb/categories/<int:category_id>/delete/", admin.kb_categories_delete, name="admin_kb_categories_delete"),
+    path(
+        "admin/kb/categories/<int:category_id>/update/", admin.kb_categories_update, name="admin_kb_categories_update"
+    ),
+    path(
+        "admin/kb/categories/<int:category_id>/delete/", admin.kb_categories_delete, name="admin_kb_categories_delete"
+    ),
     # Plugins
     path("admin/plugins/", admin_plugins.plugin_list, name="admin_plugins_index"),
     path("admin/plugins/upload/", admin_plugins.plugin_upload, name="admin_plugins_upload"),
@@ -170,11 +210,27 @@ admin_patterns = [
     path("admin/custom-objects/", admin.custom_objects_index, name="admin_custom_objects_index"),
     path("admin/custom-objects/create/", admin.custom_objects_create, name="admin_custom_objects_create"),
     path("admin/custom-objects/<int:object_id>/edit/", admin.custom_objects_edit, name="admin_custom_objects_edit"),
-    path("admin/custom-objects/<int:object_id>/delete/", admin.custom_objects_delete, name="admin_custom_objects_delete"),
-    path("admin/custom-objects/<int:object_id>/records/", admin.custom_object_records, name="admin_custom_object_records"),
-    path("admin/custom-objects/<int:object_id>/records/store/", admin.custom_object_records_store, name="admin_custom_object_records_store"),
-    path("admin/custom-objects/<int:object_id>/records/<int:record_id>/update/", admin.custom_object_records_update, name="admin_custom_object_records_update"),
-    path("admin/custom-objects/<int:object_id>/records/<int:record_id>/delete/", admin.custom_object_records_delete, name="admin_custom_object_records_delete"),
+    path(
+        "admin/custom-objects/<int:object_id>/delete/", admin.custom_objects_delete, name="admin_custom_objects_delete"
+    ),
+    path(
+        "admin/custom-objects/<int:object_id>/records/", admin.custom_object_records, name="admin_custom_object_records"
+    ),
+    path(
+        "admin/custom-objects/<int:object_id>/records/store/",
+        admin.custom_object_records_store,
+        name="admin_custom_object_records_store",
+    ),
+    path(
+        "admin/custom-objects/<int:object_id>/records/<int:record_id>/update/",
+        admin.custom_object_records_update,
+        name="admin_custom_object_records_update",
+    ),
+    path(
+        "admin/custom-objects/<int:object_id>/records/<int:record_id>/delete/",
+        admin.custom_object_records_delete,
+        name="admin_custom_object_records_delete",
+    ),
     # Reports
     path("admin/reports/dashboard/", admin.reports_dashboard, name="admin_reports_dashboard"),
     # Import
@@ -182,9 +238,13 @@ admin_patterns = [
     path("admin/import/create/", import_views.import_create, name="admin_import_create"),
     path("admin/import/store/", import_views.import_store, name="admin_import_store"),
     path("admin/import/<uuid:job_uuid>/", import_views.import_show, name="admin_import_show"),
-    path("admin/import/<uuid:job_uuid>/authenticate/", import_views.import_authenticate, name="admin_import_authenticate"),
+    path(
+        "admin/import/<uuid:job_uuid>/authenticate/", import_views.import_authenticate, name="admin_import_authenticate"
+    ),
     path("admin/import/<uuid:job_uuid>/mapping/", import_views.import_mapping, name="admin_import_mapping"),
-    path("admin/import/<uuid:job_uuid>/mapping/save/", import_views.import_mapping_save, name="admin_import_mapping_save"),
+    path(
+        "admin/import/<uuid:job_uuid>/mapping/save/", import_views.import_mapping_save, name="admin_import_mapping_save"
+    ),
     path("admin/import/<uuid:job_uuid>/run/", import_views.import_run, name="admin_import_run"),
     path("admin/import/<uuid:job_uuid>/pause/", import_views.import_pause, name="admin_import_pause"),
     path("admin/import/<uuid:job_uuid>/progress/", import_views.import_progress, name="admin_import_progress"),
@@ -210,18 +270,13 @@ urlpatterns = list(inbound_patterns)
 
 # UI routes (only when UI is enabled)
 if get_setting("UI_ENABLED"):
-    urlpatterns = (
-        customer_patterns
-        + agent_patterns
-        + admin_patterns
-        + guest_patterns
-        + urlpatterns
-    )
+    urlpatterns = customer_patterns + agent_patterns + admin_patterns + guest_patterns + urlpatterns
 
 # Inject plugin bridge routes (pages, API endpoints, webhooks) if the SDK
 # bridge has booted and registered patterns from plugin manifests.
 try:
     from escalated.bridge.plugin_bridge import get_bridge as _get_bridge
+
     _bridge = _get_bridge()
     _plugin_urls = _bridge.get_plugin_urls()
     if _plugin_urls:
@@ -231,7 +286,7 @@ except Exception:
 
 # Conditionally include API URLs when API is enabled
 if get_setting("API_ENABLED"):
-    from escalated.api_urls import api_patterns, admin_api_token_patterns
+    from escalated.api_urls import admin_api_token_patterns, api_patterns
 
     api_prefix = get_setting("API_PREFIX").strip("/")
 

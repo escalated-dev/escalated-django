@@ -33,10 +33,7 @@ def inbound_webhook(request, adapter_name):
     """
     # Check if inbound email processing is enabled
     if not get_setting("INBOUND_EMAIL_ENABLED"):
-        logger.warning(
-            f"Inbound email webhook called but feature is disabled "
-            f"(adapter={adapter_name})"
-        )
+        logger.warning(f"Inbound email webhook called but feature is disabled (adapter={adapter_name})")
         return HttpResponseBadRequest(_("Inbound email processing is disabled."))
 
     # Resolve the adapter
@@ -49,8 +46,7 @@ def inbound_webhook(request, adapter_name):
     # Verify the request authenticity
     if not adapter.verify_request(request):
         logger.warning(
-            f"Inbound email webhook verification failed "
-            f"(adapter={adapter_name}, ip={request.META.get('REMOTE_ADDR')})"
+            f"Inbound email webhook verification failed (adapter={adapter_name}, ip={request.META.get('REMOTE_ADDR')})"
         )
         return HttpResponseForbidden(_("Request verification failed."))
 
@@ -61,10 +57,7 @@ def inbound_webhook(request, adapter_name):
         # Special case: SNS subscription confirmation is handled inside parse
         if "SubscriptionConfirmation" in str(exc):
             return HttpResponse("OK", status=200)
-        logger.error(
-            f"Failed to parse inbound email webhook "
-            f"(adapter={adapter_name}): {exc}"
-        )
+        logger.error(f"Failed to parse inbound email webhook (adapter={adapter_name}): {exc}")
         return HttpResponseBadRequest(f"Failed to parse request: {exc}")
 
     # Process the inbound email
@@ -76,10 +69,7 @@ def inbound_webhook(request, adapter_name):
     elif inbound.status == "failed":
         # Still return 200 to prevent the sender from retrying
         # (the error is logged and stored in the InboundEmail record)
-        logger.error(
-            f"Inbound email processing failed but returning 200 to "
-            f"prevent retry: {inbound.error_message}"
-        )
+        logger.error(f"Inbound email processing failed but returning 200 to prevent retry: {inbound.error_message}")
         return HttpResponse("Accepted", status=200)
     else:
         return HttpResponse("Accepted", status=200)

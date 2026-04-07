@@ -8,7 +8,6 @@ from escalated.conf import get_table_name
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("escalated", "0004_v040_advanced_features"),
     ]

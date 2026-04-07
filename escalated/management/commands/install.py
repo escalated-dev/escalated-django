@@ -47,10 +47,18 @@ class Command(BaseCommand):
                 description="Default SLA policy",
                 is_default=True,
                 first_response_hours={
-                    "low": 24, "medium": 8, "high": 4, "urgent": 1, "critical": 0.5,
+                    "low": 24,
+                    "medium": 8,
+                    "high": 4,
+                    "urgent": 1,
+                    "critical": 0.5,
                 },
                 resolution_hours={
-                    "low": 72, "medium": 24, "high": 8, "urgent": 4, "critical": 2,
+                    "low": 72,
+                    "medium": 24,
+                    "high": 8,
+                    "urgent": 4,
+                    "critical": 2,
                 },
             )
             self.stdout.write(self.style.SUCCESS(_("Created default SLA policy.")))

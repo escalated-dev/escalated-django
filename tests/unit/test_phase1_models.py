@@ -1,12 +1,21 @@
-import pytest
 from datetime import date
 
+import pytest
+
 from escalated.models import (
-    AuditLog, TicketStatus, BusinessSchedule, Holiday, Role, Permission,
+    AuditLog,
+    Holiday,
+    Permission,
+    TicketStatus,
 )
 from tests.factories import (
-    UserFactory, TicketStatusFactory, BusinessScheduleFactory,
-    HolidayFactory, PermissionFactory, RoleFactory, AuditLogFactory,
+    AuditLogFactory,
+    BusinessScheduleFactory,
+    HolidayFactory,
+    PermissionFactory,
+    RoleFactory,
+    TicketStatusFactory,
+    UserFactory,
 )
 
 

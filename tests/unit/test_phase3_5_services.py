@@ -1,16 +1,17 @@
 import pytest
-from unittest.mock import patch, MagicMock
 
-from escalated.services.capacity_service import CapacityService
-from escalated.services.two_factor_service import TwoFactorService
-from escalated.services.sso_service import SsoService
+from escalated.models import AgentCapacity, Automation, Reply
 from escalated.services.automation_runner import AutomationRunner
-from escalated.models import AgentCapacity, Ticket, Reply, Tag, Automation
+from escalated.services.capacity_service import CapacityService
+from escalated.services.sso_service import SsoService
+from escalated.services.two_factor_service import TwoFactorService
 from tests.factories import (
-    UserFactory, TicketFactory, TagFactory, AgentCapacityFactory,
-    AutomationFactory, SkillFactory,
+    AgentCapacityFactory,
+    AutomationFactory,
+    TagFactory,
+    TicketFactory,
+    UserFactory,
 )
-
 
 # ---------------------------------------------------------------------------
 # Capacity Service
@@ -92,6 +93,7 @@ class TestTwoFactorService:
         secret = self.service.generate_secret()
         # Generate a code for the current time step
         import time
+
         time_step = int(time.time()) // 30
         code = self.service._generate_totp(secret, time_step)
         assert self.service.verify(secret, code) is True

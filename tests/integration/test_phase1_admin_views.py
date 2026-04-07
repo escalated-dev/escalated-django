@@ -1,18 +1,25 @@
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock
-
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory
 
 from escalated.models import (
-    TicketStatus, BusinessSchedule, Holiday, Role, Permission, AuditLog,
+    BusinessSchedule,
+    Role,
+    TicketStatus,
 )
 from escalated.views import admin
 from tests.factories import (
-    UserFactory, TicketFactory, TicketStatusFactory, BusinessScheduleFactory,
-    HolidayFactory, PermissionFactory, RoleFactory, AuditLogFactory,
+    AuditLogFactory,
+    BusinessScheduleFactory,
+    HolidayFactory,
+    PermissionFactory,
+    RoleFactory,
+    TicketFactory,
+    TicketStatusFactory,
+    UserFactory,
 )
 
 
@@ -30,6 +37,7 @@ def _make_admin_request(rf, method, path, data=None, user=None):
         request = rf.post(path, data=data or {})
     request.user = user
     from django.contrib.sessions.backends.db import SessionStore
+
     request.session = SessionStore()
     return request
 
@@ -66,12 +74,17 @@ class TestStatusesAdminViews:
         mock_render.assert_called_once()
 
     def test_create_post_creates_status(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/statuses/create/", data={
-            "label": "Awaiting Response",
-            "category": "pending",
-            "color": "#ff0000",
-            "position": "0",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/statuses/create/",
+            data={
+                "label": "Awaiting Response",
+                "category": "pending",
+                "color": "#ff0000",
+                "position": "0",
+            },
+        )
 
         response = admin.statuses_create(request)
         assert response.status_code == 302
@@ -79,12 +92,17 @@ class TestStatusesAdminViews:
 
     def test_create_sets_default_clears_others(self, rf):
         existing = TicketStatusFactory(category="open", is_default=True, slug="default-existing")
-        request = _make_admin_request(rf, "POST", "/admin/statuses/create/", data={
-            "label": "New Default",
-            "category": "open",
-            "color": "#00ff00",
-            "is_default": "true",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/statuses/create/",
+            data={
+                "label": "New Default",
+                "category": "open",
+                "color": "#00ff00",
+                "is_default": "true",
+            },
+        )
 
         admin.statuses_create(request)
 
@@ -95,11 +113,16 @@ class TestStatusesAdminViews:
 
     def test_edit_post_updates_status(self, rf):
         status = TicketStatusFactory(label="Old Label", slug="old-label")
-        request = _make_admin_request(rf, "POST", f"/admin/statuses/{status.pk}/edit/", data={
-            "label": "New Label",
-            "category": "pending",
-            "color": "#00ff00",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/statuses/{status.pk}/edit/",
+            data={
+                "label": "New Label",
+                "category": "pending",
+                "color": "#00ff00",
+            },
+        )
 
         response = admin.statuses_edit(request, status.pk)
         assert response.status_code == 302
@@ -146,14 +169,21 @@ class TestBusinessHoursAdminViews:
         assert "schedules" in props
 
     def test_create_post_with_holidays(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/business-hours/create/", data={
-            "name": "Test Schedule",
-            "timezone": "UTC",
-            "schedule": json.dumps({"monday": {"start": "09:00", "end": "17:00"}}),
-            "holidays": json.dumps([
-                {"name": "Christmas", "date": "2026-12-25", "recurring": True},
-            ]),
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/business-hours/create/",
+            data={
+                "name": "Test Schedule",
+                "timezone": "UTC",
+                "schedule": json.dumps({"monday": {"start": "09:00", "end": "17:00"}}),
+                "holidays": json.dumps(
+                    [
+                        {"name": "Christmas", "date": "2026-12-25", "recurring": True},
+                    ]
+                ),
+            },
+        )
 
         response = admin.business_hours_create(request)
         assert response.status_code == 302
@@ -167,14 +197,21 @@ class TestBusinessHoursAdminViews:
         sched = BusinessScheduleFactory()
         HolidayFactory(schedule=sched, name="Old Holiday")
 
-        request = _make_admin_request(rf, "POST", f"/admin/business-hours/{sched.pk}/edit/", data={
-            "name": sched.name,
-            "timezone": "UTC",
-            "schedule": json.dumps(sched.schedule),
-            "holidays": json.dumps([
-                {"name": "New Holiday", "date": "2026-07-04", "recurring": False},
-            ]),
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/business-hours/{sched.pk}/edit/",
+            data={
+                "name": sched.name,
+                "timezone": "UTC",
+                "schedule": json.dumps(sched.schedule),
+                "holidays": json.dumps(
+                    [
+                        {"name": "New Holiday", "date": "2026-07-04", "recurring": False},
+                    ]
+                ),
+            },
+        )
 
         response = admin.business_hours_edit(request, sched.pk)
         assert response.status_code == 302
@@ -192,12 +229,17 @@ class TestBusinessHoursAdminViews:
 
     def test_default_clears_others(self, rf):
         existing = BusinessScheduleFactory(is_default=True)
-        request = _make_admin_request(rf, "POST", "/admin/business-hours/create/", data={
-            "name": "New Default",
-            "timezone": "UTC",
-            "is_default": "true",
-            "schedule": json.dumps({"monday": {"start": "09:00", "end": "17:00"}}),
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/business-hours/create/",
+            data={
+                "name": "New Default",
+                "timezone": "UTC",
+                "is_default": "true",
+                "schedule": json.dumps({"monday": {"start": "09:00", "end": "17:00"}}),
+            },
+        )
 
         admin.business_hours_create(request)
 
@@ -229,11 +271,16 @@ class TestRolesAdminViews:
 
     def test_create_post_with_permissions(self, rf):
         perm = PermissionFactory(slug="test-perm-create")
-        request = _make_admin_request(rf, "POST", "/admin/roles/create/", data={
-            "name": "Support Lead",
-            "description": "Leads the support team",
-            "permissions": [str(perm.pk)],
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/roles/create/",
+            data={
+                "name": "Support Lead",
+                "description": "Leads the support team",
+                "permissions": [str(perm.pk)],
+            },
+        )
 
         response = admin.roles_create(request)
         assert response.status_code == 302
@@ -244,10 +291,15 @@ class TestRolesAdminViews:
 
     def test_edit_updates_role(self, rf):
         role = RoleFactory(name="Old Role", slug="old-role")
-        request = _make_admin_request(rf, "POST", f"/admin/roles/{role.pk}/edit/", data={
-            "name": "Updated Role",
-            "description": "Updated description",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/roles/{role.pk}/edit/",
+            data={
+                "name": "Updated Role",
+                "description": "Updated description",
+            },
+        )
 
         response = admin.roles_edit(request, role.pk)
         assert response.status_code == 302
@@ -277,10 +329,15 @@ class TestRolesAdminViews:
         p2 = PermissionFactory(slug="perm-b")
         role.permissions.add(p1)
 
-        request = _make_admin_request(rf, "POST", f"/admin/roles/{role.pk}/edit/", data={
-            "name": role.name,
-            "permissions": [str(p2.pk)],
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/roles/{role.pk}/edit/",
+            data={
+                "name": role.name,
+                "permissions": [str(p2.pk)],
+            },
+        )
 
         admin.roles_edit(request, role.pk)
 
@@ -328,6 +385,7 @@ class TestAuditLogsAdminViews:
         request = rf.get("/admin/audit-logs/", {"action": "created", "user_id": str(user.pk)})
         request.user = user
         from django.contrib.sessions.backends.db import SessionStore
+
         request.session = SessionStore()
 
         admin.audit_logs_index(request)

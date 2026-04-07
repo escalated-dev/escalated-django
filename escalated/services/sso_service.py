@@ -2,7 +2,6 @@ import base64
 import hashlib
 import hmac
 import json
-import struct
 import time
 import xml.etree.ElementTree as ET
 
@@ -109,9 +108,7 @@ class SsoService:
                 raise SsoValidationError("SAML assertion missing Issuer element.")
             issuer = (issuer_el.text or "").strip()
             if issuer != entity_id:
-                raise SsoValidationError(
-                    f"SAML Issuer mismatch: expected '{entity_id}', got '{issuer}'."
-                )
+                raise SsoValidationError(f"SAML Issuer mismatch: expected '{entity_id}', got '{issuer}'.")
 
         # Validate conditions
         conditions_el = root.find(".//saml:Conditions", self.SAML_NS)
@@ -148,7 +145,6 @@ class SsoService:
 
         not_before = conditions_el.get("NotBefore")
         if not_before:
-            from email.utils import parsedate_to_datetime
             import datetime
 
             try:
@@ -171,9 +167,7 @@ class SsoService:
 
     def _extract_saml_attributes(self, root):
         attributes = {}
-        for attr_el in root.findall(
-            ".//saml:AttributeStatement/saml:Attribute", self.SAML_NS
-        ):
+        for attr_el in root.findall(".//saml:AttributeStatement/saml:Attribute", self.SAML_NS):
             name = attr_el.get("Name", "")
             value_el = attr_el.find("saml:AttributeValue", self.SAML_NS)
             if value_el is not None:
@@ -201,7 +195,7 @@ class SsoService:
 
         # Decode header
         try:
-            header = json.loads(self._base64url_decode(header_b64))
+            json.loads(self._base64url_decode(header_b64))
         except (json.JSONDecodeError, Exception):
             raise SsoValidationError("Invalid JWT: malformed header.")
 
@@ -259,9 +253,7 @@ class SsoService:
             "HS512": hashlib.sha512,
         }
         if algorithm in hmac_algos:
-            expected = hmac.new(
-                secret.encode(), signing_input, hmac_algos[algorithm]
-            ).digest()
+            expected = hmac.new(secret.encode(), signing_input, hmac_algos[algorithm]).digest()
             return hmac.compare_digest(expected, signature)
 
         raise SsoValidationError(f"Unsupported JWT algorithm: {algorithm}")

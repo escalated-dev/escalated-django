@@ -1,19 +1,26 @@
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock
-
 from django.test import RequestFactory
 
 from escalated.models import (
-    CustomField, TicketLink, SideConversation, SideConversationReply,
-    Article, ArticleCategory, Ticket,
+    Article,
+    ArticleCategory,
+    CustomField,
+    SideConversation,
+    Ticket,
+    TicketLink,
 )
 from escalated.views import admin
 from tests.factories import (
-    UserFactory, TicketFactory, CustomFieldFactory,
-    SideConversationFactory, SideConversationReplyFactory,
-    ArticleCategoryFactory, ArticleFactory, TicketLinkFactory,
+    ArticleCategoryFactory,
+    ArticleFactory,
+    CustomFieldFactory,
+    SideConversationFactory,
+    TicketFactory,
+    TicketLinkFactory,
+    UserFactory,
 )
 
 
@@ -37,6 +44,7 @@ def _make_admin_request(rf, method, path, data=None, user=None, content_type=Non
         request = rf.post(path, data=data or {})
     request.user = user
     from django.contrib.sessions.backends.db import SessionStore
+
     request.session = SessionStore()
     return request
 
@@ -63,13 +71,18 @@ class TestCustomFieldsAdminViews:
         assert "custom_fields" in props
 
     def test_create_post_creates_field(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/custom-fields/create/", data={
-            "name": "Priority Level",
-            "type": "select",
-            "context": "ticket",
-            "options": json.dumps(["Low", "Medium", "High"]),
-            "position": "0",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/custom-fields/create/",
+            data={
+                "name": "Priority Level",
+                "type": "select",
+                "context": "ticket",
+                "options": json.dumps(["Low", "Medium", "High"]),
+                "position": "0",
+            },
+        )
 
         response = admin.custom_fields_create(request)
         assert response.status_code == 302
@@ -79,11 +92,16 @@ class TestCustomFieldsAdminViews:
 
     def test_edit_post_updates_field(self, rf):
         field = CustomFieldFactory(name="Old Name", slug="old-cf")
-        request = _make_admin_request(rf, "POST", f"/admin/custom-fields/{field.pk}/edit/", data={
-            "name": "New Name",
-            "type": "textarea",
-            "context": "user",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/custom-fields/{field.pk}/edit/",
+            data={
+                "name": "New Name",
+                "type": "textarea",
+                "context": "user",
+            },
+        )
 
         response = admin.custom_fields_edit(request, field.pk)
         assert response.status_code == 302
@@ -106,11 +124,15 @@ class TestCustomFieldsAdminViews:
         f2 = CustomFieldFactory(position=1, slug="cf-reorder2")
 
         request = _make_admin_request(
-            rf, "POST", "/admin/custom-fields/reorder/",
-            data={"positions": [
-                {"id": f1.pk, "position": 5},
-                {"id": f2.pk, "position": 3},
-            ]},
+            rf,
+            "POST",
+            "/admin/custom-fields/reorder/",
+            data={
+                "positions": [
+                    {"id": f1.pk, "position": 5},
+                    {"id": f2.pk, "position": 3},
+                ]
+            },
             content_type="application/json",
         )
 
@@ -155,7 +177,9 @@ class TestTicketLinksAdminViews:
         t2 = TicketFactory()
 
         request = _make_admin_request(
-            rf, "POST", f"/admin/tickets/{t1.pk}/links/store/",
+            rf,
+            "POST",
+            f"/admin/tickets/{t1.pk}/links/store/",
             data={
                 "target_reference": t2.reference,
                 "link_type": "related",
@@ -167,15 +191,15 @@ class TestTicketLinksAdminViews:
         assert response.status_code == 200
         data = json.loads(response.content)
         assert "link" in data
-        assert TicketLink.objects.filter(
-            parent_ticket=t1, child_ticket=t2
-        ).exists()
+        assert TicketLink.objects.filter(parent_ticket=t1, child_ticket=t2).exists()
 
     def test_store_prevents_self_linking(self, rf):
         t1 = TicketFactory()
 
         request = _make_admin_request(
-            rf, "POST", f"/admin/tickets/{t1.pk}/links/store/",
+            rf,
+            "POST",
+            f"/admin/tickets/{t1.pk}/links/store/",
             data={
                 "target_reference": t1.reference,
                 "link_type": "related",
@@ -192,7 +216,9 @@ class TestTicketLinksAdminViews:
         TicketLinkFactory(parent_ticket=t1, child_ticket=t2, link_type="related")
 
         request = _make_admin_request(
-            rf, "POST", f"/admin/tickets/{t1.pk}/links/store/",
+            rf,
+            "POST",
+            f"/admin/tickets/{t1.pk}/links/store/",
             data={
                 "target_reference": t2.reference,
                 "link_type": "related",
@@ -209,7 +235,9 @@ class TestTicketLinksAdminViews:
         link = TicketLinkFactory(parent_ticket=t1, child_ticket=t2)
 
         request = _make_admin_request(
-            rf, "POST", f"/admin/tickets/{t1.pk}/links/{link.pk}/delete/",
+            rf,
+            "POST",
+            f"/admin/tickets/{t1.pk}/links/{link.pk}/delete/",
         )
 
         response = admin.ticket_links_destroy(request, t1.pk, link.pk)
@@ -225,13 +253,14 @@ class TestTicketLinksAdminViews:
 @pytest.mark.django_db
 class TestTicketMergeAdminViews:
     def test_merge_search_returns_tickets(self, rf):
-        t1 = TicketFactory(subject="Login issue")
+        TicketFactory(subject="Login issue")
 
         request = _make_admin_request(rf, "GET", "/admin/tickets/merge-search/")
         request = rf.get("/admin/tickets/merge-search/", {"q": "Login"})
         user = UserFactory(username="merge_admin", is_staff=True, is_superuser=True)
         request.user = user
         from django.contrib.sessions.backends.db import SessionStore
+
         request.session = SessionStore()
 
         response = admin.ticket_merge_search(request)
@@ -253,7 +282,9 @@ class TestTicketMergeAdminViews:
         target = TicketFactory()
 
         request = _make_admin_request(
-            rf, "POST", f"/admin/tickets/{source.pk}/merge/",
+            rf,
+            "POST",
+            f"/admin/tickets/{source.pk}/merge/",
             data={"target_reference": target.reference},
             content_type="application/json",
         )
@@ -271,7 +302,9 @@ class TestTicketMergeAdminViews:
         source = TicketFactory()
 
         request = _make_admin_request(
-            rf, "POST", f"/admin/tickets/{source.pk}/merge/",
+            rf,
+            "POST",
+            f"/admin/tickets/{source.pk}/merge/",
             data={"target_reference": source.reference},
             content_type="application/json",
         )
@@ -303,7 +336,9 @@ class TestSideConversationsAdminViews:
         ticket = TicketFactory()
 
         request = _make_admin_request(
-            rf, "POST", f"/admin/tickets/{ticket.pk}/side-conversations/store/",
+            rf,
+            "POST",
+            f"/admin/tickets/{ticket.pk}/side-conversations/store/",
             data={
                 "subject": "Check with billing",
                 "body": "Need to verify the charge",
@@ -325,7 +360,9 @@ class TestSideConversationsAdminViews:
         ticket = TicketFactory()
 
         request = _make_admin_request(
-            rf, "POST", f"/admin/tickets/{ticket.pk}/side-conversations/store/",
+            rf,
+            "POST",
+            f"/admin/tickets/{ticket.pk}/side-conversations/store/",
             data={"body": "Missing subject"},
             content_type="application/json",
         )
@@ -338,7 +375,8 @@ class TestSideConversationsAdminViews:
         sc = SideConversationFactory(ticket=ticket)
 
         request = _make_admin_request(
-            rf, "POST",
+            rf,
+            "POST",
             f"/admin/tickets/{ticket.pk}/side-conversations/{sc.pk}/reply/",
             data={"body": "Here is my reply"},
             content_type="application/json",
@@ -355,7 +393,8 @@ class TestSideConversationsAdminViews:
         sc = SideConversationFactory(ticket=ticket)
 
         request = _make_admin_request(
-            rf, "POST",
+            rf,
+            "POST",
             f"/admin/tickets/{ticket.pk}/side-conversations/{sc.pk}/reply/",
             data={"body": ""},
             content_type="application/json",
@@ -369,7 +408,8 @@ class TestSideConversationsAdminViews:
         sc = SideConversationFactory(ticket=ticket, status="open")
 
         request = _make_admin_request(
-            rf, "POST",
+            rf,
+            "POST",
             f"/admin/tickets/{ticket.pk}/side-conversations/{sc.pk}/close/",
         )
 
@@ -405,23 +445,33 @@ class TestArticlesAdminViews:
 
     def test_create_post_creates_article(self, rf):
         cat = ArticleCategoryFactory(slug="art-create-cat")
-        request = _make_admin_request(rf, "POST", "/admin/kb/articles/create/", data={
-            "title": "Getting Started Guide",
-            "body": "Welcome to Escalated...",
-            "status": "draft",
-            "category_id": str(cat.pk),
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/kb/articles/create/",
+            data={
+                "title": "Getting Started Guide",
+                "body": "Welcome to Escalated...",
+                "status": "draft",
+                "category_id": str(cat.pk),
+            },
+        )
 
         response = admin.articles_create(request)
         assert response.status_code == 302
         assert Article.objects.filter(title="Getting Started Guide").exists()
 
     def test_create_published_sets_published_at(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/kb/articles/create/", data={
-            "title": "Published Article",
-            "body": "Content here",
-            "status": "published",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/kb/articles/create/",
+            data={
+                "title": "Published Article",
+                "body": "Content here",
+                "status": "published",
+            },
+        )
 
         admin.articles_create(request)
         article = Article.objects.get(title="Published Article")
@@ -429,11 +479,16 @@ class TestArticlesAdminViews:
 
     def test_edit_post_updates_article(self, rf):
         article = ArticleFactory(title="Old Title", slug="art-edit-old")
-        request = _make_admin_request(rf, "POST", f"/admin/kb/articles/{article.pk}/edit/", data={
-            "title": "New Title",
-            "body": "Updated body",
-            "status": "draft",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/kb/articles/{article.pk}/edit/",
+            data={
+                "title": "New Title",
+                "body": "Updated body",
+                "status": "draft",
+            },
+        )
 
         response = admin.articles_edit(request, article.pk)
         assert response.status_code == 302
@@ -480,29 +535,44 @@ class TestKBCategoriesAdminViews:
         assert "categories" in props
 
     def test_store_creates_category(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/kb/categories/store/", data={
-            "name": "Troubleshooting",
-            "position": "0",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/kb/categories/store/",
+            data={
+                "name": "Troubleshooting",
+                "position": "0",
+            },
+        )
 
         response = admin.kb_categories_store(request)
         assert response.status_code == 302
         assert ArticleCategory.objects.filter(name="Troubleshooting").exists()
 
     def test_store_requires_name(self, rf):
-        request = _make_admin_request(rf, "POST", "/admin/kb/categories/store/", data={
-            "name": "",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            "/admin/kb/categories/store/",
+            data={
+                "name": "",
+            },
+        )
 
         response = admin.kb_categories_store(request)
         assert response.status_code == 400
 
     def test_update_updates_category(self, rf):
         cat = ArticleCategoryFactory(name="Old Name", slug="kbcat-edit-old")
-        request = _make_admin_request(rf, "POST", f"/admin/kb/categories/{cat.pk}/update/", data={
-            "name": "New Name",
-            "description": "Updated desc",
-        })
+        request = _make_admin_request(
+            rf,
+            "POST",
+            f"/admin/kb/categories/{cat.pk}/update/",
+            data={
+                "name": "New Name",
+                "description": "Updated desc",
+            },
+        )
 
         response = admin.kb_categories_update(request, cat.pk)
         assert response.status_code == 302

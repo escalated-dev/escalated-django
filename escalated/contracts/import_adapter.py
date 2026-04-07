@@ -21,7 +21,6 @@ via the ``import.adapters`` filter hook::
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from escalated.support.extract_result import ExtractResult
 
@@ -74,7 +73,7 @@ class ImportAdapter(ABC):
         """
 
     @abstractmethod
-    def extract(self, entity_type: str, credentials: dict, cursor: Optional[str]) -> ExtractResult:
+    def extract(self, entity_type: str, credentials: dict, cursor: str | None) -> ExtractResult:
         """
         Fetch one page of records for *entity_type*.
 
@@ -97,8 +96,8 @@ class ImportAdapter(ABC):
 
     def set_job_id(self, job_id: str) -> None:
         """Store the active ImportJob UUID for cross-referencing.  Optional."""
-        self._job_id: Optional[str] = job_id
+        self._job_id: str | None = job_id
 
-    def get_job_id(self) -> Optional[str]:
+    def get_job_id(self) -> str | None:
         """Return the stored job UUID, or ``None`` if not set."""
         return getattr(self, "_job_id", None)

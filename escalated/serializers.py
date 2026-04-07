@@ -3,8 +3,6 @@ Dict-based serializers for converting Django model instances to plain dicts
 suitable for Inertia.js props. No DRF dependency required.
 """
 
-from django.utils.formats import date_format
-
 
 def _format_dt(dt):
     """Format a datetime for JSON output, or return None."""
@@ -38,19 +36,9 @@ class TicketSerializer:
             "priority_display": ticket.get_priority_display(),
             "channel": ticket.channel,
             "assigned_to": _user_dict(ticket.assigned_to),
-            "department": (
-                DepartmentSerializer.serialize(ticket.department)
-                if ticket.department
-                else None
-            ),
-            "sla_policy": (
-                SlaPolicySerializer.serialize_brief(ticket.sla_policy)
-                if ticket.sla_policy
-                else None
-            ),
-            "tags": [
-                TagSerializer.serialize(tag) for tag in ticket.tags.all()
-            ],
+            "department": (DepartmentSerializer.serialize(ticket.department) if ticket.department else None),
+            "sla_policy": (SlaPolicySerializer.serialize_brief(ticket.sla_policy) if ticket.sla_policy else None),
+            "tags": [TagSerializer.serialize(tag) for tag in ticket.tags.all()],
             "is_open": ticket.is_open,
             "first_response_at": _format_dt(ticket.first_response_at),
             "first_response_due_at": _format_dt(ticket.first_response_due_at),
@@ -79,16 +67,10 @@ class TicketSerializer:
             data["requester"] = None
 
         if include_replies:
-            data["replies"] = [
-                ReplySerializer.serialize(reply)
-                for reply in ticket.replies.filter(is_deleted=False)
-            ]
+            data["replies"] = [ReplySerializer.serialize(reply) for reply in ticket.replies.filter(is_deleted=False)]
 
         if include_activities:
-            data["activities"] = [
-                ActivitySerializer.serialize(activity)
-                for activity in ticket.activities.all()[:50]
-            ]
+            data["activities"] = [ActivitySerializer.serialize(activity) for activity in ticket.activities.all()[:50]]
 
         return data
 
@@ -110,10 +92,7 @@ class ReplySerializer:
             "type": reply.type,
             "type_display": reply.get_type_display(),
             "metadata": reply.metadata,
-            "attachments": [
-                AttachmentSerializer.serialize(a)
-                for a in reply.attachments.all()
-            ],
+            "attachments": [AttachmentSerializer.serialize(a) for a in reply.attachments.all()],
             "created_at": _format_dt(reply.created_at),
             "updated_at": _format_dt(reply.updated_at),
         }
@@ -342,7 +321,7 @@ class AuditLogSerializer:
 
     @staticmethod
     def serialize_list(logs):
-        return [AuditLogSerializer.serialize(l) for l in logs]
+        return [AuditLogSerializer.serialize(log) for log in logs]
 
 
 class TicketStatusSerializer:
@@ -390,10 +369,7 @@ class BusinessScheduleSerializer:
             "updated_at": _format_dt(schedule.updated_at),
         }
         if include_holidays:
-            data["holidays"] = [
-                HolidaySerializer.serialize(h)
-                for h in schedule.holidays.all()
-            ]
+            data["holidays"] = [HolidaySerializer.serialize(h) for h in schedule.holidays.all()]
         return data
 
     @staticmethod
@@ -437,14 +413,14 @@ class RoleSerializer:
             "slug": role.slug,
             "description": role.description,
             "is_system": role.is_system,
-            "users_count": role.users.count() if hasattr(role, '_prefetched_objects_cache') else getattr(role, 'users__count', role.users.count()),
+            "users_count": role.users.count()
+            if hasattr(role, "_prefetched_objects_cache")
+            else getattr(role, "users__count", role.users.count()),
             "created_at": _format_dt(role.created_at),
             "updated_at": _format_dt(role.updated_at),
         }
         if include_permissions:
-            data["permissions"] = PermissionSerializer.serialize_list(
-                role.permissions.all()
-            )
+            data["permissions"] = PermissionSerializer.serialize_list(role.permissions.all())
         return data
 
     @staticmethod
@@ -496,8 +472,8 @@ class CustomFieldValueSerializer:
 
 class TicketLinkSerializer:
     @staticmethod
-    def serialize(link, direction='parent'):
-        ticket = link.child_ticket if direction == 'parent' else link.parent_ticket
+    def serialize(link, direction="parent"):
+        ticket = link.child_ticket if direction == "parent" else link.parent_ticket
         return {
             "id": link.pk,
             "link_type": link.link_type,
@@ -507,7 +483,7 @@ class TicketLinkSerializer:
                 "reference": ticket.reference,
                 "subject": ticket.subject,
                 "status": ticket.status,
-                "type": getattr(ticket, 'type', 'question'),
+                "type": getattr(ticket, "type", "question"),
             },
         }
 
@@ -568,9 +544,9 @@ class ArticleCategorySerializer:
             "created_at": _format_dt(category.created_at),
             "updated_at": _format_dt(category.updated_at),
         }
-        if hasattr(category, 'articles__count'):
+        if hasattr(category, "articles__count"):
             data["articles_count"] = category.articles__count
-        elif hasattr(category, 'articles_count'):
+        elif hasattr(category, "articles_count"):
             data["articles_count"] = category.articles_count
         return data
 
@@ -584,11 +560,7 @@ class ArticleSerializer:
     def serialize(article):
         return {
             "id": article.pk,
-            "category": (
-                ArticleCategorySerializer.serialize(article.category)
-                if article.category
-                else None
-            ),
+            "category": (ArticleCategorySerializer.serialize(article.category) if article.category else None),
             "title": article.title,
             "slug": article.slug,
             "body": article.body,
@@ -613,7 +585,7 @@ class AgentProfileSerializer:
         return {
             "id": profile.pk,
             "user_id": profile.user_id,
-            "user": _user_dict(profile.user) if hasattr(profile, 'user') else None,
+            "user": _user_dict(profile.user) if hasattr(profile, "user") else None,
             "agent_type": profile.agent_type,
             "max_tickets": profile.max_tickets,
             "created_at": _format_dt(profile.created_at),
@@ -635,9 +607,9 @@ class SkillSerializer:
             "created_at": _format_dt(skill.created_at),
             "updated_at": _format_dt(skill.updated_at),
         }
-        if hasattr(skill, 'agents_count'):
+        if hasattr(skill, "agents_count"):
             data["agents_count"] = skill.agents_count
-        elif hasattr(skill, 'agents__count'):
+        elif hasattr(skill, "agents__count"):
             data["agents_count"] = skill.agents__count
         return data
 
@@ -666,12 +638,23 @@ class AgentCapacitySerializer:
 
 class WebhookSerializer:
     AVAILABLE_EVENTS = [
-        "ticket.created", "ticket.updated", "ticket.status_changed",
-        "ticket.resolved", "ticket.closed", "ticket.reopened",
-        "ticket.assigned", "ticket.unassigned", "ticket.escalated",
-        "ticket.priority_changed", "ticket.department_changed",
-        "reply.created", "internal_note.added",
-        "sla.breached", "sla.warning", "tag.added", "tag.removed",
+        "ticket.created",
+        "ticket.updated",
+        "ticket.status_changed",
+        "ticket.resolved",
+        "ticket.closed",
+        "ticket.reopened",
+        "ticket.assigned",
+        "ticket.unassigned",
+        "ticket.escalated",
+        "ticket.priority_changed",
+        "ticket.department_changed",
+        "reply.created",
+        "internal_note.added",
+        "sla.breached",
+        "sla.warning",
+        "tag.added",
+        "tag.removed",
     ]
 
     @staticmethod
@@ -685,9 +668,9 @@ class WebhookSerializer:
             "created_at": _format_dt(webhook.created_at),
             "updated_at": _format_dt(webhook.updated_at),
         }
-        if hasattr(webhook, 'deliveries_count'):
+        if hasattr(webhook, "deliveries_count"):
             data["deliveries_count"] = webhook.deliveries_count
-        elif hasattr(webhook, 'deliveries__count'):
+        elif hasattr(webhook, "deliveries__count"):
             data["deliveries_count"] = webhook.deliveries__count
         return data
 
@@ -759,9 +742,9 @@ class CustomObjectSerializer:
             "created_at": _format_dt(obj.created_at),
             "updated_at": _format_dt(obj.updated_at),
         }
-        if hasattr(obj, 'records_count'):
+        if hasattr(obj, "records_count"):
             data["records_count"] = obj.records_count
-        elif hasattr(obj, 'records__count'):
+        elif hasattr(obj, "records__count"):
             data["records_count"] = obj.records__count
         return data
 

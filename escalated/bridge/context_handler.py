@@ -126,13 +126,11 @@ class ContextHandler:
     def _get_plugin_config(self, plugin: str) -> dict:
         from escalated.bridge.plugin_store_record import PluginStoreRecord
 
-        record = (
-            PluginStoreRecord.objects.filter(
-                plugin=plugin,
-                collection="__config__",
-                key="__config__",
-            ).first()
-        )
+        record = PluginStoreRecord.objects.filter(
+            plugin=plugin,
+            collection="__config__",
+            key="__config__",
+        ).first()
         if record is None:
             return {}
         return record.data if isinstance(record.data, dict) else {}
@@ -164,9 +162,7 @@ class ContextHandler:
         if not key:
             raise ValueError("ctx.store.get requires key")
 
-        record = PluginStoreRecord.objects.filter(
-            plugin=plugin, collection=collection, key=key
-        ).first()
+        record = PluginStoreRecord.objects.filter(plugin=plugin, collection=collection, key=key).first()
         return record.data if record else None
 
     def _store_set(self, params: dict) -> None:
@@ -182,7 +178,9 @@ class ContextHandler:
             raise ValueError("ctx.store.set requires key")
 
         PluginStoreRecord.objects.update_or_create(
-            plugin=plugin, collection=collection, key=key,
+            plugin=plugin,
+            collection=collection,
+            key=key,
             defaults={"data": value},
         )
         return None
@@ -229,10 +227,7 @@ class ContextHandler:
         if limit is not None:
             records = records[: int(limit)]
 
-        return [
-            {"_id": r.id, **(r.data if isinstance(r.data, dict) else {})}
-            for r in records
-        ]
+        return [{"_id": r.id, **(r.data if isinstance(r.data, dict) else {})} for r in records]
 
     def _apply_json_operator(self, qs, field: str, op: str, value):
         """
@@ -243,7 +238,6 @@ class ContextHandler:
         database-agnostic.  For large collections a database-level
         implementation would be more efficient.
         """
-        from escalated.bridge.plugin_store_record import PluginStoreRecord
 
         def _extract(record):
             if not isinstance(record.data, dict):
@@ -251,12 +245,12 @@ class ContextHandler:
             return record.data.get(field)
 
         op_funcs = {
-            "$gt":  lambda v, val: v is not None and v > val,
+            "$gt": lambda v, val: v is not None and v > val,
             "$gte": lambda v, val: v is not None and v >= val,
-            "$lt":  lambda v, val: v is not None and v < val,
+            "$lt": lambda v, val: v is not None and v < val,
             "$lte": lambda v, val: v is not None and v <= val,
-            "$ne":  lambda v, val: v != val,
-            "$in":  lambda v, val: v in (val if isinstance(val, list) else [val]),
+            "$ne": lambda v, val: v != val,
+            "$in": lambda v, val: v in (val if isinstance(val, list) else [val]),
             "$nin": lambda v, val: v not in (val if isinstance(val, list) else [val]),
         }
 
@@ -301,9 +295,7 @@ class ContextHandler:
         if data is None:
             raise ValueError("ctx.store.update requires data")
 
-        record = PluginStoreRecord.objects.get(
-            plugin=plugin, collection=collection, key=key
-        )
+        record = PluginStoreRecord.objects.get(plugin=plugin, collection=collection, key=key)
         existing = record.data if isinstance(record.data, dict) else {}
         record.data = {**existing, **data}
         record.save(update_fields=["data"])
@@ -320,9 +312,7 @@ class ContextHandler:
         if not key:
             raise ValueError("ctx.store.delete requires key")
 
-        PluginStoreRecord.objects.filter(
-            plugin=plugin, collection=collection, key=key
-        ).delete()
+        PluginStoreRecord.objects.filter(plugin=plugin, collection=collection, key=key).delete()
         return None
 
     # ------------------------------------------------------------------
@@ -406,11 +396,13 @@ class ContextHandler:
 
     def _get_user_model(self):
         from django.contrib.auth import get_user_model
+
         from escalated.conf import get_setting
 
         model_path = get_setting("USER_MODEL")
         if model_path:
             from django.apps import apps
+
             app_label, model_name = model_path.rsplit(".", 1) if "." in model_path else model_path.split(".")
             try:
                 return apps.get_model(app_label, model_name)
@@ -537,8 +529,8 @@ class ContextHandler:
         Gracefully no-ops when Channels is not installed.
         """
         try:
-            from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
 
             channel_layer = get_channel_layer()
             if channel_layer is None:
@@ -558,9 +550,7 @@ class ContextHandler:
                 channel,
             )
         except Exception as exc:
-            logger.warning(
-                "ctx.broadcast: failed to broadcast to '%s': %s", channel, exc
-            )
+            logger.warning("ctx.broadcast: failed to broadcast to '%s': %s", channel, exc)
 
     # ------------------------------------------------------------------
     # Misc
@@ -610,8 +600,6 @@ class ContextHandler:
         """Convert a Django model instance to a plain serialisable dict."""
         if instance is None:
             return None
-        from django.forms.models import model_to_dict
-        from django.db import models as django_models
 
         try:
             d = {}
