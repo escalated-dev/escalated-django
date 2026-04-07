@@ -6,7 +6,6 @@ from django.db import models
 
 from escalated.conf import get_table_name
 
-
 # ---------------------------------------------------------------------------
 # Manager / QuerySet
 # ---------------------------------------------------------------------------

@@ -1,29 +1,28 @@
 import pytest
+
 from tests.factories import (
-    UserFactory,
-    TicketFactory,
-    ReplyFactory,
-    TagFactory,
-    DepartmentFactory,
-    SlaPolicyFactory,
-    EscalationRuleFactory,
-    CannedResponseFactory,
-    MacroFactory,
     ApiTokenFactory,
-    TicketStatusFactory,
-    BusinessScheduleFactory,
-    HolidayFactory,
-    PermissionFactory,
-    RoleFactory,
-    AuditLogFactory,
-    CustomFieldFactory,
-    CustomFieldValueFactory,
-    TicketLinkFactory,
-    SideConversationFactory,
-    SideConversationReplyFactory,
     ArticleCategoryFactory,
     ArticleFactory,
+    AuditLogFactory,
+    BusinessScheduleFactory,
+    CannedResponseFactory,
+    CustomFieldFactory,
+    DepartmentFactory,
+    EscalationRuleFactory,
+    HolidayFactory,
+    MacroFactory,
+    PermissionFactory,
+    RoleFactory,
+    SideConversationFactory,
+    SlaPolicyFactory,
+    TagFactory,
+    TicketFactory,
+    TicketLinkFactory,
+    TicketStatusFactory,
+    UserFactory,
 )
+
 
 @pytest.fixture
 def user(db):
@@ -123,6 +122,7 @@ def role(db):
 @pytest.fixture
 def audit_log(db, admin_user, ticket):
     from django.contrib.contenttypes.models import ContentType
+
     return AuditLogFactory(
         user=admin_user,
         auditable_content_type=ContentType.objects.get_for_model(ticket),

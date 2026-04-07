@@ -4,8 +4,8 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from escalated.models import Ticket, EscalationRule, TicketActivity
-from escalated.signals import ticket_escalated, ticket_priority_changed
+from escalated.models import EscalationRule, Ticket, TicketActivity
+from escalated.signals import ticket_escalated
 
 logger = logging.getLogger("escalated")
 
@@ -24,9 +24,7 @@ class EscalationService:
         Called by the evaluate_escalations management command.
         """
         rules = EscalationRule.objects.filter(is_active=True).order_by("order")
-        open_tickets = Ticket.objects.open().select_related(
-            "assigned_to", "department", "sla_policy"
-        )
+        open_tickets = Ticket.objects.open().select_related("assigned_to", "department", "sla_policy")
 
         actions_taken = 0
         for rule in rules:
@@ -60,10 +58,7 @@ class EscalationService:
 
         # Check trigger type first
         if rule.trigger_type == EscalationRule.TriggerType.SLA_BREACH:
-            if not (
-                ticket.sla_first_response_breached
-                or ticket.sla_resolution_breached
-            ):
+            if not (ticket.sla_first_response_breached or ticket.sla_resolution_breached):
                 return False
 
         elif rule.trigger_type == EscalationRule.TriggerType.NO_RESPONSE:
@@ -150,19 +145,14 @@ class EscalationService:
                 if ticket.assigned_to != agent:
                     ticket.assigned_to = agent
                     acted = True
-                    logger.info(
-                        f"Escalation rule '{rule.name}' assigned "
-                        f"{ticket.reference} to {agent}"
-                    )
+                    logger.info(f"Escalation rule '{rule.name}' assigned {ticket.reference} to {agent}")
             except User.DoesNotExist:
-                logger.warning(
-                    f"Escalation rule '{rule.name}' references non-existent "
-                    f"user {actions['assign_to_id']}"
-                )
+                logger.warning(f"Escalation rule '{rule.name}' references non-existent user {actions['assign_to_id']}")
 
         # Change department
         if "department_id" in actions:
             from escalated.models import Department
+
             try:
                 dept = Department.objects.get(pk=actions["department_id"])
                 if ticket.department != dept:
@@ -170,8 +160,7 @@ class EscalationService:
                     acted = True
             except Department.DoesNotExist:
                 logger.warning(
-                    f"Escalation rule '{rule.name}' references non-existent "
-                    f"department {actions['department_id']}"
+                    f"Escalation rule '{rule.name}' references non-existent department {actions['department_id']}"
                 )
 
         if acted:

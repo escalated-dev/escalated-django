@@ -4,32 +4,32 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Avg
+from django.db.models import Avg, Q
 from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
-from escalated.rendering import render_page
 
 from escalated.models import (
-    Ticket,
-    Tag,
-    Department,
     CannedResponse,
+    Department,
     Macro,
     Reply,
     SatisfactionRating,
+    Tag,
+    Ticket,
 )
-from escalated.permissions import is_agent, is_admin, can_view_ticket, can_update_ticket
+from escalated.permissions import can_update_ticket, can_view_ticket, is_admin, is_agent
+from escalated.rendering import render_page
 from escalated.serializers import (
-    TicketSerializer,
-    ReplySerializer,
-    TagSerializer,
-    DepartmentSerializer,
-    CannedResponseSerializer,
     ActivitySerializer,
     AttachmentSerializer,
+    CannedResponseSerializer,
+    DepartmentSerializer,
     MacroSerializer,
+    ReplySerializer,
     SatisfactionRatingSerializer,
+    TagSerializer,
+    TicketSerializer,
 )
 from escalated.services.ticket_service import TicketService
 
@@ -56,9 +56,7 @@ def dashboard(request):
     my_tickets = Ticket.objects.assigned_to(user.pk)
 
     # CSAT stats
-    avg_csat = SatisfactionRating.objects.aggregate(
-        avg_rating=Avg("rating")
-    )["avg_rating"]
+    avg_csat = SatisfactionRating.objects.aggregate(avg_rating=Avg("rating"))["avg_rating"]
     total_ratings = SatisfactionRating.objects.count()
     resolved_with_rating = SatisfactionRating.objects.filter(
         ticket__status__in=[Ticket.Status.RESOLVED, Ticket.Status.CLOSED]
@@ -69,27 +67,23 @@ def dashboard(request):
         "my_open": my_tickets.open().count(),
         "unassigned": Ticket.objects.unassigned().open().count(),
         "breached_sla": Ticket.objects.breached_sla().open().count(),
-        "by_priority": {
-            p.value: Ticket.objects.open().filter(priority=p.value).count()
-            for p in Ticket.Priority
-        },
-        "by_status": {
-            s.value: Ticket.objects.filter(status=s.value).count()
-            for s in Ticket.Status
-        },
+        "by_priority": {p.value: Ticket.objects.open().filter(priority=p.value).count() for p in Ticket.Priority},
+        "by_status": {s.value: Ticket.objects.filter(status=s.value).count() for s in Ticket.Status},
         "avg_csat_rating": round(avg_csat, 1) if avg_csat else None,
         "total_ratings": total_ratings,
         "resolved_with_rating_count": resolved_with_rating,
     }
 
-    recent_tickets = my_tickets.open().select_related(
-        "department"
-    ).prefetch_related("tags")[:10]
+    recent_tickets = my_tickets.open().select_related("department").prefetch_related("tags")[:10]
 
-    return render_page(request, "Escalated/Agent/Dashboard", props={
-        "stats": stats,
-        "recent_tickets": TicketSerializer.serialize_list(recent_tickets),
-    })
+    return render_page(
+        request,
+        "Escalated/Agent/Dashboard",
+        props={
+            "stats": stats,
+            "recent_tickets": TicketSerializer.serialize_list(recent_tickets),
+        },
+    )
 
 
 @login_required
@@ -99,9 +93,7 @@ def ticket_list(request):
     if check:
         return check
 
-    tickets = Ticket.objects.select_related(
-        "assigned_to", "department"
-    ).prefetch_related("tags")
+    tickets = Ticket.objects.select_related("assigned_to", "department").prefetch_related("tags")
 
     # Apply filters
     status = request.GET.get("status")
@@ -143,8 +135,12 @@ def ticket_list(request):
 
     sort = request.GET.get("sort", "-created_at")
     allowed_sorts = [
-        "created_at", "-created_at", "priority", "-priority",
-        "updated_at", "-updated_at",
+        "created_at",
+        "-created_at",
+        "priority",
+        "-priority",
+        "updated_at",
+        "-updated_at",
     ]
     if sort in allowed_sorts:
         tickets = tickets.order_by(sort)
@@ -152,32 +148,34 @@ def ticket_list(request):
     paginator = Paginator(tickets, 25)
     page = paginator.get_page(request.GET.get("page", 1))
 
-    return render_page(request, "Escalated/Agent/Tickets/Index", props={
-        "tickets": TicketSerializer.serialize_list(page.object_list),
-        "pagination": {
-            "current_page": page.number,
-            "total_pages": paginator.num_pages,
-            "total_count": paginator.count,
-            "has_next": page.has_next(),
-            "has_previous": page.has_previous(),
+    return render_page(
+        request,
+        "Escalated/Agent/Tickets/Index",
+        props={
+            "tickets": TicketSerializer.serialize_list(page.object_list),
+            "pagination": {
+                "current_page": page.number,
+                "total_pages": paginator.num_pages,
+                "total_count": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
+            "filters": {
+                "status": status,
+                "priority": priority,
+                "assigned": assigned,
+                "department": department,
+                "tag": tag,
+                "search": search,
+                "sort": sort,
+                "following": following,
+            },
+            "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
+            "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+            "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
+            "tags": TagSerializer.serialize_list(Tag.objects.all()),
         },
-        "filters": {
-            "status": status,
-            "priority": priority,
-            "assigned": assigned,
-            "department": department,
-            "tag": tag,
-            "search": search,
-            "sort": sort,
-            "following": following,
-        },
-        "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
-        "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
-        "departments": DepartmentSerializer.serialize_list(
-            Department.objects.filter(is_active=True)
-        ),
-        "tags": TagSerializer.serialize_list(Tag.objects.all()),
-    })
+    )
 
 
 @login_required
@@ -188,15 +186,17 @@ def ticket_show(request, ticket_id):
         return check
 
     try:
-        ticket = Ticket.objects.select_related(
-            "assigned_to", "department", "sla_policy"
-        ).prefetch_related(
-            "tags",
-            "replies__author",
-            "replies__attachments",
-            "activities",
-            "attachments",
-        ).get(pk=ticket_id)
+        ticket = (
+            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
+            .prefetch_related(
+                "tags",
+                "replies__author",
+                "replies__attachments",
+                "activities",
+                "attachments",
+            )
+            .get(pk=ticket_id)
+        )
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
@@ -207,23 +207,17 @@ def ticket_show(request, ticket_id):
     activities = ticket.activities.all()[:50]
 
     # Available agents for assignment
-    agents = User.objects.filter(
-        escalated_departments__is_active=True
-    ).distinct()
+    agents = User.objects.filter(escalated_departments__is_active=True).distinct()
 
-    canned_responses = CannedResponse.objects.filter(
-        Q(is_shared=True) | Q(created_by=request.user)
-    )
+    canned_responses = CannedResponse.objects.filter(Q(is_shared=True) | Q(created_by=request.user))
 
     # Macros available to this agent (shared + own)
-    macros = Macro.objects.filter(
-        Q(is_shared=True) | Q(created_by=request.user)
-    ).order_by("order")
+    macros = Macro.objects.filter(Q(is_shared=True) | Q(created_by=request.user)).order_by("order")
 
     # Pinned notes
-    pinned_notes = ticket.replies.filter(
-        is_deleted=False, is_internal_note=True, is_pinned=True
-    ).select_related("author")
+    pinned_notes = ticket.replies.filter(is_deleted=False, is_internal_note=True, is_pinned=True).select_related(
+        "author"
+    )
 
     # Satisfaction rating
     try:
@@ -232,29 +226,28 @@ def ticket_show(request, ticket_id):
     except SatisfactionRating.DoesNotExist:
         satisfaction_data = None
 
-    return render_page(request, "Escalated/Agent/Tickets/Show", props={
-        "ticket": TicketSerializer.serialize(ticket),
-        "replies": ReplySerializer.serialize_list(replies),
-        "activities": [ActivitySerializer.serialize(a) for a in activities],
-        "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
-        "agents": [
-            {"id": a.pk, "name": a.get_full_name() or a.username, "email": a.email}
-            for a in agents
-        ],
-        "departments": DepartmentSerializer.serialize_list(
-            Department.objects.filter(is_active=True)
-        ),
-        "tags": TagSerializer.serialize_list(Tag.objects.all()),
-        "canned_responses": CannedResponseSerializer.serialize_list(canned_responses),
-        "macros": MacroSerializer.serialize_list(macros),
-        "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
-        "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
-        "can_update": can_update_ticket(request.user, ticket),
-        "is_following": ticket.is_followed_by(request.user.pk),
-        "followers_count": ticket.followers_count,
-        "pinned_notes": ReplySerializer.serialize_list(pinned_notes),
-        "satisfaction_rating": satisfaction_data,
-    })
+    return render_page(
+        request,
+        "Escalated/Agent/Tickets/Show",
+        props={
+            "ticket": TicketSerializer.serialize(ticket),
+            "replies": ReplySerializer.serialize_list(replies),
+            "activities": [ActivitySerializer.serialize(a) for a in activities],
+            "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
+            "agents": [{"id": a.pk, "name": a.get_full_name() or a.username, "email": a.email} for a in agents],
+            "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
+            "tags": TagSerializer.serialize_list(Tag.objects.all()),
+            "canned_responses": CannedResponseSerializer.serialize_list(canned_responses),
+            "macros": MacroSerializer.serialize_list(macros),
+            "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
+            "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+            "can_update": can_update_ticket(request.user, ticket),
+            "is_following": ticket.is_followed_by(request.user.pk),
+            "followers_count": ticket.followers_count,
+            "pinned_notes": ReplySerializer.serialize_list(pinned_notes),
+            "satisfaction_rating": satisfaction_data,
+        },
+    )
 
 
 @login_required
@@ -311,9 +304,10 @@ def ticket_reply(request, ticket_id):
     # Handle attachments
     files = request.FILES.getlist("attachments")
     if files:
-        from escalated.services.attachment_service import AttachmentService
         from escalated.conf import get_setting
-        for f in files[:get_setting("MAX_ATTACHMENTS")]:
+        from escalated.services.attachment_service import AttachmentService
+
+        for f in files[: get_setting("MAX_ATTACHMENTS")]:
             try:
                 AttachmentService.attach(reply, f)
             except Exception:
@@ -579,13 +573,12 @@ def ticket_apply_macro(request, ticket_id):
         return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
 
     try:
-        macro = Macro.objects.filter(
-            Q(is_shared=True) | Q(created_by=request.user)
-        ).get(pk=macro_id)
+        macro = Macro.objects.filter(Q(is_shared=True) | Q(created_by=request.user)).get(pk=macro_id)
     except Macro.DoesNotExist:
         return HttpResponseNotFound(_("Macro not found"))
 
     from escalated.services.macro_service import MacroService
+
     macro_service = MacroService()
     macro_service.apply(macro, ticket, request.user)
 

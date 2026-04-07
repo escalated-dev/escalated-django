@@ -2,7 +2,7 @@ from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from escalated.permissions import is_agent, is_admin
+from escalated.permissions import is_admin, is_agent
 
 
 class EnsureAgentMiddleware:
@@ -22,9 +22,7 @@ class EnsureAgentMiddleware:
             return HttpResponseRedirect(reverse("login"))
 
         if not is_agent(request.user) and not is_admin(request.user):
-            return HttpResponseForbidden(
-                _("You do not have permission to access the agent dashboard.")
-            )
+            return HttpResponseForbidden(_("You do not have permission to access the agent dashboard."))
 
         return None
 
@@ -46,9 +44,7 @@ class EnsureAdminMiddleware:
             return HttpResponseRedirect(reverse("login"))
 
         if not is_admin(request.user):
-            return HttpResponseForbidden(
-                _("You do not have permission to access the admin area.")
-            )
+            return HttpResponseForbidden(_("You do not have permission to access the admin area."))
 
         return None
 

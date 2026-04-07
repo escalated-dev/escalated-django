@@ -15,7 +15,7 @@ boot) and injected into the main urlconf via include() in urls.py.
 import logging
 
 from django.http import JsonResponse
-from django.urls import path, re_path
+from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger("escalated.bridge")
@@ -62,9 +62,7 @@ class RouteRegistrar:
     # Pages — rendered HTML views (Inertia or plain template)
     # ------------------------------------------------------------------
 
-    def _register_pages(
-        self, plugin_name: str, pages: list, prefix: str
-    ) -> None:
+    def _register_pages(self, plugin_name: str, pages: list, prefix: str) -> None:
         if not pages:
             return
 
@@ -76,8 +74,7 @@ class RouteRegistrar:
 
             if not route or not component:
                 logger.warning(
-                    "Escalated PluginBridge: skipping page with missing route or "
-                    "component for plugin '%s': %s",
+                    "Escalated PluginBridge: skipping page with missing route or component for plugin '%s': %s",
                     plugin_name,
                     page,
                 )
@@ -105,11 +102,11 @@ class RouteRegistrar:
         bridge = self._bridge
 
         def page_view(request):
-            from django.contrib.auth.decorators import login_required
             from django.http import HttpResponseForbidden
 
             if not request.user.is_authenticated:
                 from django.contrib.auth.views import redirect_to_login
+
                 return redirect_to_login(request.get_full_path())
 
             if not getattr(request.user, "is_staff", False):
@@ -128,6 +125,7 @@ class RouteRegistrar:
             # Try to use django-inertia if available; fall back to JsonResponse
             try:
                 from inertia import render as inertia_render
+
                 return inertia_render(
                     request,
                     "Escalated/Plugin/Page",
@@ -157,9 +155,7 @@ class RouteRegistrar:
     # Endpoints — authenticated JSON API
     # ------------------------------------------------------------------
 
-    def _register_endpoints(
-        self, plugin_name: str, endpoints: dict, prefix: str
-    ) -> None:
+    def _register_endpoints(self, plugin_name: str, endpoints: dict, prefix: str) -> None:
         if not endpoints:
             return
 
@@ -209,6 +205,7 @@ class RouteRegistrar:
 
             try:
                 import json as _json
+
                 try:
                     body = _json.loads(request.body) if request.body else {}
                 except ValueError:
@@ -243,9 +240,7 @@ class RouteRegistrar:
     # Webhooks — public (no auth)
     # ------------------------------------------------------------------
 
-    def _register_webhooks(
-        self, plugin_name: str, webhooks: dict, prefix: str
-    ) -> None:
+    def _register_webhooks(self, plugin_name: str, webhooks: dict, prefix: str) -> None:
         if not webhooks:
             return
 
@@ -267,15 +262,14 @@ class RouteRegistrar:
                 plugin_name,
             )
 
-    def _make_webhook_view(
-        self, plugin_name: str, http_method: str, wh_path: str
-    ):
+    def _make_webhook_view(self, plugin_name: str, http_method: str, wh_path: str):
         bridge = self._bridge
 
         @csrf_exempt
         def webhook_view(request, **kwargs):
-            from django.http import HttpResponseNotAllowed
             import json as _json
+
+            from django.http import HttpResponseNotAllowed
 
             if request.method.upper() != http_method:
                 return HttpResponseNotAllowed([http_method])

@@ -1,8 +1,5 @@
-from datetime import timedelta
-
 from django.db import connection
 from django.db.models import Count, Q
-from django.utils import timezone
 
 
 class ReportingService:
@@ -43,9 +40,7 @@ class ReportingService:
         """Get average first response time in hours."""
         from escalated.models import Reply, Ticket
 
-        tickets = Ticket.objects.filter(
-            created_at__gte=start, created_at__lte=end
-        ).values_list("id", "created_at")
+        tickets = Ticket.objects.filter(created_at__gte=start, created_at__lte=end).values_list("id", "created_at")
 
         total_hours = 0
         count = 0
@@ -106,12 +101,14 @@ class ReportingService:
             total = agent_tickets.count()
             resolved = agent_tickets.filter(status__in=["resolved", "closed"]).count()
 
-            results.append({
-                "agent_id": agent.pk,
-                "agent_name": agent.get_full_name() or agent.username,
-                "total_tickets": total,
-                "resolved_tickets": resolved,
-            })
+            results.append(
+                {
+                    "agent_id": agent.pk,
+                    "agent_name": agent.get_full_name() or agent.username,
+                    "total_tickets": total,
+                    "resolved_tickets": resolved,
+                }
+            )
 
         return results
 
@@ -128,8 +125,6 @@ class ReportingService:
         if total == 0:
             return 100.0
 
-        breached = tickets.filter(
-            Q(sla_first_response_at__isnull=False) | Q(sla_resolution_at__isnull=False)
-        ).count()
+        breached = tickets.filter(Q(sla_first_response_at__isnull=False) | Q(sla_resolution_at__isnull=False)).count()
 
         return round(((total - breached) / total) * 100, 1)

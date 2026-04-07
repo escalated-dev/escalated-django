@@ -1,17 +1,21 @@
 from django.utils.module_loading import import_string
+
 from escalated.conf import get_setting
 
 
 class UiRenderer:
     """Abstract base for rendering UI pages."""
+
     def render(self, request, component, props=None):
         raise NotImplementedError
 
 
 class InertiaRenderer(UiRenderer):
     """Default renderer using inertia-django."""
+
     def render(self, request, component, props=None):
         from inertia import render
+
         return render(request, component, props=props or {})
 
 
@@ -28,9 +32,7 @@ def get_renderer():
         elif get_setting("UI_ENABLED"):
             _renderer_instance = InertiaRenderer()
         else:
-            raise RuntimeError(
-                "Escalated UI is disabled. Set UI_ENABLED=True or provide a custom UI_RENDERER."
-            )
+            raise RuntimeError("Escalated UI is disabled. Set UI_ENABLED=True or provide a custom UI_RENDERER.")
     return _renderer_instance
 
 

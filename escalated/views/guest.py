@@ -3,15 +3,15 @@ import secrets
 from django.http import HttpResponseForbidden, HttpResponseNotFound
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
-from escalated.rendering import render_page
 
 from escalated.conf import get_setting
-from escalated.models import Ticket, Department, EscalatedSetting, SatisfactionRating
+from escalated.models import Department, EscalatedSetting, SatisfactionRating, Ticket
+from escalated.rendering import render_page
 from escalated.serializers import (
-    TicketSerializer,
-    ReplySerializer,
-    DepartmentSerializer,
     AttachmentSerializer,
+    DepartmentSerializer,
+    ReplySerializer,
+    TicketSerializer,
 )
 
 
@@ -25,15 +25,15 @@ def ticket_create(request):
     if not _guest_tickets_enabled():
         return HttpResponseNotFound(_("Guest tickets are not enabled."))
 
-    return render_page(request, "Escalated/Guest/Create", props={
-        "departments": DepartmentSerializer.serialize_list(
-            Department.objects.filter(is_active=True)
-        ),
-        "priorities": [
-            {"value": p.value, "label": p.label} for p in Ticket.Priority
-        ],
-        "default_priority": get_setting("DEFAULT_PRIORITY"),
-    })
+    return render_page(
+        request,
+        "Escalated/Guest/Create",
+        props={
+            "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
+            "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+            "default_priority": get_setting("DEFAULT_PRIORITY"),
+        },
+    )
 
 
 def ticket_store(request):
@@ -63,24 +63,24 @@ def ticket_store(request):
         errors["description"] = _("Description is required.")
 
     if errors:
-        return render_page(request, "Escalated/Guest/Create", props={
-            "errors": errors,
-            "old": {
-                "name": name,
-                "email": email,
-                "subject": subject,
-                "description": description,
-                "priority": priority,
-                "department_id": department_id,
+        return render_page(
+            request,
+            "Escalated/Guest/Create",
+            props={
+                "errors": errors,
+                "old": {
+                    "name": name,
+                    "email": email,
+                    "subject": subject,
+                    "description": description,
+                    "priority": priority,
+                    "department_id": department_id,
+                },
+                "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
+                "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+                "default_priority": get_setting("DEFAULT_PRIORITY"),
             },
-            "departments": DepartmentSerializer.serialize_list(
-                Department.objects.filter(is_active=True)
-            ),
-            "priorities": [
-                {"value": p.value, "label": p.label} for p in Ticket.Priority
-            ],
-            "default_priority": get_setting("DEFAULT_PRIORITY"),
-        })
+        )
 
     # Generate a unique guest token
     guest_token = secrets.token_hex(32)  # 64-character hex string
@@ -103,7 +103,7 @@ def ticket_store(request):
     if files:
         from escalated.services.attachment_service import AttachmentService
 
-        for f in files[:get_setting("MAX_ATTACHMENTS")]:
+        for f in files[: get_setting("MAX_ATTACHMENTS")]:
             try:
                 AttachmentService.attach(ticket, f)
             except Exception:
@@ -115,24 +115,28 @@ def ticket_store(request):
 def ticket_show(request, token):
     """Show a guest ticket by its token."""
     try:
-        ticket = Ticket.objects.select_related(
-            "assigned_to", "department", "sla_policy"
-        ).prefetch_related(
-            "tags", "replies__author", "replies__attachments", "attachments"
-        ).get(guest_token=token)
+        ticket = (
+            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
+            .prefetch_related("tags", "replies__author", "replies__attachments", "attachments")
+            .get(guest_token=token)
+        )
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found."))
 
     # Filter out internal notes for guest users
     replies = ticket.replies.filter(is_deleted=False, is_internal_note=False)
 
-    return render_page(request, "Escalated/Guest/Show", props={
-        "ticket": TicketSerializer.serialize(ticket),
-        "replies": ReplySerializer.serialize_list(replies),
-        "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
-        "token": token,
-        "can_reply": ticket.is_open,
-    })
+    return render_page(
+        request,
+        "Escalated/Guest/Show",
+        props={
+            "ticket": TicketSerializer.serialize(ticket),
+            "replies": ReplySerializer.serialize_list(replies),
+            "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
+            "token": token,
+            "can_reply": ticket.is_open,
+        },
+    )
 
 
 def ticket_reply(request, token):
@@ -164,7 +168,7 @@ def ticket_reply(request, token):
     if files:
         from escalated.services.attachment_service import AttachmentService
 
-        for f in files[:get_setting("MAX_ATTACHMENTS")]:
+        for f in files[: get_setting("MAX_ATTACHMENTS")]:
             try:
                 AttachmentService.attach(reply_obj, f)
             except Exception:

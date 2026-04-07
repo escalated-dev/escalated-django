@@ -2,7 +2,6 @@ import os
 
 from django.conf import settings
 
-
 DEFAULTS = {
     "MODE": "self_hosted",
     "USER_MODEL": None,  # Falls back to settings.AUTH_USER_MODEL

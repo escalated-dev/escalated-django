@@ -1,12 +1,12 @@
-import pytest
 from datetime import timedelta
 from io import StringIO
 
+import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
 
-from tests.factories import UserFactory, ApiTokenFactory, WebhookFactory
+from tests.factories import ApiTokenFactory, UserFactory, WebhookFactory
 
 
 @pytest.mark.django_db
@@ -59,9 +59,7 @@ class TestPurgeExpiredDataCommand:
 
         user = UserFactory()
         expired = ApiTokenFactory(user=user)
-        ApiToken.objects.filter(pk=expired.pk).update(
-            expires_at=timezone.now() - timedelta(days=1)
-        )
+        ApiToken.objects.filter(pk=expired.pk).update(expires_at=timezone.now() - timedelta(days=1))
 
         out = StringIO()
         call_command("purge_expired_data", stdout=out)
@@ -77,9 +75,7 @@ class TestPurgeExpiredDataCommand:
             payload={"test": True},
             response_code=200,
         )
-        WebhookDelivery.objects.filter(pk=old.pk).update(
-            created_at=timezone.now() - timedelta(days=60)
-        )
+        WebhookDelivery.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=60))
 
         out = StringIO()
         call_command("purge_expired_data", "--days", "30", stdout=out)

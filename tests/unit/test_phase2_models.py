@@ -2,15 +2,25 @@ import pytest
 from django.db import IntegrityError
 
 from escalated.models import (
-    CustomField, CustomFieldValue, TicketLink, SideConversation,
-    SideConversationReply, ArticleCategory, Article, Ticket,
+    Article,
+    ArticleCategory,
+    CustomField,
+    CustomFieldValue,
+    SideConversation,
+    SideConversationReply,
+    Ticket,
+    TicketLink,
 )
 from tests.factories import (
-    UserFactory, TicketFactory, CustomFieldFactory, CustomFieldValueFactory,
-    TicketLinkFactory, SideConversationFactory, SideConversationReplyFactory,
-    ArticleCategoryFactory, ArticleFactory,
+    ArticleCategoryFactory,
+    ArticleFactory,
+    CustomFieldFactory,
+    CustomFieldValueFactory,
+    SideConversationFactory,
+    SideConversationReplyFactory,
+    TicketFactory,
+    TicketLinkFactory,
 )
-
 
 # ---------------------------------------------------------------------------
 # Custom Fields
@@ -69,6 +79,7 @@ class TestCustomFieldValueModel:
     def test_str_representation(self):
         field = CustomFieldFactory(name="Region")
         from django.contrib.contenttypes.models import ContentType
+
         ct = ContentType.objects.get_for_model(Ticket)
         val = CustomFieldValueFactory(
             custom_field=field,
@@ -82,6 +93,7 @@ class TestCustomFieldValueModel:
     def test_cascade_delete_on_field(self):
         field = CustomFieldFactory()
         from django.contrib.contenttypes.models import ContentType
+
         ct = ContentType.objects.get_for_model(Ticket)
         CustomFieldValueFactory(
             custom_field=field,
@@ -193,9 +205,7 @@ class TestSideConversationReplyModel:
         SideConversationReplyFactory(side_conversation=sc)
         sc_pk = sc.pk
         sc.delete()
-        assert not SideConversationReply.objects.filter(
-            side_conversation_id=sc_pk
-        ).exists()
+        assert not SideConversationReply.objects.filter(side_conversation_id=sc_pk).exists()
 
 
 # ---------------------------------------------------------------------------

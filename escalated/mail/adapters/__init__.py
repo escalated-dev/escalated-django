@@ -1,8 +1,8 @@
 from escalated.mail.adapters.base import BaseAdapter
+from escalated.mail.adapters.imap import IMAPAdapter
 from escalated.mail.adapters.mailgun import MailgunAdapter
 from escalated.mail.adapters.postmark import PostmarkAdapter
 from escalated.mail.adapters.ses import SESAdapter
-from escalated.mail.adapters.imap import IMAPAdapter
 
 ADAPTERS = {
     "mailgun": MailgunAdapter,
@@ -20,10 +20,7 @@ def get_adapter(name: str) -> BaseAdapter:
     """
     adapter_class = ADAPTERS.get(name)
     if adapter_class is None:
-        raise ValueError(
-            f"Unknown inbound email adapter: '{name}'. "
-            f"Must be one of: {', '.join(ADAPTERS.keys())}"
-        )
+        raise ValueError(f"Unknown inbound email adapter: '{name}'. Must be one of: {', '.join(ADAPTERS.keys())}")
     return adapter_class()
 
 

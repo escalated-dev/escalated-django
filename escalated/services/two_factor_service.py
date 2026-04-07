@@ -59,7 +59,7 @@ class TwoFactorService:
 
         # Dynamic truncation
         offset = hmac_digest[-1] & 0x0F
-        truncated = struct.unpack(">I", hmac_digest[offset:offset + 4])[0] & 0x7FFFFFFF
+        truncated = struct.unpack(">I", hmac_digest[offset : offset + 4])[0] & 0x7FFFFFFF
 
-        code = truncated % (10 ** self.DIGITS)
+        code = truncated % (10**self.DIGITS)
         return str(code).zfill(self.DIGITS)

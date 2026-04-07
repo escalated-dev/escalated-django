@@ -1,10 +1,10 @@
 import logging
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 
 from django.utils import timezone
 
 from escalated.conf import get_setting
-from escalated.models import Ticket, SlaPolicy
+from escalated.models import SlaPolicy, Ticket
 from escalated.signals import sla_breached, sla_warning
 
 logger = logging.getLogger("escalated")
@@ -32,21 +32,15 @@ class SlaService:
         first_response_hours = policy.get_first_response_hours(priority)
         if first_response_hours is not None:
             if policy.business_hours_only:
-                ticket.first_response_due_at = SlaService._add_business_hours(
-                    now, first_response_hours
-                )
+                ticket.first_response_due_at = SlaService._add_business_hours(now, first_response_hours)
             else:
-                ticket.first_response_due_at = now + timedelta(
-                    hours=first_response_hours
-                )
+                ticket.first_response_due_at = now + timedelta(hours=first_response_hours)
 
         # Resolution deadline
         resolution_hours = policy.get_resolution_hours(priority)
         if resolution_hours is not None:
             if policy.business_hours_only:
-                ticket.resolution_due_at = SlaService._add_business_hours(
-                    now, resolution_hours
-                )
+                ticket.resolution_due_at = SlaService._add_business_hours(now, resolution_hours)
             else:
                 ticket.resolution_due_at = now + timedelta(hours=resolution_hours)
 
@@ -76,9 +70,7 @@ class SlaService:
                 ticket=ticket,
                 breach_type="first_response",
             )
-            logger.warning(
-                f"SLA first response breached on ticket {ticket.reference}"
-            )
+            logger.warning(f"SLA first response breached on ticket {ticket.reference}")
 
         # Check resolution breach
         if (
@@ -94,9 +86,7 @@ class SlaService:
                 ticket=ticket,
                 breach_type="resolution",
             )
-            logger.warning(
-                f"SLA resolution breached on ticket {ticket.reference}"
-            )
+            logger.warning(f"SLA resolution breached on ticket {ticket.reference}")
 
         if breached:
             ticket.save(
@@ -122,11 +112,7 @@ class SlaService:
         warned = False
 
         # First response warning
-        if (
-            ticket.first_response_due_at
-            and not ticket.first_response_at
-            and not ticket.sla_first_response_breached
-        ):
+        if ticket.first_response_due_at and not ticket.first_response_at and not ticket.sla_first_response_breached:
             remaining = ticket.first_response_due_at - now
             if timedelta(0) < remaining <= threshold:
                 sla_warning.send(
@@ -138,11 +124,7 @@ class SlaService:
                 warned = True
 
         # Resolution warning
-        if (
-            ticket.resolution_due_at
-            and not ticket.resolved_at
-            and not ticket.sla_resolution_breached
-        ):
+        if ticket.resolution_due_at and not ticket.resolved_at and not ticket.sla_resolution_breached:
             remaining = ticket.resolution_due_at - now
             if timedelta(0) < remaining <= threshold:
                 sla_warning.send(
@@ -161,9 +143,7 @@ class SlaService:
         Check SLA breaches and warnings for all open tickets.
         Called by the check_sla management command.
         """
-        open_tickets = Ticket.objects.open().filter(
-            sla_policy__isnull=False
-        ).select_related("sla_policy")
+        open_tickets = Ticket.objects.open().filter(sla_policy__isnull=False).select_related("sla_policy")
 
         breached_count = 0
         warned_count = 0

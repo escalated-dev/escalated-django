@@ -90,10 +90,7 @@ class HookManager:
         """Return True if any callbacks are registered for *tag*."""
         if tag not in self._actions:
             return False
-        return any(
-            len(callbacks) > 0
-            for callbacks in self._actions[tag].values()
-        )
+        return any(len(callbacks) > 0 for callbacks in self._actions[tag].values())
 
     def remove_action(self, tag, callback=None):
         """
@@ -110,9 +107,7 @@ class HookManager:
             return
 
         for priority in list(self._actions[tag].keys()):
-            self._actions[tag][priority] = [
-                cb for cb in self._actions[tag][priority] if cb is not callback
-            ]
+            self._actions[tag][priority] = [cb for cb in self._actions[tag][priority] if cb is not callback]
             if not self._actions[tag][priority]:
                 del self._actions[tag][priority]
 
@@ -171,10 +166,7 @@ class HookManager:
         """Return True if any callbacks are registered for *tag*."""
         if tag not in self._filters:
             return False
-        return any(
-            len(callbacks) > 0
-            for callbacks in self._filters[tag].values()
-        )
+        return any(len(callbacks) > 0 for callbacks in self._filters[tag].values())
 
     def remove_filter(self, tag, callback=None):
         """
@@ -191,9 +183,7 @@ class HookManager:
             return
 
         for priority in list(self._filters[tag].keys()):
-            self._filters[tag][priority] = [
-                cb for cb in self._filters[tag][priority] if cb is not callback
-            ]
+            self._filters[tag][priority] = [cb for cb in self._filters[tag][priority] if cb is not callback]
             if not self._filters[tag][priority]:
                 del self._filters[tag][priority]
 
@@ -278,13 +268,16 @@ def on_action(tag, priority=10):
         def handle(ticket, user):
             ...
     """
+
     def decorator(func):
         add_action(tag, func, priority)
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -296,11 +289,14 @@ def on_filter(tag, priority=10):
         def uppercase(value, ticket):
             return value.upper()
     """
+
     def decorator(func):
         add_filter(tag, func, priority)
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator

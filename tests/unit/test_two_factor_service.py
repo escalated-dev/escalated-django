@@ -1,5 +1,3 @@
-import pytest
-
 from escalated.services.two_factor_service import TwoFactorService
 
 
@@ -23,6 +21,7 @@ class TestTwoFactorService:
         secret = service.generate_secret()
         # Generate a current code
         import time
+
         time_step = int(time.time()) // service.PERIOD
         code = service._generate_totp(secret, time_step)
         assert service.verify(secret, code) is True

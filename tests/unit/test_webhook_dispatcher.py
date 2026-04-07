@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from escalated.models import Webhook, WebhookDelivery
+import pytest
+
+from escalated.models import WebhookDelivery
 from escalated.services.webhook_dispatcher import WebhookDispatcher
 from tests.factories import WebhookFactory
 

@@ -1,5 +1,3 @@
-import base64
-import hashlib
 import json
 import logging
 import re
@@ -52,17 +50,12 @@ class SESAdapter(BaseAdapter):
         # Verify Topic ARN — reject if not configured
         expected_arn = get_setting("SES_TOPIC_ARN")
         if not expected_arn:
-            logger.warning(
-                "Escalated: SES Topic ARN not configured — rejecting request."
-            )
+            logger.warning("Escalated: SES Topic ARN not configured — rejecting request.")
             return False
 
         topic_arn = data.get("TopicArn", "")
         if topic_arn != expected_arn:
-            logger.warning(
-                f"SES adapter: Topic ARN mismatch. "
-                f"Expected '{expected_arn}', got '{topic_arn}'"
-            )
+            logger.warning(f"SES adapter: Topic ARN mismatch. Expected '{expected_arn}', got '{topic_arn}'")
             return False
 
         # Validate SNS message type
@@ -72,24 +65,18 @@ class SESAdapter(BaseAdapter):
             "Notification",
             "UnsubscribeConfirmation",
         ):
-            logger.warning(
-                f"SES adapter: unexpected SNS message type: {message_type}"
-            )
+            logger.warning(f"SES adapter: unexpected SNS message type: {message_type}")
             return False
 
         # Validate SigningCertURL is from a legitimate AWS SNS endpoint
-        signing_cert_url = data.get("SigningCertURL") or data.get(
-            "SigningCertUrl"
-        )
+        signing_cert_url = data.get("SigningCertURL") or data.get("SigningCertUrl")
         if signing_cert_url:
             parsed_cert_url = urlparse(signing_cert_url)
             if parsed_cert_url.scheme != "https" or not re.match(
                 r"^sns\.[a-z0-9-]+\.amazonaws\.com$",
                 parsed_cert_url.hostname or "",
             ):
-                logger.warning(
-                    f"SES adapter: invalid SigningCertURL: {signing_cert_url}"
-                )
+                logger.warning(f"SES adapter: invalid SigningCertURL: {signing_cert_url}")
                 return False
 
         return True
@@ -115,9 +102,7 @@ class SESAdapter(BaseAdapter):
         try:
             ses_message = json.loads(sns_data.get("Message", "{}"))
         except (json.JSONDecodeError, TypeError) as exc:
-            raise ValueError(
-                f"Invalid SES message in SNS notification: {exc}"
-            ) from exc
+            raise ValueError(f"Invalid SES message in SNS notification: {exc}") from exc
 
         mail_data = ses_message.get("mail", {})
         common_headers = mail_data.get("commonHeaders", {})
@@ -171,10 +156,7 @@ class SESAdapter(BaseAdapter):
         """
         subscribe_url = data.get("SubscribeURL")
         if not subscribe_url or not self._is_valid_sns_url(subscribe_url):
-            logger.warning(
-                "SNS SubscriptionConfirmation has missing or invalid "
-                f"SubscribeURL: {subscribe_url!r}"
-            )
+            logger.warning(f"SNS SubscriptionConfirmation has missing or invalid SubscribeURL: {subscribe_url!r}")
             return
 
         try:
@@ -191,10 +173,7 @@ class SESAdapter(BaseAdapter):
         try:
             parsed = urlparse(url)
             return bool(
-                parsed.scheme == 'https'
-                and re.match(
-                    r'^sns\.[a-z0-9-]+\.amazonaws\.com$', parsed.hostname or ''
-                )
+                parsed.scheme == "https" and re.match(r"^sns\.[a-z0-9-]+\.amazonaws\.com$", parsed.hostname or "")
             )
         except Exception:
             return False

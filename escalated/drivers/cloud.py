@@ -26,9 +26,7 @@ class CloudDriver:
             "metadata": data.get("metadata"),
             "requester_id": user.pk,
             "requester_email": getattr(user, "email", None),
-            "requester_name": getattr(
-                user, "get_full_name", lambda: str(user)
-            )(),
+            "requester_name": getattr(user, "get_full_name", lambda: str(user))(),
         }
         return self.api.create_ticket(payload)
 
@@ -55,9 +53,7 @@ class CloudDriver:
             "body": data["body"],
             "is_internal_note": data.get("is_internal_note", False),
             "author_id": user.pk if user else None,
-            "author_name": getattr(
-                user, "get_full_name", lambda: str(user)
-            )() if user else "Guest",
+            "author_name": getattr(user, "get_full_name", lambda: str(user))() if user else "Guest",
             "metadata": data.get("metadata"),
         }
         return self.api.add_reply(ticket_id, payload)

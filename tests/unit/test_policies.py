@@ -1,16 +1,15 @@
 import pytest
 from django.contrib.auth.models import AnonymousUser
 
-from escalated.policies import check_policy, PolicyDenied
-from escalated.policies.ticket_policy import TicketPolicy
-from escalated.policies.department_policy import DepartmentPolicy
-from escalated.policies.tag_policy import TagPolicy
+from escalated.policies.article_policy import ArticlePolicy
 from escalated.policies.canned_response_policy import CannedResponsePolicy
-from escalated.policies.sla_policy_policy import SlaPolicyPolicy
+from escalated.policies.department_policy import DepartmentPolicy
 from escalated.policies.escalation_rule_policy import EscalationRulePolicy
 from escalated.policies.macro_policy import MacroPolicy
-from escalated.policies.article_policy import ArticlePolicy
-from tests.factories import UserFactory, DepartmentFactory, CannedResponseFactory, MacroFactory
+from escalated.policies.sla_policy_policy import SlaPolicyPolicy
+from escalated.policies.tag_policy import TagPolicy
+from escalated.policies.ticket_policy import TicketPolicy
+from tests.factories import CannedResponseFactory, DepartmentFactory, MacroFactory, UserFactory
 
 
 @pytest.mark.django_db

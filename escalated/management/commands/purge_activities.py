@@ -31,9 +31,7 @@ class Command(BaseCommand):
         count = old_activities.count()
 
         if dry_run:
-            self.stdout.write(
-                f"[DRY RUN] Would purge {count} activities older than {days} days."
-            )
+            self.stdout.write(f"[DRY RUN] Would purge {count} activities older than {days} days.")
             return
 
         if count == 0:
@@ -42,8 +40,4 @@ class Command(BaseCommand):
 
         deleted, _ = old_activities.delete()
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Purged {deleted} activity records older than {days} days."
-            )
-        )
+        self.stdout.write(self.style.SUCCESS(f"Purged {deleted} activity records older than {days} days."))

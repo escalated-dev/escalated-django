@@ -140,7 +140,7 @@ class JsonRpcClient:
             ready, _, _ = select.select([self._stdout], [], [], timeout_seconds)
             if not ready:
                 return None
-        except (select.error, ValueError):
+        except (OSError, ValueError):
             # select() is not available for this file object (e.g. Windows pipes).
             # Fall through to the blocking read below.
             pass
@@ -169,16 +169,12 @@ class JsonRpcClient:
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                raise RuntimeError(
-                    f"JSON-RPC timeout waiting for response to request #{expected_id}"
-                )
+                raise RuntimeError(f"JSON-RPC timeout waiting for response to request #{expected_id}")
 
             line = self.read_line(int(remaining) + 1)
 
             if line is None:
-                raise RuntimeError(
-                    f"JSON-RPC connection lost waiting for response to request #{expected_id}"
-                )
+                raise RuntimeError(f"JSON-RPC connection lost waiting for response to request #{expected_id}")
 
             if line == "":
                 continue
@@ -186,9 +182,7 @@ class JsonRpcClient:
             try:
                 decoded = json.loads(line)
             except json.JSONDecodeError:
-                logger.warning(
-                    "Escalated PluginBridge: received non-JSON line: %s", line[:200]
-                )
+                logger.warning("Escalated PluginBridge: received non-JSON line: %s", line[:200])
                 continue
 
             if not isinstance(decoded, dict) or "jsonrpc" not in decoded:

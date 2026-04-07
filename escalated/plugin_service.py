@@ -42,9 +42,7 @@ class PluginService:
             try:
                 os.makedirs(self._plugins_path, exist_ok=True)
             except OSError:
-                logger.warning(
-                    "Could not create plugins directory: %s", self._plugins_path
-                )
+                logger.warning("Could not create plugins directory: %s", self._plugins_path)
 
     def _get_manifest(self, slug):
         """
@@ -54,7 +52,7 @@ class PluginService:
         if not os.path.isfile(manifest_path):
             return None
         try:
-            with open(manifest_path, "r", encoding="utf-8") as fh:
+            with open(manifest_path, encoding="utf-8") as fh:
                 return json.load(fh)
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("Failed to read manifest for plugin '%s': %s", slug, exc)
@@ -79,7 +77,7 @@ class PluginService:
         if not os.path.isfile(manifest_path):
             return None
         try:
-            with open(manifest_path, "r", encoding="utf-8") as fh:
+            with open(manifest_path, encoding="utf-8") as fh:
                 return json.load(fh)
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("Failed to read manifest for plugin '%s': %s", slug, exc)
@@ -124,40 +122,39 @@ class PluginService:
             except Exception:
                 db_plugin = None
 
-            plugins.append({
-                "slug": entry,
-                "name": manifest.get("name", entry),
-                "description": manifest.get("description", ""),
-                "version": manifest.get("version", "1.0.0"),
-                "author": manifest.get("author", "Unknown"),
-                "author_url": manifest.get("author_url", ""),
-                "requires": manifest.get("requires", "1.0.0"),
-                "main_file": manifest.get("main_file", "plugin.py"),
-                "is_active": db_plugin.is_active if db_plugin else False,
-                "activated_at": (
-                    db_plugin.activated_at.isoformat()
-                    if db_plugin and db_plugin.activated_at
-                    else None
-                ),
-                "path": plugin_dir,
-                "source": "local",
-            })
+            plugins.append(
+                {
+                    "slug": entry,
+                    "name": manifest.get("name", entry),
+                    "description": manifest.get("description", ""),
+                    "version": manifest.get("version", "1.0.0"),
+                    "author": manifest.get("author", "Unknown"),
+                    "author_url": manifest.get("author_url", ""),
+                    "requires": manifest.get("requires", "1.0.0"),
+                    "main_file": manifest.get("main_file", "plugin.py"),
+                    "is_active": db_plugin.is_active if db_plugin else False,
+                    "activated_at": (
+                        db_plugin.activated_at.isoformat() if db_plugin and db_plugin.activated_at else None
+                    ),
+                    "path": plugin_dir,
+                    "source": "local",
+                }
+            )
 
         return plugins
 
     def _get_pip_plugins(self):
         """Discover plugins installed via pip (packages with plugin.json)."""
-        from escalated.plugin_models import EscalatedPlugin
         import importlib.metadata
+
+        from escalated.plugin_models import EscalatedPlugin
 
         plugins = []
         try:
             for dist in importlib.metadata.distributions():
                 # Check if the distribution has a plugin.json at its root
                 dist_files = dist.files or []
-                has_manifest = any(
-                    str(f) == "plugin.json" for f in dist_files
-                )
+                has_manifest = any(str(f) == "plugin.json" for f in dist_files)
                 if not has_manifest:
                     continue
 
@@ -173,7 +170,7 @@ class PluginService:
 
                 directory = os.path.dirname(dist_path)
                 try:
-                    with open(dist_path, "r", encoding="utf-8") as fh:
+                    with open(dist_path, encoding="utf-8") as fh:
                         manifest = json.load(fh)
                 except (json.JSONDecodeError, OSError):
                     continue
@@ -188,24 +185,24 @@ class PluginService:
                 except Exception:
                     db_plugin = None
 
-                plugins.append({
-                    "slug": slug,
-                    "name": manifest.get("name", slug),
-                    "description": manifest.get("description", ""),
-                    "version": manifest.get("version", "1.0.0"),
-                    "author": manifest.get("author", "Unknown"),
-                    "author_url": manifest.get("author_url", ""),
-                    "requires": manifest.get("requires", "1.0.0"),
-                    "main_file": manifest.get("main_file", "plugin.py"),
-                    "is_active": db_plugin.is_active if db_plugin else False,
-                    "activated_at": (
-                        db_plugin.activated_at.isoformat()
-                        if db_plugin and db_plugin.activated_at
-                        else None
-                    ),
-                    "path": directory,
-                    "source": "composer",  # Use "composer" for consistency with frontend
-                })
+                plugins.append(
+                    {
+                        "slug": slug,
+                        "name": manifest.get("name", slug),
+                        "description": manifest.get("description", ""),
+                        "version": manifest.get("version", "1.0.0"),
+                        "author": manifest.get("author", "Unknown"),
+                        "author_url": manifest.get("author_url", ""),
+                        "requires": manifest.get("requires", "1.0.0"),
+                        "main_file": manifest.get("main_file", "plugin.py"),
+                        "is_active": db_plugin.is_active if db_plugin else False,
+                        "activated_at": (
+                            db_plugin.activated_at.isoformat() if db_plugin and db_plugin.activated_at else None
+                        ),
+                        "path": directory,
+                        "source": "composer",  # Use "composer" for consistency with frontend
+                    }
+                )
         except Exception as exc:
             logger.debug("Could not scan pip packages: %s", exc)
 
@@ -257,11 +254,19 @@ class PluginService:
             plugin.is_active = True
             plugin.activated_at = timezone.now()
             plugin.deactivated_at = None
-            plugin.save(update_fields=[
-                "name", "version", "description", "author",
-                "is_active", "activated_at", "deactivated_at",
-                "installed_at", "updated_at",
-            ])
+            plugin.save(
+                update_fields=[
+                    "name",
+                    "version",
+                    "description",
+                    "author",
+                    "is_active",
+                    "activated_at",
+                    "deactivated_at",
+                    "installed_at",
+                    "updated_at",
+                ]
+            )
 
             # Load the plugin so its hooks get registered
             self.load_plugin(slug)
@@ -355,6 +360,7 @@ class PluginService:
 
         # Save to a temp path
         import tempfile
+
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
         try:
             for chunk in uploaded_file.chunks():
@@ -375,10 +381,7 @@ class PluginService:
 
                 extract_path = os.path.join(self._plugins_path, root_folder)
                 if os.path.exists(extract_path):
-                    raise Exception(
-                        f"Plugin '{root_folder}' already exists. "
-                        "Delete it first before uploading again."
-                    )
+                    raise Exception(f"Plugin '{root_folder}' already exists. Delete it first before uploading again.")
 
                 zf.extractall(self._plugins_path)
 
@@ -386,15 +389,13 @@ class PluginService:
             manifest_path = os.path.join(extract_path, "plugin.json")
             if not os.path.isfile(manifest_path):
                 shutil.rmtree(extract_path, ignore_errors=True)
-                raise Exception(
-                    "Invalid plugin: missing plugin.json in root directory."
-                )
+                raise Exception("Invalid plugin: missing plugin.json in root directory.")
 
             # Create a DB record so the plugin appears immediately
             from escalated.plugin_models import EscalatedPlugin
 
             try:
-                with open(manifest_path, "r", encoding="utf-8") as fh:
+                with open(manifest_path, encoding="utf-8") as fh:
                     manifest = json.load(fh)
             except (json.JSONDecodeError, OSError):
                 manifest = {}
@@ -426,9 +427,10 @@ class PluginService:
         # Check pip-installed plugins
         try:
             import importlib.metadata
+
             for dist in importlib.metadata.distributions():
                 if dist.metadata["Name"] == slug:
-                    for f in (dist.files or []):
+                    for f in dist.files or []:
                         if str(f) == "plugin.json":
                             return os.path.dirname(str(f.locate()))
         except Exception:
@@ -462,7 +464,7 @@ class PluginService:
 
         manifest_path = os.path.join(plugin_dir, "plugin.json")
         try:
-            with open(manifest_path, "r", encoding="utf-8") as fh:
+            with open(manifest_path, encoding="utf-8") as fh:
                 manifest = json.load(fh)
         except (json.JSONDecodeError, OSError):
             logger.warning("Cannot load plugin '%s': no manifest found.", slug)
@@ -495,7 +497,7 @@ class PluginService:
                 logger.info("Plugin '%s' loaded via importlib.", slug)
             else:
                 # Fallback: exec the file directly
-                with open(plugin_file, "r", encoding="utf-8") as fh:
+                with open(plugin_file, encoding="utf-8") as fh:
                     code = fh.read()
                 exec(compile(code, plugin_file, "exec"), {"__name__": module_name})
                 logger.info("Plugin '%s' loaded via exec.", slug)

@@ -24,12 +24,10 @@ that new action hooks are dropped with a warning.  Filter hooks return the
 unmodified value instead of being dropped.
 """
 
-import importlib.util
 import logging
 import os
 import shutil
 import subprocess
-import sys
 import time
 
 logger = logging.getLogger("escalated.bridge")
@@ -95,9 +93,7 @@ class PluginBridge:
             return
 
         if not self._is_runtime_available():
-            logger.info(
-                "Escalated PluginBridge: Node.js runtime not available — SDK plugins disabled"
-            )
+            logger.info("Escalated PluginBridge: Node.js runtime not available — SDK plugins disabled")
             return
 
         try:
@@ -106,9 +102,7 @@ class PluginBridge:
             self._register_routes()
             self._booted = True
         except Exception as exc:
-            logger.warning(
-                "Escalated PluginBridge: boot failed — SDK plugins disabled: %s", exc
-            )
+            logger.warning("Escalated PluginBridge: boot failed — SDK plugins disabled: %s", exc)
             self._teardown()
 
     def dispatch_action(self, hook: str, event: dict) -> None:
@@ -123,9 +117,7 @@ class PluginBridge:
             return
 
         if self._pending_action_count >= MAX_QUEUE_DEPTH:
-            logger.warning(
-                "Escalated PluginBridge: action queue full — dropping action '%s'", hook
-            )
+            logger.warning("Escalated PluginBridge: action queue full — dropping action '%s'", hook)
             return
 
         self._pending_action_count += 1
@@ -138,9 +130,7 @@ class PluginBridge:
                 self._context_handler.handle,
             )
         except Exception as exc:
-            logger.warning(
-                "Escalated PluginBridge: action '%s' failed: %s", hook, exc
-            )
+            logger.warning("Escalated PluginBridge: action '%s' failed: %s", hook, exc)
             self._handle_crash()
         finally:
             self._pending_action_count -= 1
@@ -256,12 +246,12 @@ class PluginBridge:
 
     def _is_runtime_available(self) -> bool:
         """Check that Node.js is available and SDK plugins are enabled."""
-        from escalated.conf import get_setting
 
         # Honour the SDK_ENABLED config key if present
         escalated_settings = {}
         try:
             from django.conf import settings
+
             escalated_settings = getattr(settings, "ESCALATED", {})
         except Exception:
             pass
@@ -286,7 +276,6 @@ class PluginBridge:
 
     def _spawn(self) -> None:
         """Spawn the Node.js plugin runtime subprocess."""
-        from escalated.conf import get_setting
         from django.conf import settings
 
         escalated_settings = getattr(settings, "ESCALATED", {})
@@ -313,9 +302,7 @@ class PluginBridge:
                 bufsize=1,  # line-buffered
             )
         except OSError as exc:
-            raise RuntimeError(
-                f"Failed to spawn plugin runtime '{command}': {exc}"
-            ) from exc
+            raise RuntimeError(f"Failed to spawn plugin runtime '{command}': {exc}") from exc
 
         from escalated.bridge.json_rpc_client import JsonRpcClient
 
@@ -398,8 +385,7 @@ class PluginBridge:
             elapsed = time.monotonic() - self._last_restart_at
             if elapsed < backoff:
                 logger.debug(
-                    "Escalated PluginBridge: waiting for backoff before restart "
-                    "(%.0f s remaining)",
+                    "Escalated PluginBridge: waiting for backoff before restart (%.0f s remaining)",
                     backoff - elapsed,
                 )
                 return False
@@ -417,8 +403,7 @@ class PluginBridge:
             self._restart_attempts += 1
             self._last_restart_at = time.monotonic()
             logger.error(
-                "Escalated PluginBridge: failed to start plugin runtime "
-                "(attempt %d): %s",
+                "Escalated PluginBridge: failed to start plugin runtime (attempt %d): %s",
                 self._restart_attempts,
                 exc,
             )
@@ -442,10 +427,7 @@ class PluginBridge:
     def _handle_crash(self) -> None:
         """Clean up after a crash so the next call triggers a restart."""
         if not self._is_process_alive():
-            logger.warning(
-                "Escalated PluginBridge: plugin runtime process has crashed — "
-                "will restart on next dispatch"
-            )
+            logger.warning("Escalated PluginBridge: plugin runtime process has crashed — will restart on next dispatch")
             self._teardown()
 
     def _teardown(self) -> None:
@@ -468,6 +450,7 @@ class PluginBridge:
         """Return the escalated-django package version."""
         try:
             from importlib.metadata import version
+
             return version("escalated-django")
         except Exception:
             pass
@@ -477,7 +460,8 @@ class PluginBridge:
             pyproject = os.path.join(pkg_root, "pyproject.toml")
             if os.path.isfile(pyproject):
                 import re
-                with open(pyproject, "r", encoding="utf-8") as fh:
+
+                with open(pyproject, encoding="utf-8") as fh:
                     content = fh.read()
                 match = re.search(r'^version\s*=\s*"([^"]+)"', content, re.MULTILINE)
                 if match:

@@ -1,8 +1,8 @@
 import pytest
 
-from escalated.models import Ticket, Reply
+from escalated.models import Reply, Ticket
 from escalated.services.ticket_merge_service import TicketMergeService
-from tests.factories import UserFactory, TicketFactory, ReplyFactory
+from tests.factories import ReplyFactory, TicketFactory, UserFactory
 
 
 @pytest.mark.django_db
@@ -74,7 +74,8 @@ class TestTicketMergeService:
         self.service.merge(source, target, merged_by_user_id=user.pk)
 
         target_note = Reply.objects.filter(
-            ticket=target, is_internal_note=True,
+            ticket=target,
+            is_internal_note=True,
             body__contains="merged into this ticket",
         ).first()
 

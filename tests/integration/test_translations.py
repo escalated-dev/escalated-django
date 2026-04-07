@@ -1,12 +1,10 @@
 import os
+
 import pytest
 from django.utils import translation
 
-
 LOCALES = ["en", "de", "es", "fr"]
-LOCALE_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "..", "escalated", "locale"
-)
+LOCALE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "escalated", "locale")
 
 
 class TestTranslations:
@@ -29,7 +27,7 @@ class TestTranslations:
         if locale == "en":
             return
         po_path = os.path.join(LOCALE_DIR, locale, "LC_MESSAGES", "django.po")
-        with open(po_path, "r", encoding="utf-8") as f:
+        with open(po_path, encoding="utf-8") as f:
             content = f.read()
         lines = content.split("\n")
         in_header = True

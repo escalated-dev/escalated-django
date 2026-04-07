@@ -1,32 +1,31 @@
 import logging
-from datetime import timedelta
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.utils import timezone
 
 from escalated.models import (
-    Ticket,
     Reply,
     Tag,
+    Ticket,
     TicketActivity,
 )
 from escalated.signals import (
-    ticket_created,
-    ticket_updated,
-    ticket_status_changed,
-    ticket_assigned,
-    ticket_unassigned,
-    ticket_priority_changed,
-    ticket_escalated,
-    ticket_resolved,
-    ticket_closed,
-    ticket_reopened,
-    reply_created,
+    department_changed,
     internal_note_added,
+    reply_created,
     tag_added,
     tag_removed,
-    department_changed,
+    ticket_assigned,
+    ticket_closed,
+    ticket_created,
+    ticket_escalated,
+    ticket_priority_changed,
+    ticket_reopened,
+    ticket_resolved,
+    ticket_status_changed,
+    ticket_unassigned,
+    ticket_updated,
 )
 
 logger = logging.getLogger("escalated")
@@ -84,9 +83,7 @@ class LocalDriver:
 
         if changes:
             ticket.save()
-            ticket_updated.send(
-                sender=Ticket, ticket=ticket, user=user, changes=changes
-            )
+            ticket_updated.send(sender=Ticket, ticket=ticket, user=user, changes=changes)
 
         return ticket
 
@@ -134,15 +131,12 @@ class LocalDriver:
         elif new_status == Ticket.Status.REOPENED:
             ticket_reopened.send(sender=Ticket, ticket=ticket, user=user)
         elif new_status == Ticket.Status.ESCALATED:
-            ticket_escalated.send(
-                sender=Ticket, ticket=ticket, user=user, reason="Manual escalation"
-            )
+            ticket_escalated.send(sender=Ticket, ticket=ticket, user=user, reason="Manual escalation")
 
         return ticket
 
     def assign_ticket(self, ticket, user, agent):
         """Assign a ticket to an agent."""
-        previous_agent = ticket.assigned_to
         ticket.assigned_to = agent
 
         if ticket.status == Ticket.Status.OPEN:
@@ -160,9 +154,7 @@ class LocalDriver:
             },
         )
 
-        ticket_assigned.send(
-            sender=Ticket, ticket=ticket, user=user, agent=agent
-        )
+        ticket_assigned.send(sender=Ticket, ticket=ticket, user=user, agent=agent)
 
         return ticket
 
@@ -207,16 +199,11 @@ class LocalDriver:
         # Update ticket status based on who is replying
         if not is_internal and user is not None:
             ct = ContentType.objects.get_for_model(user)
-            is_requester = (
-                ticket.requester_content_type == ct
-                and ticket.requester_object_id == user.pk
-            )
+            is_requester = ticket.requester_content_type == ct and ticket.requester_object_id == user.pk
 
             if is_requester:
                 if ticket.status == Ticket.Status.WAITING_ON_CUSTOMER:
-                    self.transition_status(
-                        ticket, user, Ticket.Status.WAITING_ON_AGENT
-                    )
+                    self.transition_status(ticket, user, Ticket.Status.WAITING_ON_AGENT)
             else:
                 if ticket.status in [
                     Ticket.Status.OPEN,
@@ -224,9 +211,7 @@ class LocalDriver:
                     Ticket.Status.WAITING_ON_AGENT,
                     Ticket.Status.REOPENED,
                 ]:
-                    self.transition_status(
-                        ticket, user, Ticket.Status.WAITING_ON_CUSTOMER
-                    )
+                    self.transition_status(ticket, user, Ticket.Status.WAITING_ON_CUSTOMER)
         elif not is_internal and user is None:
             # Guest reply — treat like a customer reply
             if ticket.status == Ticket.Status.WAITING_ON_CUSTOMER:
@@ -234,31 +219,23 @@ class LocalDriver:
 
         # Fire signals
         if is_internal:
-            internal_note_added.send(
-                sender=Reply, reply=reply, ticket=ticket, user=user
-            )
+            internal_note_added.send(sender=Reply, reply=reply, ticket=ticket, user=user)
         else:
-            reply_created.send(
-                sender=Reply, reply=reply, ticket=ticket, user=user
-            )
+            reply_created.send(sender=Reply, reply=reply, ticket=ticket, user=user)
 
         return reply
 
     def get_ticket(self, ticket_id):
         """Retrieve a single ticket by ID."""
         return (
-            Ticket.objects.select_related(
-                "assigned_to", "department", "sla_policy"
-            )
+            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
             .prefetch_related("tags", "replies", "activities")
             .get(pk=ticket_id)
         )
 
     def list_tickets(self, filters=None):
         """List tickets with optional filters."""
-        qs = Ticket.objects.select_related(
-            "assigned_to", "department", "sla_policy"
-        ).prefetch_related("tags")
+        qs = Ticket.objects.select_related("assigned_to", "department", "sla_policy").prefetch_related("tags")
 
         if filters:
             if "status" in filters:

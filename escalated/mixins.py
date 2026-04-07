@@ -93,9 +93,11 @@ class AuditableMixin:
     @staticmethod
     def _get_current_request():
         try:
-            from django.middleware.common import CommonMiddleware  # noqa: F401
             import threading
+
+            from django.middleware.common import CommonMiddleware  # noqa: F401
+
             # Fall back to None if no request middleware is available
-            return getattr(threading.current_thread(), '_escalated_request', None)
+            return getattr(threading.current_thread(), "_escalated_request", None)
         except Exception:
             return None

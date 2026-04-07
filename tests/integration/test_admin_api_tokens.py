@@ -3,7 +3,7 @@ Integration tests for the admin API token management views.
 """
 
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.test import RequestFactory
@@ -25,6 +25,7 @@ def rf():
 def _attach_session(request):
     """Attach a mock session to the request."""
     from django.contrib.sessions.backends.db import SessionStore
+
     request.session = SessionStore()
 
 
@@ -82,12 +83,14 @@ class TestAdminApiTokensCreate:
 
         request = rf.post(
             "/admin/api-tokens/create/",
-            data=json.dumps({
-                "name": "Test Token",
-                "user_id": user.pk,
-                "abilities": ["agent"],
-                "expires_in_days": 30,
-            }),
+            data=json.dumps(
+                {
+                    "name": "Test Token",
+                    "user_id": user.pk,
+                    "abilities": ["agent"],
+                    "expires_in_days": 30,
+                }
+            ),
             content_type="application/json",
         )
         request.user = admin
@@ -176,10 +179,12 @@ class TestAdminApiTokensUpdate:
 
         request = rf.post(
             f"/admin/api-tokens/{token.pk}/update/",
-            data=json.dumps({
-                "name": "Updated Name",
-                "abilities": ["agent", "admin"],
-            }),
+            data=json.dumps(
+                {
+                    "name": "Updated Name",
+                    "abilities": ["agent", "admin"],
+                }
+            ),
             content_type="application/json",
         )
         request.user = admin

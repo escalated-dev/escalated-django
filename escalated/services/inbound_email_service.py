@@ -4,7 +4,6 @@ import re
 import secrets
 
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 
 from escalated.conf import get_setting
 from escalated.mail.inbound_message import InboundMessage
@@ -32,19 +31,82 @@ class InboundEmailService:
     """
 
     ALLOWED_TAGS = {
-        'p', 'br', 'b', 'strong', 'i', 'em', 'u', 'a', 'ul', 'ol', 'li',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code',
-        'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img', 'hr', 'div', 'span',
-        'sub', 'sup',
+        "p",
+        "br",
+        "b",
+        "strong",
+        "i",
+        "em",
+        "u",
+        "a",
+        "ul",
+        "ol",
+        "li",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "blockquote",
+        "pre",
+        "code",
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",
+        "img",
+        "hr",
+        "div",
+        "span",
+        "sub",
+        "sup",
     }
 
     BLOCKED_EXTENSIONS = {
-        'exe', 'bat', 'cmd', 'com', 'msi', 'scr', 'pif', 'vbs', 'vbe',
-        'js', 'jse', 'wsf', 'wsh', 'ps1', 'psm1', 'psd1', 'reg',
-        'cpl', 'hta', 'inf', 'lnk', 'sct', 'shb', 'sys', 'drv',
-        'php', 'phtml', 'php3', 'php4', 'php5', 'phar',
-        'sh', 'bash', 'csh', 'ksh', 'pl', 'py', 'rb',
-        'dll', 'so', 'dylib',
+        "exe",
+        "bat",
+        "cmd",
+        "com",
+        "msi",
+        "scr",
+        "pif",
+        "vbs",
+        "vbe",
+        "js",
+        "jse",
+        "wsf",
+        "wsh",
+        "ps1",
+        "psm1",
+        "psd1",
+        "reg",
+        "cpl",
+        "hta",
+        "inf",
+        "lnk",
+        "sct",
+        "shb",
+        "sys",
+        "drv",
+        "php",
+        "phtml",
+        "php3",
+        "php4",
+        "php5",
+        "phar",
+        "sh",
+        "bash",
+        "csh",
+        "ksh",
+        "pl",
+        "py",
+        "rb",
+        "dll",
+        "so",
+        "dylib",
     }
 
     @staticmethod
@@ -56,37 +118,45 @@ class InboundEmailService:
         allowed = InboundEmailService.ALLOWED_TAGS
 
         def replace_tag(match):
-            tag_name = match.group(1).strip().split()[0].lower().lstrip('/')
+            tag_name = match.group(1).strip().split()[0].lower().lstrip("/")
             if tag_name in allowed:
                 return match.group(0)
-            return ''
+            return ""
 
-        clean = re.sub(r'<(/?\s*[a-zA-Z][a-zA-Z0-9]*(?:\s[^>]*)?)>', replace_tag, html)
+        clean = re.sub(r"<(/?\s*[a-zA-Z][a-zA-Z0-9]*(?:\s[^>]*)?)>", replace_tag, html)
 
         # Remove event handler attributes
-        clean = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', clean, flags=re.IGNORECASE)
-        clean = re.sub(r'\s+on\w+\s*=\s*\S+', '', clean, flags=re.IGNORECASE)
+        clean = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', "", clean, flags=re.IGNORECASE)
+        clean = re.sub(r"\s+on\w+\s*=\s*\S+", "", clean, flags=re.IGNORECASE)
 
         # Remove javascript: protocol
         clean = re.sub(
             r'\b(href|src|action)\s*=\s*["\']?\s*javascript\s*:',
-            r'\1="', clean, flags=re.IGNORECASE,
+            r'\1="',
+            clean,
+            flags=re.IGNORECASE,
         )
 
         # Remove data: URLs except data:image
         clean = re.sub(
             r'\b(href|src|action)\s*=\s*["\']?\s*data\s*:(?!image/)',
-            r'\1="', clean, flags=re.IGNORECASE,
+            r'\1="',
+            clean,
+            flags=re.IGNORECASE,
         )
 
         # Remove style with expression()
         clean = re.sub(
             r'style\s*=\s*["\'][^"\']*expression\s*\([^"\']*["\']',
-            '', clean, flags=re.IGNORECASE,
+            "",
+            clean,
+            flags=re.IGNORECASE,
         )
         clean = re.sub(
             r'style\s*=\s*["\'][^"\']*url\s*\(\s*["\']?\s*javascript:[^"\']*["\']',
-            '', clean, flags=re.IGNORECASE,
+            "",
+            clean,
+            flags=re.IGNORECASE,
         )
 
         return clean
@@ -97,8 +167,8 @@ class InboundEmailService:
         if message.body_text:
             return message.body_text
         if message.body_html:
-            return InboundEmailService._sanitize_html(message.body_html) or ''
-        return ''
+            return InboundEmailService._sanitize_html(message.body_html) or ""
+        return ""
 
     @staticmethod
     def process(message: InboundMessage, adapter_name: str = "unknown") -> InboundEmail:
@@ -119,9 +189,7 @@ class InboundEmailService:
                 status=InboundEmail.Status.PROCESSED,
             ).first()
             if existing:
-                logger.info(
-                    f"Duplicate inbound email (message_id={message.message_id}), skipping"
-                )
+                logger.info(f"Duplicate inbound email (message_id={message.message_id}), skipping")
                 return existing
 
         # Create the InboundEmail log record
@@ -133,9 +201,7 @@ class InboundEmailService:
             subject=message.subject,
             body_text=message.body_text,
             body_html=InboundEmailService._sanitize_html(message.body_html),
-            raw_headers="\n".join(
-                f"{k}: {v}" for k, v in message.headers.items()
-            ) if message.headers else None,
+            raw_headers="\n".join(f"{k}: {v}" for k, v in message.headers.items()) if message.headers else None,
             adapter=adapter_name,
             status=InboundEmail.Status.PENDING,
         )
@@ -145,14 +211,11 @@ class InboundEmailService:
             inbound.mark_processed(ticket, reply)
             logger.info(
                 f"Inbound email processed: {message.from_email} -> "
-                f"ticket {ticket.reference}"
-                + (f" (reply #{reply.pk})" if reply else " (new ticket)")
+                f"ticket {ticket.reference}" + (f" (reply #{reply.pk})" if reply else " (new ticket)")
             )
         except Exception as exc:
             inbound.mark_failed(str(exc))
-            logger.error(
-                f"Failed to process inbound email from {message.from_email}: {exc}"
-            )
+            logger.error(f"Failed to process inbound email from {message.from_email}: {exc}")
 
         return inbound
 
@@ -164,7 +227,6 @@ class InboundEmailService:
         Raises an exception on failure (caught by process()).
         """
         from escalated.drivers import get_driver
-        from escalated.services.attachment_service import AttachmentService
 
         driver = get_driver()
 
@@ -173,13 +235,9 @@ class InboundEmailService:
 
         # Also try by In-Reply-To / References headers
         if ticket is None and message.in_reply_to:
-            ticket = InboundEmailService._find_ticket_by_message_id(
-                message.in_reply_to
-            )
+            ticket = InboundEmailService._find_ticket_by_message_id(message.in_reply_to)
         if ticket is None and message.references:
-            ticket = InboundEmailService._find_ticket_by_references(
-                message.references
-            )
+            ticket = InboundEmailService._find_ticket_by_references(message.references)
 
         # Resolve sender — try to find a registered user first
         User = get_user_model()
@@ -193,26 +251,18 @@ class InboundEmailService:
 
         if ticket is not None:
             # Existing ticket — add a reply
-            reply = InboundEmailService._add_reply(
-                driver, ticket, user, message
-            )
+            reply = InboundEmailService._add_reply(driver, ticket, user, message)
 
             # Handle attachments on the reply
-            InboundEmailService._handle_attachments(
-                reply, message.attachments
-            )
+            InboundEmailService._handle_attachments(reply, message.attachments)
 
             return ticket, reply
         else:
             # New ticket
-            ticket, reply = InboundEmailService._create_ticket(
-                driver, user, message
-            )
+            ticket, reply = InboundEmailService._create_ticket(driver, user, message)
 
             # Handle attachments on the ticket
-            InboundEmailService._handle_attachments(
-                ticket, message.attachments
-            )
+            InboundEmailService._handle_attachments(ticket, message.attachments)
 
             return ticket, reply
 
@@ -229,9 +279,7 @@ class InboundEmailService:
             try:
                 return Ticket.objects.get(reference=reference)
             except Ticket.DoesNotExist:
-                logger.debug(
-                    f"Reference '{reference}' found in subject but no matching ticket"
-                )
+                logger.debug(f"Reference '{reference}' found in subject but no matching ticket")
         return None
 
     @staticmethod
@@ -240,11 +288,15 @@ class InboundEmailService:
         Find a ticket by looking for an InboundEmail with the given message_id
         that was already processed.
         """
-        previous = InboundEmail.objects.filter(
-            message_id=message_id,
-            status=InboundEmail.Status.PROCESSED,
-            ticket__isnull=False,
-        ).select_related("ticket").first()
+        previous = (
+            InboundEmail.objects.filter(
+                message_id=message_id,
+                status=InboundEmail.Status.PROCESSED,
+                ticket__isnull=False,
+            )
+            .select_related("ticket")
+            .first()
+        )
         return previous.ticket if previous else None
 
     @staticmethod
@@ -293,16 +345,19 @@ class InboundEmailService:
 
         if user is not None:
             # Authenticated user ticket
-            ticket = driver.create_ticket(user, {
-                "subject": subject,
-                "description": body,
-                "priority": get_setting("DEFAULT_PRIORITY"),
-                "channel": "email",
-                "metadata": {
-                    "source": "inbound_email",
-                    "message_id": message.message_id,
+            ticket = driver.create_ticket(
+                user,
+                {
+                    "subject": subject,
+                    "description": body,
+                    "priority": get_setting("DEFAULT_PRIORITY"),
+                    "channel": "email",
+                    "metadata": {
+                        "source": "inbound_email",
+                        "message_id": message.message_id,
+                    },
                 },
-            })
+            )
         else:
             # Guest ticket (follows the same pattern as views/guest.py)
             guest_token = secrets.token_hex(32)
@@ -346,22 +401,19 @@ class InboundEmailService:
 
         for i, att in enumerate(attachments):
             if i >= max_attachments:
-                logger.warning(
-                    f"Attachment limit ({max_attachments}) reached, "
-                    f"skipping remaining attachments"
-                )
+                logger.warning(f"Attachment limit ({max_attachments}) reached, skipping remaining attachments")
                 break
 
             # Block dangerous file extensions
-            filename = att.get('filename', '')
+            filename = att.get("filename", "")
             _, extension = os.path.splitext(filename)
-            extension = extension.lower().lstrip('.')
+            extension = extension.lower().lstrip(".")
             if extension and extension in InboundEmailService.BLOCKED_EXTENSIONS:
                 logger.info(
-                    f'Escalated: Blocked dangerous inbound attachment.',
+                    "Escalated: Blocked dangerous inbound attachment.",
                     extra={
-                        'filename': filename,
-                        'extension': extension,
+                        "filename": filename,
+                        "extension": extension,
                     },
                 )
                 continue
@@ -404,11 +456,6 @@ class InboundEmailService:
                         original_filename=filename,
                     )
                 else:
-                    logger.warning(
-                        f"Attachment '{att.get('filename', 'unnamed')}' "
-                        f"has no file data, skipping"
-                    )
+                    logger.warning(f"Attachment '{att.get('filename', 'unnamed')}' has no file data, skipping")
             except Exception as exc:
-                logger.error(
-                    f"Failed to attach file '{att.get('filename', 'unnamed')}': {exc}"
-                )
+                logger.error(f"Failed to attach file '{att.get('filename', 'unnamed')}': {exc}")

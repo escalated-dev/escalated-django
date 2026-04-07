@@ -3,19 +3,19 @@ Full ticket lifecycle integration test.
 Tests the complete flow from creation through resolution and closing.
 """
 
-import pytest
 from datetime import timedelta
 
+import pytest
 from django.utils import timezone
 
-from escalated.models import Ticket, Reply, TicketActivity
-from escalated.services.ticket_service import TicketService
+from escalated.models import Reply, Ticket, TicketActivity
 from escalated.services.sla_service import SlaService
+from escalated.services.ticket_service import TicketService
 from tests.factories import (
-    UserFactory,
     DepartmentFactory,
     SlaPolicyFactory,
     TagFactory,
+    UserFactory,
 )
 
 
@@ -40,7 +40,7 @@ class TestTicketLifecycle:
         agent = UserFactory(username="lifecycle_agent")
         department = DepartmentFactory(name="Support")
         department.agents.add(agent)
-        sla = SlaPolicyFactory(
+        SlaPolicyFactory(
             is_default=True,
             first_response_hours={"medium": 8},
             resolution_hours={"medium": 24},
@@ -48,12 +48,15 @@ class TestTicketLifecycle:
         tag = TagFactory(name="Billing", slug="billing")
 
         # 1. Customer creates a ticket
-        ticket = service.create(customer, {
-            "subject": "Billing question",
-            "description": "I was charged twice for my subscription.",
-            "priority": "medium",
-            "department_id": department.pk,
-        })
+        ticket = service.create(
+            customer,
+            {
+                "subject": "Billing question",
+                "description": "I was charged twice for my subscription.",
+                "priority": "medium",
+                "department_id": department.pk,
+            },
+        )
 
         assert ticket.pk is not None
         assert ticket.status == Ticket.Status.OPEN
@@ -88,9 +91,9 @@ class TestTicketLifecycle:
         assert note.type == Reply.Type.NOTE
 
         # 5. Agent replies to customer
-        reply = service.reply(ticket, agent, {
-            "body": "I can see the duplicate charge. Let me process a refund for you."
-        })
+        reply = service.reply(
+            ticket, agent, {"body": "I can see the duplicate charge. Let me process a refund for you."}
+        )
         assert reply.pk is not None
         assert reply.is_internal_note is False
 
@@ -99,9 +102,7 @@ class TestTicketLifecycle:
         assert ticket.status == Ticket.Status.WAITING_ON_CUSTOMER
 
         # 6. Customer replies
-        customer_reply = service.reply(ticket, customer, {
-            "body": "Thank you! How long will the refund take?"
-        })
+        service.reply(ticket, customer, {"body": "Thank you! How long will the refund take?"})
 
         ticket.refresh_from_db()
         # After customer replies, status should transition to WAITING_ON_AGENT
@@ -146,11 +147,14 @@ class TestTicketLifecycle:
         department = DepartmentFactory()
         department.agents.add(agent)
 
-        ticket = service.create(customer, {
-            "subject": "Minor UI issue",
-            "description": "Button color is slightly off.",
-            "priority": "low",
-        })
+        ticket = service.create(
+            customer,
+            {
+                "subject": "Minor UI issue",
+                "description": "Button color is slightly off.",
+                "priority": "low",
+            },
+        )
 
         assert ticket.priority == Ticket.Priority.LOW
 
@@ -182,11 +186,14 @@ class TestTicketLifecycle:
         dept1.agents.add(agent)
         dept2.agents.add(agent)
 
-        ticket = service.create(customer, {
-            "subject": "Technical question about API",
-            "description": "How do I authenticate?",
-            "department_id": dept1.pk,
-        })
+        ticket = service.create(
+            customer,
+            {
+                "subject": "Technical question about API",
+                "description": "How do I authenticate?",
+                "department_id": dept1.pk,
+            },
+        )
 
         assert ticket.department == dept1
 
@@ -211,10 +218,13 @@ class TestTicketLifecycle:
         )
 
         service = TicketService()
-        ticket = service.create(customer, {
-            "subject": "SLA test ticket",
-            "description": "Testing SLA enforcement",
-        })
+        ticket = service.create(
+            customer,
+            {
+                "subject": "SLA test ticket",
+                "description": "Testing SLA enforcement",
+            },
+        )
 
         # Manually set SLA policy and deadline in the past
         ticket.sla_policy = policy

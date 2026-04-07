@@ -5,83 +5,78 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Avg, F, Max
+from django.db.models import Avg, Count, Max, Q
 from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
-from escalated.rendering import render_page
 
 from escalated.models import (
-    Ticket,
-    Tag,
-    Department,
-    SlaPolicy,
-    EscalationRule,
-    CannedResponse,
-    EscalatedSetting,
-    Macro,
-    Reply,
-    SatisfactionRating,
-    AuditLog,
-    TicketStatus,
-    BusinessSchedule,
-    Holiday,
-    Role,
-    Permission,
-    CustomField,
-    CustomFieldValue,
-    TicketLink,
-    SideConversation,
-    SideConversationReply,
-    ArticleCategory,
-    Article,
-    AgentProfile,
-    Skill,
-    AgentSkill,
     AgentCapacity,
-    Webhook,
-    WebhookDelivery,
+    Article,
+    ArticleCategory,
+    AuditLog,
     Automation,
-    TwoFactor,
+    BusinessSchedule,
+    CannedResponse,
+    CustomField,
     CustomObject,
     CustomObjectRecord,
+    Department,
+    EscalatedSetting,
+    EscalationRule,
+    Holiday,
+    Macro,
+    Permission,
+    Reply,
+    Role,
+    SatisfactionRating,
+    SideConversation,
+    SideConversationReply,
+    Skill,
+    SlaPolicy,
+    Tag,
+    Ticket,
+    TicketLink,
+    TicketStatus,
+    TwoFactor,
+    Webhook,
+    WebhookDelivery,
 )
 from escalated.permissions import is_admin, is_agent
+from escalated.rendering import render_page
 from escalated.serializers import (
-    TicketSerializer,
-    ReplySerializer,
-    TagSerializer,
-    DepartmentSerializer,
-    SlaPolicySerializer,
-    EscalationRuleSerializer,
-    CannedResponseSerializer,
-    EscalatedSettingSerializer,
     ActivitySerializer,
-    AttachmentSerializer,
-    MacroSerializer,
-    SatisfactionRatingSerializer,
-    AuditLogSerializer,
-    TicketStatusSerializer,
-    BusinessScheduleSerializer,
-    HolidaySerializer,
-    RoleSerializer,
-    PermissionSerializer,
-    CustomFieldSerializer,
-    TicketLinkSerializer,
-    SideConversationSerializer,
-    SideConversationReplySerializer,
+    AgentCapacitySerializer,
     ArticleCategorySerializer,
     ArticleSerializer,
-    AgentProfileSerializer,
-    SkillSerializer,
-    AgentCapacitySerializer,
-    WebhookSerializer,
-    WebhookDeliverySerializer,
+    AttachmentSerializer,
+    AuditLogSerializer,
     AutomationSerializer,
-    CustomObjectSerializer,
+    BusinessScheduleSerializer,
+    CannedResponseSerializer,
+    CustomFieldSerializer,
     CustomObjectRecordSerializer,
+    CustomObjectSerializer,
+    DepartmentSerializer,
+    EscalatedSettingSerializer,
+    EscalationRuleSerializer,
+    MacroSerializer,
+    PermissionSerializer,
+    ReplySerializer,
+    RoleSerializer,
+    SatisfactionRatingSerializer,
+    SideConversationReplySerializer,
+    SideConversationSerializer,
+    SkillSerializer,
+    SlaPolicySerializer,
+    TagSerializer,
+    TicketLinkSerializer,
+    TicketSerializer,
+    TicketStatusSerializer,
+    WebhookDeliverySerializer,
+    WebhookSerializer,
 )
 from escalated.services.ticket_service import TicketService
 
@@ -108,17 +103,17 @@ _SENSITIVE_SETTING_KEYS = {
 def _mask_secret(value: str) -> str:
     """Mask a secret value, showing only the first 3 characters."""
     if not value:
-        return ''
+        return ""
     if len(value) <= 6:
-        return '*' * len(value)
-    return value[:3] + '*' * min(len(value) - 3, 12)
+        return "*" * len(value)
+    return value[:3] + "*" * min(len(value) - 3, 12)
 
 
 def _is_masked_value(value: str | None) -> bool:
     """Return True if the value looks like a masked secret (e.g. 'abc************')."""
     if not value:
         return False
-    return bool(re_module.match(r'^.{0,3}\*{3,}$', value))
+    return bool(re_module.match(r"^.{0,3}\*{3,}$", value))
 
 
 # ---------------------------------------------------------------------------
@@ -138,57 +133,47 @@ def reports(request):
 
     total_tickets = Ticket.objects.count()
     open_tickets = Ticket.objects.open().count()
-    resolved_last_30 = Ticket.objects.filter(
-        resolved_at__gte=thirty_days_ago
-    ).count()
-    created_last_30 = Ticket.objects.filter(
-        created_at__gte=thirty_days_ago
-    ).count()
+    resolved_last_30 = Ticket.objects.filter(resolved_at__gte=thirty_days_ago).count()
+    created_last_30 = Ticket.objects.filter(created_at__gte=thirty_days_ago).count()
     sla_breaches = Ticket.objects.breached_sla().count()
 
     by_department = list(
-        Department.objects.filter(is_active=True)
-        .annotate(ticket_count=Count("tickets"))
-        .values("name", "ticket_count")
+        Department.objects.filter(is_active=True).annotate(ticket_count=Count("tickets")).values("name", "ticket_count")
     )
 
-    by_priority = {
-        p.value: Ticket.objects.filter(priority=p.value).count()
-        for p in Ticket.Priority
-    }
+    by_priority = {p.value: Ticket.objects.filter(priority=p.value).count() for p in Ticket.Priority}
 
-    by_status = {
-        s.value: Ticket.objects.filter(status=s.value).count()
-        for s in Ticket.Status
-    }
+    by_status = {s.value: Ticket.objects.filter(status=s.value).count() for s in Ticket.Status}
 
     # CSAT stats
-    csat_ratings = SatisfactionRating.objects.filter(
-        created_at__gte=thirty_days_ago
-    )
+    csat_ratings = SatisfactionRating.objects.filter(created_at__gte=thirty_days_ago)
     avg_csat = csat_ratings.aggregate(avg_rating=Avg("rating"))["avg_rating"]
     total_ratings = csat_ratings.count()
     csat_breakdown = {}
     for r in range(1, 6):
         csat_breakdown[str(r)] = csat_ratings.filter(rating=r).count()
 
-    return render_page(request, "Escalated/Admin/Reports", props={
-        "stats": {
-            "total_tickets": total_tickets,
-            "open_tickets": open_tickets,
-            "resolved_last_30": resolved_last_30,
-            "created_last_30": created_last_30,
-            "sla_breaches": sla_breaches,
+    return render_page(
+        request,
+        "Escalated/Admin/Reports",
+        props={
+            "stats": {
+                "total_tickets": total_tickets,
+                "open_tickets": open_tickets,
+                "resolved_last_30": resolved_last_30,
+                "created_last_30": created_last_30,
+                "sla_breaches": sla_breaches,
+            },
+            "by_department": by_department,
+            "by_priority": by_priority,
+            "by_status": by_status,
+            "csat": {
+                "average": round(avg_csat, 1) if avg_csat else None,
+                "total": total_ratings,
+                "breakdown": csat_breakdown,
+            },
         },
-        "by_department": by_department,
-        "by_priority": by_priority,
-        "by_status": by_status,
-        "csat": {
-            "average": round(avg_csat, 1) if avg_csat else None,
-            "total": total_ratings,
-            "breakdown": csat_breakdown,
-        },
-    })
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +184,7 @@ def reports(request):
 def _get_agents():
     """Return list of users who are agents or admins."""
     from django.contrib.auth import get_user_model
+
     User = get_user_model()
     users = User.objects.filter(is_active=True)
     return [
@@ -215,9 +201,7 @@ def tickets_index(request):
     if check:
         return check
 
-    tickets = Ticket.objects.select_related(
-        "assigned_to", "department"
-    ).prefetch_related("tags")
+    tickets = Ticket.objects.select_related("assigned_to", "department").prefetch_related("tags")
 
     # Apply filters
     status = request.GET.get("status")
@@ -257,8 +241,12 @@ def tickets_index(request):
 
     sort = request.GET.get("sort", "-created_at")
     allowed_sorts = [
-        "created_at", "-created_at", "priority", "-priority",
-        "updated_at", "-updated_at",
+        "created_at",
+        "-created_at",
+        "priority",
+        "-priority",
+        "updated_at",
+        "-updated_at",
     ]
     if sort in allowed_sorts:
         tickets = tickets.order_by(sort)
@@ -266,31 +254,33 @@ def tickets_index(request):
     paginator = Paginator(tickets, 25)
     page = paginator.get_page(request.GET.get("page", 1))
 
-    return render_page(request, "Escalated/Admin/Tickets/Index", props={
-        "tickets": TicketSerializer.serialize_list(page.object_list),
-        "pagination": {
-            "current_page": page.number,
-            "total_pages": paginator.num_pages,
-            "total_count": paginator.count,
-            "has_next": page.has_next(),
-            "has_previous": page.has_previous(),
+    return render_page(
+        request,
+        "Escalated/Admin/Tickets/Index",
+        props={
+            "tickets": TicketSerializer.serialize_list(page.object_list),
+            "pagination": {
+                "current_page": page.number,
+                "total_pages": paginator.num_pages,
+                "total_count": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
+            "filters": {
+                "status": status,
+                "priority": priority,
+                "assigned": assigned,
+                "department": department,
+                "tag": tag,
+                "search": search,
+                "sort": sort,
+                "following": following,
+            },
+            "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
+            "tags": TagSerializer.serialize_list(Tag.objects.all()),
+            "agents": _get_agents(),
         },
-        "filters": {
-            "status": status,
-            "priority": priority,
-            "assigned": assigned,
-            "department": department,
-            "tag": tag,
-            "search": search,
-            "sort": sort,
-            "following": following,
-        },
-        "departments": DepartmentSerializer.serialize_list(
-            Department.objects.filter(is_active=True)
-        ),
-        "tags": TagSerializer.serialize_list(Tag.objects.all()),
-        "agents": _get_agents(),
-    })
+    )
 
 
 @login_required
@@ -301,34 +291,32 @@ def tickets_show(request, ticket_id):
         return check
 
     try:
-        ticket = Ticket.objects.select_related(
-            "assigned_to", "department", "sla_policy"
-        ).prefetch_related(
-            "tags",
-            "replies__author",
-            "replies__attachments",
-            "activities",
-            "attachments",
-        ).get(pk=ticket_id)
+        ticket = (
+            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
+            .prefetch_related(
+                "tags",
+                "replies__author",
+                "replies__attachments",
+                "activities",
+                "attachments",
+            )
+            .get(pk=ticket_id)
+        )
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
     replies = ticket.replies.filter(is_deleted=False).select_related("author")
     activities = ticket.activities.all()[:50]
 
-    canned_responses = CannedResponse.objects.filter(
-        Q(is_shared=True) | Q(created_by=request.user)
-    )
+    canned_responses = CannedResponse.objects.filter(Q(is_shared=True) | Q(created_by=request.user))
 
     # Macros available to this user (shared + own)
-    macros = Macro.objects.filter(
-        Q(is_shared=True) | Q(created_by=request.user)
-    ).order_by("order")
+    macros = Macro.objects.filter(Q(is_shared=True) | Q(created_by=request.user)).order_by("order")
 
     # Pinned notes
-    pinned_notes = ticket.replies.filter(
-        is_deleted=False, is_internal_note=True, is_pinned=True
-    ).select_related("author")
+    pinned_notes = ticket.replies.filter(is_deleted=False, is_internal_note=True, is_pinned=True).select_related(
+        "author"
+    )
 
     # Satisfaction rating
     try:
@@ -337,25 +325,27 @@ def tickets_show(request, ticket_id):
     except SatisfactionRating.DoesNotExist:
         satisfaction_data = None
 
-    return render_page(request, "Escalated/Admin/Tickets/Show", props={
-        "ticket": TicketSerializer.serialize(ticket),
-        "replies": ReplySerializer.serialize_list(replies),
-        "activities": [ActivitySerializer.serialize(a) for a in activities],
-        "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
-        "agents": _get_agents(),
-        "departments": DepartmentSerializer.serialize_list(
-            Department.objects.filter(is_active=True)
-        ),
-        "tags": TagSerializer.serialize_list(Tag.objects.all()),
-        "canned_responses": CannedResponseSerializer.serialize_list(canned_responses),
-        "macros": MacroSerializer.serialize_list(macros),
-        "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
-        "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
-        "is_following": ticket.is_followed_by(request.user.pk),
-        "followers_count": ticket.followers_count,
-        "pinned_notes": ReplySerializer.serialize_list(pinned_notes),
-        "satisfaction_rating": satisfaction_data,
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Tickets/Show",
+        props={
+            "ticket": TicketSerializer.serialize(ticket),
+            "replies": ReplySerializer.serialize_list(replies),
+            "activities": [ActivitySerializer.serialize(a) for a in activities],
+            "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
+            "agents": _get_agents(),
+            "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
+            "tags": TagSerializer.serialize_list(Tag.objects.all()),
+            "canned_responses": CannedResponseSerializer.serialize_list(canned_responses),
+            "macros": MacroSerializer.serialize_list(macros),
+            "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
+            "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+            "is_following": ticket.is_followed_by(request.user.pk),
+            "followers_count": ticket.followers_count,
+            "pinned_notes": ReplySerializer.serialize_list(pinned_notes),
+            "satisfaction_rating": satisfaction_data,
+        },
+    )
 
 
 @login_required
@@ -382,9 +372,10 @@ def tickets_reply(request, ticket_id):
 
     files = request.FILES.getlist("attachments")
     if files:
-        from escalated.services.attachment_service import AttachmentService
         from escalated.conf import get_setting
-        for f in files[:get_setting("MAX_ATTACHMENTS")]:
+        from escalated.services.attachment_service import AttachmentService
+
+        for f in files[: get_setting("MAX_ATTACHMENTS")]:
             try:
                 AttachmentService.attach(reply, f)
             except Exception:
@@ -434,6 +425,7 @@ def tickets_assign(request, ticket_id):
         return HttpResponseNotFound(_("Ticket not found"))
 
     from django.contrib.auth import get_user_model
+
     User = get_user_model()
 
     agent_id = request.POST.get("agent_id")
@@ -575,9 +567,13 @@ def departments_index(request):
         ticket_count=Count("tickets"),
     )
 
-    return render_page(request, "Escalated/Admin/Departments/Index", props={
-        "departments": DepartmentSerializer.serialize_list(departments),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Departments/Index",
+        props={
+            "departments": DepartmentSerializer.serialize_list(departments),
+        },
+    )
 
 
 @login_required
@@ -593,13 +589,15 @@ def departments_create(request):
         is_active = request.POST.get("is_active", "true") == "true"
 
         if not name:
-            return render_page(request, "Escalated/Admin/Departments/Create", props={
-                "errors": {"name": _("Name is required.")},
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/Departments/Create",
+                props={
+                    "errors": {"name": _("Name is required.")},
+                },
+            )
 
-        Department.objects.create(
-            name=name, slug=slug, description=description, is_active=is_active
-        )
+        Department.objects.create(name=name, slug=slug, description=description, is_active=is_active)
         return redirect("escalated:admin_departments_index")
 
     return render_page(request, "Escalated/Admin/Departments/Create", props={})
@@ -618,12 +616,8 @@ def departments_edit(request, department_id):
 
     if request.method == "POST":
         department.name = request.POST.get("name", department.name)
-        department.slug = slugify(
-            request.POST.get("slug", "") or department.name
-        )
-        department.description = request.POST.get(
-            "description", department.description
-        )
+        department.slug = slugify(request.POST.get("slug", "") or department.name)
+        department.description = request.POST.get("description", department.description)
         department.is_active = request.POST.get("is_active", "true") == "true"
         department.save()
 
@@ -635,16 +629,21 @@ def departments_edit(request, department_id):
         return redirect("escalated:admin_departments_index")
 
     from django.contrib.auth import get_user_model
+
     User = get_user_model()
 
-    return render_page(request, "Escalated/Admin/Departments/Edit", props={
-        "department": DepartmentSerializer.serialize(department),
-        "all_agents": [
-            {"id": u.pk, "name": u.get_full_name() or u.username, "email": u.email}
-            for u in User.objects.filter(is_active=True)
-        ],
-        "current_agent_ids": list(department.agents.values_list("pk", flat=True)),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Departments/Edit",
+        props={
+            "department": DepartmentSerializer.serialize(department),
+            "all_agents": [
+                {"id": u.pk, "name": u.get_full_name() or u.username, "email": u.email}
+                for u in User.objects.filter(is_active=True)
+            ],
+            "current_agent_ids": list(department.agents.values_list("pk", flat=True)),
+        },
+    )
 
 
 @login_required
@@ -677,9 +676,13 @@ def sla_policies_index(request):
         return check
 
     policies = SlaPolicy.objects.all()
-    return render_page(request, "Escalated/Admin/SlaPolicies/Index", props={
-        "policies": SlaPolicySerializer.serialize_list(policies),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/SlaPolicies/Index",
+        props={
+            "policies": SlaPolicySerializer.serialize_list(policies),
+        },
+    )
 
 
 @login_required
@@ -693,21 +696,21 @@ def sla_policies_create(request):
 
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(request, "Escalated/Admin/SlaPolicies/Create", props={
-                "errors": {"name": _("Name is required.")},
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/SlaPolicies/Create",
+                props={
+                    "errors": {"name": _("Name is required.")},
+                },
+            )
 
         try:
-            first_response_hours = json.loads(
-                request.POST.get("first_response_hours", "{}")
-            )
+            first_response_hours = json.loads(request.POST.get("first_response_hours", "{}"))
         except (json.JSONDecodeError, TypeError):
             first_response_hours = {}
 
         try:
-            resolution_hours = json.loads(
-                request.POST.get("resolution_hours", "{}")
-            )
+            resolution_hours = json.loads(request.POST.get("resolution_hours", "{}"))
         except (json.JSONDecodeError, TypeError):
             resolution_hours = {}
 
@@ -728,9 +731,13 @@ def sla_policies_create(request):
         )
         return redirect("escalated:admin_sla_policies_index")
 
-    return render_page(request, "Escalated/Admin/SlaPolicies/Create", props={
-        "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/SlaPolicies/Create",
+        props={
+            "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+        },
+    )
 
 
 @login_required
@@ -749,9 +756,7 @@ def sla_policies_edit(request, policy_id):
 
         policy.name = request.POST.get("name", policy.name)
         policy.description = request.POST.get("description", policy.description)
-        policy.business_hours_only = (
-            request.POST.get("business_hours_only", "false") == "true"
-        )
+        policy.business_hours_only = request.POST.get("business_hours_only", "false") == "true"
         policy.is_active = request.POST.get("is_active", "true") == "true"
 
         is_default = request.POST.get("is_default", "false") == "true"
@@ -760,26 +765,26 @@ def sla_policies_edit(request, policy_id):
         policy.is_default = is_default
 
         try:
-            policy.first_response_hours = json.loads(
-                request.POST.get("first_response_hours", "{}")
-            )
+            policy.first_response_hours = json.loads(request.POST.get("first_response_hours", "{}"))
         except (json.JSONDecodeError, TypeError):
             pass
 
         try:
-            policy.resolution_hours = json.loads(
-                request.POST.get("resolution_hours", "{}")
-            )
+            policy.resolution_hours = json.loads(request.POST.get("resolution_hours", "{}"))
         except (json.JSONDecodeError, TypeError):
             pass
 
         policy.save()
         return redirect("escalated:admin_sla_policies_index")
 
-    return render_page(request, "Escalated/Admin/SlaPolicies/Edit", props={
-        "policy": SlaPolicySerializer.serialize(policy),
-        "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/SlaPolicies/Edit",
+        props={
+            "policy": SlaPolicySerializer.serialize(policy),
+            "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+        },
+    )
 
 
 @login_required
@@ -812,9 +817,13 @@ def escalation_rules_index(request):
         return check
 
     rules = EscalationRule.objects.all()
-    return render_page(request, "Escalated/Admin/EscalationRules/Index", props={
-        "rules": EscalationRuleSerializer.serialize_list(rules),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/EscalationRules/Index",
+        props={
+            "rules": EscalationRuleSerializer.serialize_list(rules),
+        },
+    )
 
 
 @login_required
@@ -828,13 +837,14 @@ def escalation_rules_create(request):
 
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(request, "Escalated/Admin/EscalationRules/Create", props={
-                "errors": {"name": _("Name is required.")},
-                "trigger_types": [
-                    {"value": t.value, "label": t.label}
-                    for t in EscalationRule.TriggerType
-                ],
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/EscalationRules/Create",
+                props={
+                    "errors": {"name": _("Name is required.")},
+                    "trigger_types": [{"value": t.value, "label": t.label} for t in EscalationRule.TriggerType],
+                },
+            )
 
         try:
             conditions = json.loads(request.POST.get("conditions", "{}"))
@@ -857,12 +867,13 @@ def escalation_rules_create(request):
         )
         return redirect("escalated:admin_escalation_rules_index")
 
-    return render_page(request, "Escalated/Admin/EscalationRules/Create", props={
-        "trigger_types": [
-            {"value": t.value, "label": t.label}
-            for t in EscalationRule.TriggerType
-        ],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/EscalationRules/Create",
+        props={
+            "trigger_types": [{"value": t.value, "label": t.label} for t in EscalationRule.TriggerType],
+        },
+    )
 
 
 @login_required
@@ -898,13 +909,14 @@ def escalation_rules_edit(request, rule_id):
         rule.save()
         return redirect("escalated:admin_escalation_rules_index")
 
-    return render_page(request, "Escalated/Admin/EscalationRules/Edit", props={
-        "rule": EscalationRuleSerializer.serialize(rule),
-        "trigger_types": [
-            {"value": t.value, "label": t.label}
-            for t in EscalationRule.TriggerType
-        ],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/EscalationRules/Edit",
+        props={
+            "rule": EscalationRuleSerializer.serialize(rule),
+            "trigger_types": [{"value": t.value, "label": t.label} for t in EscalationRule.TriggerType],
+        },
+    )
 
 
 @login_required
@@ -937,12 +949,13 @@ def tags_index(request):
         return check
 
     tags = Tag.objects.annotate(ticket_count=Count("tickets"))
-    return render_page(request, "Escalated/Admin/Tags/Index", props={
-        "tags": [
-            {**TagSerializer.serialize(t), "ticket_count": t.ticket_count}
-            for t in tags
-        ],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Tags/Index",
+        props={
+            "tags": [{**TagSerializer.serialize(t), "ticket_count": t.ticket_count} for t in tags],
+        },
+    )
 
 
 @login_required
@@ -954,9 +967,13 @@ def tags_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(request, "Escalated/Admin/Tags/Create", props={
-                "errors": {"name": _("Name is required.")},
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/Tags/Create",
+                props={
+                    "errors": {"name": _("Name is required.")},
+                },
+            )
 
         Tag.objects.create(
             name=name,
@@ -986,9 +1003,13 @@ def tags_edit(request, tag_id):
         tag.save()
         return redirect("escalated:admin_tags_index")
 
-    return render_page(request, "Escalated/Admin/Tags/Edit", props={
-        "tag": TagSerializer.serialize(tag),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Tags/Edit",
+        props={
+            "tag": TagSerializer.serialize(tag),
+        },
+    )
 
 
 @login_required
@@ -1021,9 +1042,13 @@ def canned_responses_index(request):
         return check
 
     responses = CannedResponse.objects.select_related("created_by")
-    return render_page(request, "Escalated/Admin/CannedResponses/Index", props={
-        "canned_responses": CannedResponseSerializer.serialize_list(responses),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/CannedResponses/Index",
+        props={
+            "canned_responses": CannedResponseSerializer.serialize_list(responses),
+        },
+    )
 
 
 @login_required
@@ -1035,9 +1060,13 @@ def canned_responses_create(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
         if not title:
-            return render_page(request, "Escalated/Admin/CannedResponses/Create", props={
-                "errors": {"title": _("Title is required.")},
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/CannedResponses/Create",
+                props={
+                    "errors": {"title": _("Title is required.")},
+                },
+            )
 
         CannedResponse.objects.create(
             title=title,
@@ -1070,9 +1099,13 @@ def canned_responses_edit(request, response_id):
         canned.save()
         return redirect("escalated:admin_canned_responses_index")
 
-    return render_page(request, "Escalated/Admin/CannedResponses/Edit", props={
-        "canned_response": CannedResponseSerializer.serialize(canned),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/CannedResponses/Edit",
+        props={
+            "canned_response": CannedResponseSerializer.serialize(canned),
+        },
+    )
 
 
 @login_required
@@ -1113,9 +1146,13 @@ def settings_index(request):
         if key in settings_dict and settings_dict[key]:
             settings_dict[key] = _mask_secret(settings_dict[key])
 
-    return render_page(request, "Escalated/Admin/Settings", props={
-        "settings": settings_dict,
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Settings",
+        props={
+            "settings": settings_dict,
+        },
+    )
 
 
 @login_required
@@ -1279,13 +1316,12 @@ def tickets_apply_macro(request, ticket_id):
         return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
 
     try:
-        macro = Macro.objects.filter(
-            Q(is_shared=True) | Q(created_by=request.user)
-        ).get(pk=macro_id)
+        macro = Macro.objects.filter(Q(is_shared=True) | Q(created_by=request.user)).get(pk=macro_id)
     except Macro.DoesNotExist:
         return HttpResponseNotFound(_("Macro not found"))
 
     from escalated.services.macro_service import MacroService
+
     macro_service = MacroService()
     macro_service.apply(macro, ticket, request.user)
 
@@ -1414,9 +1450,13 @@ def macros_index(request):
         return check
 
     macros = Macro.objects.select_related("created_by").order_by("order")
-    return render_page(request, "Escalated/Admin/Macros/Index", props={
-        "macros": MacroSerializer.serialize_list(macros),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Macros/Index",
+        props={
+            "macros": MacroSerializer.serialize_list(macros),
+        },
+    )
 
 
 @login_required
@@ -1429,9 +1469,13 @@ def macros_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(request, "Escalated/Admin/Macros/Create", props={
-                "errors": {"name": _("Name is required.")},
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/Macros/Create",
+                props={
+                    "errors": {"name": _("Name is required.")},
+                },
+            )
 
         try:
             actions = json.loads(request.POST.get("actions", "[]"))
@@ -1477,9 +1521,13 @@ def macros_edit(request, macro_id):
         macro.save()
         return redirect("escalated:admin_macros_index")
 
-    return render_page(request, "Escalated/Admin/Macros/Edit", props={
-        "macro": MacroSerializer.serialize(macro),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Macros/Edit",
+        props={
+            "macro": MacroSerializer.serialize(macro),
+        },
+    )
 
 
 @login_required
@@ -1537,33 +1585,32 @@ def audit_logs_index(request):
     paginator = Paginator(logs, 50)
     page = paginator.get_page(request.GET.get("page", 1))
 
-    return render_page(request, "Escalated/Admin/AuditLog/Index", props={
-        "logs": AuditLogSerializer.serialize_list(page.object_list),
-        "pagination": {
-            "current_page": page.number,
-            "total_pages": paginator.num_pages,
-            "total_count": paginator.count,
-            "has_next": page.has_next(),
-            "has_previous": page.has_previous(),
+    return render_page(
+        request,
+        "Escalated/Admin/AuditLog/Index",
+        props={
+            "logs": AuditLogSerializer.serialize_list(page.object_list),
+            "pagination": {
+                "current_page": page.number,
+                "total_pages": paginator.num_pages,
+                "total_count": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
+            "filters": {
+                "user_id": user_id,
+                "action": action,
+                "auditable_type": auditable_type,
+                "date_from": date_from,
+                "date_to": date_to,
+            },
+            "users": [
+                {"id": u.pk, "name": u.get_full_name() or u.username} for u in User.objects.filter(is_active=True)
+            ],
+            "actions": ["created", "updated", "deleted"],
+            "resource_types": list(AuditLog.objects.values_list("auditable_content_type__model", flat=True).distinct()),
         },
-        "filters": {
-            "user_id": user_id,
-            "action": action,
-            "auditable_type": auditable_type,
-            "date_from": date_from,
-            "date_to": date_to,
-        },
-        "users": [
-            {"id": u.pk, "name": u.get_full_name() or u.username}
-            for u in User.objects.filter(is_active=True)
-        ],
-        "actions": ["created", "updated", "deleted"],
-        "resource_types": list(
-            AuditLog.objects.values_list(
-                "auditable_content_type__model", flat=True
-            ).distinct()
-        ),
-    })
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1578,10 +1625,14 @@ def statuses_index(request):
         return check
 
     statuses = TicketStatus.objects.all()
-    return render_page(request, "Escalated/Admin/Statuses/Index", props={
-        "statuses": TicketStatusSerializer.serialize_list(statuses),
-        "categories": ["new", "open", "pending", "on_hold", "solved"],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Statuses/Index",
+        props={
+            "statuses": TicketStatusSerializer.serialize_list(statuses),
+            "categories": ["new", "open", "pending", "on_hold", "solved"],
+        },
+    )
 
 
 @login_required
@@ -1593,10 +1644,14 @@ def statuses_create(request):
     if request.method == "POST":
         label = request.POST.get("label", "").strip()
         if not label:
-            return render_page(request, "Escalated/Admin/Statuses/Form", props={
-                "errors": {"label": _("Label is required.")},
-                "categories": ["new", "open", "pending", "on_hold", "solved"],
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/Statuses/Form",
+                props={
+                    "errors": {"label": _("Label is required.")},
+                    "categories": ["new", "open", "pending", "on_hold", "solved"],
+                },
+            )
 
         category = request.POST.get("category", "open")
         is_default = request.POST.get("is_default", "false") == "true"
@@ -1614,9 +1669,13 @@ def statuses_create(request):
         )
         return redirect("escalated:admin_statuses_index")
 
-    return render_page(request, "Escalated/Admin/Statuses/Form", props={
-        "categories": ["new", "open", "pending", "on_hold", "solved"],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Statuses/Form",
+        props={
+            "categories": ["new", "open", "pending", "on_hold", "solved"],
+        },
+    )
 
 
 @login_required
@@ -1639,18 +1698,20 @@ def statuses_edit(request, status_id):
 
         is_default = request.POST.get("is_default", "false") == "true"
         if is_default and not status.is_default:
-            TicketStatus.objects.filter(category=status.category).exclude(
-                pk=status.pk
-            ).update(is_default=False)
+            TicketStatus.objects.filter(category=status.category).exclude(pk=status.pk).update(is_default=False)
         status.is_default = is_default
 
         status.save()
         return redirect("escalated:admin_statuses_index")
 
-    return render_page(request, "Escalated/Admin/Statuses/Form", props={
-        "status": TicketStatusSerializer.serialize(status),
-        "categories": ["new", "open", "pending", "on_hold", "solved"],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Statuses/Form",
+        props={
+            "status": TicketStatusSerializer.serialize(status),
+            "categories": ["new", "open", "pending", "on_hold", "solved"],
+        },
+    )
 
 
 @login_required
@@ -1683,9 +1744,13 @@ def business_hours_index(request):
         return check
 
     schedules = BusinessSchedule.objects.prefetch_related("holidays").all()
-    return render_page(request, "Escalated/Admin/BusinessHours/Index", props={
-        "schedules": BusinessScheduleSerializer.serialize_list(schedules),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/BusinessHours/Index",
+        props={
+            "schedules": BusinessScheduleSerializer.serialize_list(schedules),
+        },
+    )
 
 
 @login_required
@@ -1697,9 +1762,13 @@ def business_hours_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(request, "Escalated/Admin/BusinessHours/Form", props={
-                "errors": {"name": _("Name is required.")},
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/BusinessHours/Form",
+                props={
+                    "errors": {"name": _("Name is required.")},
+                },
+            )
 
         is_default = request.POST.get("is_default", "false") == "true"
         if is_default:
@@ -1733,9 +1802,14 @@ def business_hours_create(request):
         return redirect("escalated:admin_business_hours_index")
 
     from zoneinfo import available_timezones
-    return render_page(request, "Escalated/Admin/BusinessHours/Form", props={
-        "timezones": sorted(available_timezones()),
-    })
+
+    return render_page(
+        request,
+        "Escalated/Admin/BusinessHours/Form",
+        props={
+            "timezones": sorted(available_timezones()),
+        },
+    )
 
 
 @login_required
@@ -1755,9 +1829,7 @@ def business_hours_edit(request, schedule_id):
 
         is_default = request.POST.get("is_default", "false") == "true"
         if is_default and not sched.is_default:
-            BusinessSchedule.objects.filter(is_default=True).exclude(
-                pk=sched.pk
-            ).update(is_default=False)
+            BusinessSchedule.objects.filter(is_default=True).exclude(pk=sched.pk).update(is_default=False)
         sched.is_default = is_default
 
         try:
@@ -1785,10 +1857,15 @@ def business_hours_edit(request, schedule_id):
         return redirect("escalated:admin_business_hours_index")
 
     from zoneinfo import available_timezones
-    return render_page(request, "Escalated/Admin/BusinessHours/Edit", props={
-        "schedule": BusinessScheduleSerializer.serialize(sched),
-        "timezones": sorted(available_timezones()),
-    })
+
+    return render_page(
+        request,
+        "Escalated/Admin/BusinessHours/Edit",
+        props={
+            "schedule": BusinessScheduleSerializer.serialize(sched),
+            "timezones": sorted(available_timezones()),
+        },
+    )
 
 
 @login_required
@@ -1821,9 +1898,13 @@ def roles_index(request):
         return check
 
     roles = Role.objects.annotate(users__count=Count("users"))
-    return render_page(request, "Escalated/Admin/Roles/Index", props={
-        "roles": RoleSerializer.serialize_list(roles),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Roles/Index",
+        props={
+            "roles": RoleSerializer.serialize_list(roles),
+        },
+    )
 
 
 @login_required
@@ -1835,10 +1916,14 @@ def roles_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(request, "Escalated/Admin/Roles/Form", props={
-                "errors": {"name": _("Name is required.")},
-                "permissions": PermissionSerializer.serialize_grouped(Permission.objects.all()),
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/Roles/Form",
+                props={
+                    "errors": {"name": _("Name is required.")},
+                    "permissions": PermissionSerializer.serialize_grouped(Permission.objects.all()),
+                },
+            )
 
         role = Role.objects.create(
             name=name,
@@ -1851,9 +1936,13 @@ def roles_create(request):
 
         return redirect("escalated:admin_roles_index")
 
-    return render_page(request, "Escalated/Admin/Roles/Form", props={
-        "permissions": PermissionSerializer.serialize_grouped(Permission.objects.all()),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Roles/Form",
+        props={
+            "permissions": PermissionSerializer.serialize_grouped(Permission.objects.all()),
+        },
+    )
 
 
 @login_required
@@ -1877,10 +1966,14 @@ def roles_edit(request, role_id):
 
         return redirect("escalated:admin_roles_index")
 
-    return render_page(request, "Escalated/Admin/Roles/Form", props={
-        "role": RoleSerializer.serialize(role, include_permissions=True),
-        "permissions": PermissionSerializer.serialize_grouped(Permission.objects.all()),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Roles/Form",
+        props={
+            "role": RoleSerializer.serialize(role, include_permissions=True),
+            "permissions": PermissionSerializer.serialize_grouped(Permission.objects.all()),
+        },
+    )
 
 
 @login_required
@@ -1916,9 +2009,13 @@ def custom_fields_index(request):
         return check
 
     fields = CustomField.objects.all().order_by("position")
-    return render_page(request, "Escalated/Admin/CustomFields/Index", props={
-        "custom_fields": CustomFieldSerializer.serialize_list(fields),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/CustomFields/Index",
+        props={
+            "custom_fields": CustomFieldSerializer.serialize_list(fields),
+        },
+    )
 
 
 @login_required
@@ -1931,13 +2028,14 @@ def custom_fields_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(request, "Escalated/Admin/CustomFields/Create", props={
-                "errors": {"name": _("Name is required.")},
-                "contexts": [
-                    {"value": c.value, "label": c.label}
-                    for c in CustomField.Context
-                ],
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/CustomFields/Create",
+                props={
+                    "errors": {"name": _("Name is required.")},
+                    "contexts": [{"value": c.value, "label": c.label} for c in CustomField.Context],
+                },
+            )
 
         try:
             options = json.loads(request.POST.get("options", "null"))
@@ -1945,9 +2043,7 @@ def custom_fields_create(request):
             options = None
 
         try:
-            validation_rules = json.loads(
-                request.POST.get("validation_rules", "null")
-            )
+            validation_rules = json.loads(request.POST.get("validation_rules", "null"))
         except (json.JSONDecodeError, TypeError):
             validation_rules = None
 
@@ -1972,12 +2068,13 @@ def custom_fields_create(request):
         )
         return redirect("escalated:admin_custom_fields_index")
 
-    return render_page(request, "Escalated/Admin/CustomFields/Create", props={
-        "contexts": [
-            {"value": c.value, "label": c.label}
-            for c in CustomField.Context
-        ],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/CustomFields/Create",
+        props={
+            "contexts": [{"value": c.value, "label": c.label} for c in CustomField.Context],
+        },
+    )
 
 
 @login_required
@@ -2009,29 +2106,26 @@ def custom_fields_edit(request, field_id):
             pass
 
         try:
-            field.validation_rules = json.loads(
-                request.POST.get("validation_rules", "null")
-            )
+            field.validation_rules = json.loads(request.POST.get("validation_rules", "null"))
         except (json.JSONDecodeError, TypeError):
             pass
 
         try:
-            field.conditions = json.loads(
-                request.POST.get("conditions", "null")
-            )
+            field.conditions = json.loads(request.POST.get("conditions", "null"))
         except (json.JSONDecodeError, TypeError):
             pass
 
         field.save()
         return redirect("escalated:admin_custom_fields_index")
 
-    return render_page(request, "Escalated/Admin/CustomFields/Edit", props={
-        "custom_field": CustomFieldSerializer.serialize(field),
-        "contexts": [
-            {"value": c.value, "label": c.label}
-            for c in CustomField.Context
-        ],
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/CustomFields/Edit",
+        props={
+            "custom_field": CustomFieldSerializer.serialize(field),
+            "contexts": [{"value": c.value, "label": c.label} for c in CustomField.Context],
+        },
+    )
 
 
 @login_required
@@ -2070,9 +2164,7 @@ def custom_fields_reorder(request):
 
     positions = body.get("positions", [])
     for item in positions:
-        CustomField.objects.filter(pk=item.get("id")).update(
-            position=item.get("position", 0)
-        )
+        CustomField.objects.filter(pk=item.get("id")).update(position=item.get("position", 0))
 
     return JsonResponse({"success": True})
 
@@ -2099,9 +2191,9 @@ def ticket_links_index(request, ticket_id):
 
     links = []
     for link in parent_links:
-        links.append(TicketLinkSerializer.serialize(link, direction='parent'))
+        links.append(TicketLinkSerializer.serialize(link, direction="parent"))
     for link in child_links:
-        links.append(TicketLinkSerializer.serialize(link, direction='child'))
+        links.append(TicketLinkSerializer.serialize(link, direction="child"))
 
     return JsonResponse({"links": links})
 
@@ -2142,11 +2234,10 @@ def ticket_links_store(request, ticket_id):
         return JsonResponse({"error": "Cannot link a ticket to itself"}, status=400)
 
     # Prevent duplicates
-    exists = TicketLink.objects.filter(
-        parent_ticket=ticket, child_ticket=target, link_type=link_type
-    ).exists() or TicketLink.objects.filter(
-        parent_ticket=target, child_ticket=ticket, link_type=link_type
-    ).exists()
+    exists = (
+        TicketLink.objects.filter(parent_ticket=ticket, child_ticket=target, link_type=link_type).exists()
+        or TicketLink.objects.filter(parent_ticket=target, child_ticket=ticket, link_type=link_type).exists()
+    )
 
     if exists:
         return JsonResponse({"error": "Link already exists"}, status=400)
@@ -2157,9 +2248,11 @@ def ticket_links_store(request, ticket_id):
         link_type=link_type,
     )
 
-    return JsonResponse({
-        "link": TicketLinkSerializer.serialize(link, direction='parent'),
-    })
+    return JsonResponse(
+        {
+            "link": TicketLinkSerializer.serialize(link, direction="parent"),
+        }
+    )
 
 
 @login_required
@@ -2202,24 +2295,23 @@ def ticket_merge_search(request):
 
     tickets = (
         Ticket.objects.filter(merged_into__isnull=True)
-        .filter(
-            Q(reference__icontains=q)
-            | Q(subject__icontains=q)
-        )
+        .filter(Q(reference__icontains=q) | Q(subject__icontains=q))
         .order_by("-created_at")[:10]
     )
 
-    return JsonResponse({
-        "tickets": [
-            {
-                "id": t.pk,
-                "reference": t.reference,
-                "subject": t.subject,
-                "status": t.status,
-            }
-            for t in tickets
-        ]
-    })
+    return JsonResponse(
+        {
+            "tickets": [
+                {
+                    "id": t.pk,
+                    "reference": t.reference,
+                    "subject": t.subject,
+                    "status": t.status,
+                }
+                for t in tickets
+            ]
+        }
+    )
 
 
 @login_required
@@ -2255,6 +2347,7 @@ def ticket_merge(request, ticket_id):
         return JsonResponse({"error": "Cannot merge a ticket into itself"}, status=400)
 
     from escalated.services.ticket_merge_service import TicketMergeService
+
     merge_service = TicketMergeService()
     merge_service.merge(source, target, merged_by_user_id=request.user.pk)
 
@@ -2279,16 +2372,17 @@ def side_conversations_index(request, ticket_id):
         return JsonResponse({"error": "Ticket not found"}, status=404)
 
     conversations = (
-        ticket.side_conversations
-        .select_related("created_by")
+        ticket.side_conversations.select_related("created_by")
         .prefetch_related("replies__author")
         .annotate(reply_count=Count("replies"))
         .order_by("-created_at")
     )
 
-    return JsonResponse({
-        "side_conversations": SideConversationSerializer.serialize_list(conversations),
-    })
+    return JsonResponse(
+        {
+            "side_conversations": SideConversationSerializer.serialize_list(conversations),
+        }
+    )
 
 
 @login_required
@@ -2334,15 +2428,16 @@ def side_conversations_store(request, ticket_id):
 
     # Re-fetch with relations for serialization
     conversation = (
-        SideConversation.objects
-        .select_related("created_by")
+        SideConversation.objects.select_related("created_by")
         .prefetch_related("replies__author")
         .get(pk=conversation.pk)
     )
 
-    return JsonResponse({
-        "side_conversation": SideConversationSerializer.serialize(conversation),
-    })
+    return JsonResponse(
+        {
+            "side_conversation": SideConversationSerializer.serialize(conversation),
+        }
+    )
 
 
 @login_required
@@ -2361,9 +2456,7 @@ def side_conversations_reply(request, ticket_id, conversation_id):
         return JsonResponse({"error": "Ticket not found"}, status=404)
 
     try:
-        conversation = SideConversation.objects.get(
-            pk=conversation_id, ticket=ticket
-        )
+        conversation = SideConversation.objects.get(pk=conversation_id, ticket=ticket)
     except SideConversation.DoesNotExist:
         return JsonResponse({"error": "Side conversation not found"}, status=404)
 
@@ -2382,9 +2475,11 @@ def side_conversations_reply(request, ticket_id, conversation_id):
         author=request.user,
     )
 
-    return JsonResponse({
-        "reply": SideConversationReplySerializer.serialize(reply),
-    })
+    return JsonResponse(
+        {
+            "reply": SideConversationReplySerializer.serialize(reply),
+        }
+    )
 
 
 @login_required
@@ -2403,9 +2498,7 @@ def side_conversations_close(request, ticket_id, conversation_id):
         return JsonResponse({"error": "Ticket not found"}, status=404)
 
     try:
-        conversation = SideConversation.objects.get(
-            pk=conversation_id, ticket=ticket
-        )
+        conversation = SideConversation.objects.get(pk=conversation_id, ticket=ticket)
     except SideConversation.DoesNotExist:
         return JsonResponse({"error": "Side conversation not found"}, status=404)
 
@@ -2444,24 +2537,26 @@ def articles_index(request):
     paginator = Paginator(articles, 20)
     page = paginator.get_page(request.GET.get("page", 1))
 
-    return render_page(request, "Escalated/Admin/KB/Articles/Index", props={
-        "articles": ArticleSerializer.serialize_list(page.object_list),
-        "pagination": {
-            "current_page": page.number,
-            "total_pages": paginator.num_pages,
-            "total_count": paginator.count,
-            "has_next": page.has_next(),
-            "has_previous": page.has_previous(),
+    return render_page(
+        request,
+        "Escalated/Admin/KB/Articles/Index",
+        props={
+            "articles": ArticleSerializer.serialize_list(page.object_list),
+            "pagination": {
+                "current_page": page.number,
+                "total_pages": paginator.num_pages,
+                "total_count": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
+            "filters": {
+                "search": search,
+                "status": status_filter,
+                "category": category_filter,
+            },
+            "categories": ArticleCategorySerializer.serialize_list(ArticleCategory.objects.ordered()),
         },
-        "filters": {
-            "search": search,
-            "status": status_filter,
-            "category": category_filter,
-        },
-        "categories": ArticleCategorySerializer.serialize_list(
-            ArticleCategory.objects.ordered()
-        ),
-    })
+    )
 
 
 @login_required
@@ -2474,12 +2569,14 @@ def articles_create(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
         if not title:
-            return render_page(request, "Escalated/Admin/KB/Articles/Create", props={
-                "errors": {"title": _("Title is required.")},
-                "categories": ArticleCategorySerializer.serialize_list(
-                    ArticleCategory.objects.ordered()
-                ),
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/KB/Articles/Create",
+                props={
+                    "errors": {"title": _("Title is required.")},
+                    "categories": ArticleCategorySerializer.serialize_list(ArticleCategory.objects.ordered()),
+                },
+            )
 
         status = request.POST.get("status", Article.Status.DRAFT)
         published_at = None
@@ -2499,11 +2596,13 @@ def articles_create(request):
         )
         return redirect("escalated:admin_articles_index")
 
-    return render_page(request, "Escalated/Admin/KB/Articles/Create", props={
-        "categories": ArticleCategorySerializer.serialize_list(
-            ArticleCategory.objects.ordered()
-        ),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/KB/Articles/Create",
+        props={
+            "categories": ArticleCategorySerializer.serialize_list(ArticleCategory.objects.ordered()),
+        },
+    )
 
 
 @login_required
@@ -2514,9 +2613,7 @@ def articles_edit(request, article_id):
         return check
 
     try:
-        article = Article.objects.select_related("category", "author").get(
-            pk=article_id
-        )
+        article = Article.objects.select_related("category", "author").get(pk=article_id)
     except Article.DoesNotExist:
         return HttpResponseNotFound(_("Article not found"))
 
@@ -2536,12 +2633,14 @@ def articles_edit(request, article_id):
         article.save()
         return redirect("escalated:admin_articles_index")
 
-    return render_page(request, "Escalated/Admin/KB/Articles/Edit", props={
-        "article": ArticleSerializer.serialize(article),
-        "categories": ArticleCategorySerializer.serialize_list(
-            ArticleCategory.objects.ordered()
-        ),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/KB/Articles/Edit",
+        props={
+            "article": ArticleSerializer.serialize(article),
+            "categories": ArticleCategorySerializer.serialize_list(ArticleCategory.objects.ordered()),
+        },
+    )
 
 
 @login_required
@@ -2575,13 +2674,15 @@ def kb_categories_index(request):
     if check:
         return check
 
-    categories = ArticleCategory.objects.annotate(
-        articles_count=Count("articles")
-    ).order_by("position", "name")
+    categories = ArticleCategory.objects.annotate(articles_count=Count("articles")).order_by("position", "name")
 
-    return render_page(request, "Escalated/Admin/KB/Categories/Index", props={
-        "categories": ArticleCategorySerializer.serialize_list(categories),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/KB/Categories/Index",
+        props={
+            "categories": ArticleCategorySerializer.serialize_list(categories),
+        },
+    )
 
 
 @login_required
@@ -2669,7 +2770,9 @@ def skills_index(request):
     if check:
         return check
     skills = Skill.objects.annotate(agents_count=Count("agents")).order_by("name")
-    return render_page(request, "Escalated/Admin/Skills/Index", props={"skills": SkillSerializer.serialize_list(skills)})
+    return render_page(
+        request, "Escalated/Admin/Skills/Index", props={"skills": SkillSerializer.serialize_list(skills)}
+    )
 
 
 @login_required
@@ -2680,7 +2783,9 @@ def skills_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(request, "Escalated/Admin/Skills/Form", props={"errors": {"name": _("Name is required.")}})
+            return render_page(
+                request, "Escalated/Admin/Skills/Form", props={"errors": {"name": _("Name is required.")}}
+            )
         Skill.objects.create(name=name)
         return redirect("escalated:admin_skills_index")
     return render_page(request, "Escalated/Admin/Skills/Form", props={})
@@ -2727,7 +2832,11 @@ def capacity_index(request):
     if check:
         return check
     capacities = AgentCapacity.objects.select_related("user").order_by("user_id")
-    return render_page(request, "Escalated/Admin/Capacity/Index", props={"capacities": AgentCapacitySerializer.serialize_list(capacities)})
+    return render_page(
+        request,
+        "Escalated/Admin/Capacity/Index",
+        props={"capacities": AgentCapacitySerializer.serialize_list(capacities)},
+    )
 
 
 @login_required
@@ -2759,10 +2868,14 @@ def webhooks_index(request):
     if check:
         return check
     webhooks = Webhook.objects.annotate(deliveries_count=Count("deliveries")).order_by("-created_at")
-    return render_page(request, "Escalated/Admin/Webhooks/Index", props={
-        "webhooks": WebhookSerializer.serialize_list(webhooks),
-        "available_events": WebhookSerializer.AVAILABLE_EVENTS,
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Webhooks/Index",
+        props={
+            "webhooks": WebhookSerializer.serialize_list(webhooks),
+            "available_events": WebhookSerializer.AVAILABLE_EVENTS,
+        },
+    )
 
 
 @login_required
@@ -2773,10 +2886,14 @@ def webhooks_create(request):
     if request.method == "POST":
         url = request.POST.get("url", "").strip()
         if not url:
-            return render_page(request, "Escalated/Admin/Webhooks/Form", props={
-                "errors": {"url": _("URL is required.")},
-                "available_events": WebhookSerializer.AVAILABLE_EVENTS,
-            })
+            return render_page(
+                request,
+                "Escalated/Admin/Webhooks/Form",
+                props={
+                    "errors": {"url": _("URL is required.")},
+                    "available_events": WebhookSerializer.AVAILABLE_EVENTS,
+                },
+            )
         try:
             events = json.loads(request.POST.get("events", "[]"))
         except (json.JSONDecodeError, TypeError):
@@ -2788,7 +2905,9 @@ def webhooks_create(request):
             active=request.POST.get("active", "true") == "true",
         )
         return redirect("escalated:admin_webhooks_index")
-    return render_page(request, "Escalated/Admin/Webhooks/Form", props={"available_events": WebhookSerializer.AVAILABLE_EVENTS})
+    return render_page(
+        request, "Escalated/Admin/Webhooks/Form", props={"available_events": WebhookSerializer.AVAILABLE_EVENTS}
+    )
 
 
 @login_required
@@ -2812,10 +2931,14 @@ def webhooks_edit(request, webhook_id):
         webhook.active = request.POST.get("active", "true") == "true"
         webhook.save()
         return redirect("escalated:admin_webhooks_index")
-    return render_page(request, "Escalated/Admin/Webhooks/Form", props={
-        "webhook": WebhookSerializer.serialize(webhook),
-        "available_events": WebhookSerializer.AVAILABLE_EVENTS,
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Webhooks/Form",
+        props={
+            "webhook": WebhookSerializer.serialize(webhook),
+            "available_events": WebhookSerializer.AVAILABLE_EVENTS,
+        },
+    )
 
 
 @login_required
@@ -2844,17 +2967,21 @@ def webhooks_deliveries(request, webhook_id):
     deliveries = webhook.deliveries.order_by("-created_at")
     paginator = Paginator(deliveries, 25)
     page = paginator.get_page(request.GET.get("page", 1))
-    return render_page(request, "Escalated/Admin/Webhooks/Deliveries", props={
-        "webhook": WebhookSerializer.serialize(webhook),
-        "deliveries": WebhookDeliverySerializer.serialize_list(page.object_list),
-        "pagination": {
-            "current_page": page.number,
-            "total_pages": paginator.num_pages,
-            "total_count": paginator.count,
-            "has_next": page.has_next(),
-            "has_previous": page.has_previous(),
+    return render_page(
+        request,
+        "Escalated/Admin/Webhooks/Deliveries",
+        props={
+            "webhook": WebhookSerializer.serialize(webhook),
+            "deliveries": WebhookDeliverySerializer.serialize_list(page.object_list),
+            "pagination": {
+                "current_page": page.number,
+                "total_pages": paginator.num_pages,
+                "total_count": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
         },
-    })
+    )
 
 
 @login_required
@@ -2869,6 +2996,7 @@ def webhooks_retry(request, delivery_id):
     except WebhookDelivery.DoesNotExist:
         return JsonResponse({"error": "Delivery not found"}, status=404)
     from escalated.services.webhook_dispatcher import WebhookDispatcher
+
     dispatcher = WebhookDispatcher()
     dispatcher.retry_delivery(delivery)
     return JsonResponse({"success": True})
@@ -2900,20 +3028,24 @@ def automations_index(request):
     paginator = Paginator(automations, 20)
     page = paginator.get_page(request.GET.get("page", 1))
 
-    return render_page(request, "Escalated/Admin/Automations/Index", props={
-        "automations": AutomationSerializer.serialize_list(page.object_list),
-        "pagination": {
-            "current_page": page.number,
-            "total_pages": paginator.num_pages,
-            "total_count": paginator.count,
-            "has_next": page.has_next(),
-            "has_previous": page.has_previous(),
+    return render_page(
+        request,
+        "Escalated/Admin/Automations/Index",
+        props={
+            "automations": AutomationSerializer.serialize_list(page.object_list),
+            "pagination": {
+                "current_page": page.number,
+                "total_pages": paginator.num_pages,
+                "total_count": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
+            "filters": {
+                "active": active_filter,
+                "search": search,
+            },
         },
-        "filters": {
-            "active": active_filter,
-            "search": search,
-        },
-    })
+    )
 
 
 @login_required
@@ -2979,14 +3111,20 @@ def automations_edit(request, automation_id):
         if not isinstance(actions, list) or len(actions) < 1:
             errors["actions"] = _("At least one action is required.")
         if errors:
-            return render_page(request, "Escalated/Admin/Automations/Form", props={"automation": AutomationSerializer.serialize(automation), "errors": errors})
+            return render_page(
+                request,
+                "Escalated/Admin/Automations/Form",
+                props={"automation": AutomationSerializer.serialize(automation), "errors": errors},
+            )
         automation.name = name
         automation.conditions = conditions
         automation.actions = actions
         automation.active = request.POST.get("active", "true") == "true"
         automation.save()
         return redirect("escalated:admin_automations_index")
-    return render_page(request, "Escalated/Admin/Automations/Form", props={"automation": AutomationSerializer.serialize(automation)})
+    return render_page(
+        request, "Escalated/Admin/Automations/Form", props={"automation": AutomationSerializer.serialize(automation)}
+    )
 
 
 @login_required
@@ -3014,6 +3152,7 @@ def settings_csat(request):
     if check:
         return check
     from escalated.models import EscalatedSetting
+
     defaults = {
         "csat_question_text": "How would you rate your support experience?",
         "csat_scale": "1-5",
@@ -3039,6 +3178,7 @@ def settings_sso(request):
     if check:
         return check
     from escalated.services.sso_service import SsoService
+
     sso = SsoService()
     if request.method == "POST":
         sso.save_config(request.POST.dict())
@@ -3052,10 +3192,14 @@ def settings_two_factor(request):
     if check:
         return check
     two_factor = TwoFactor.objects.filter(user=request.user).first()
-    return render_page(request, "Escalated/Admin/Settings/TwoFactor", props={
-        "enabled": two_factor.is_confirmed() if two_factor else False,
-        "pending": two_factor is not None and not two_factor.is_confirmed() if two_factor else False,
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Settings/TwoFactor",
+        props={
+            "enabled": two_factor.is_confirmed() if two_factor else False,
+            "pending": two_factor is not None and not two_factor.is_confirmed() if two_factor else False,
+        },
+    )
 
 
 @login_required
@@ -3066,6 +3210,7 @@ def two_factor_setup(request):
     if request.method != "POST":
         return HttpResponseForbidden(_("Method not allowed"))
     from escalated.services.two_factor_service import TwoFactorService
+
     service = TwoFactorService()
     TwoFactor.objects.filter(user=request.user, confirmed_at__isnull=True).delete()
     secret = service.generate_secret()
@@ -3093,10 +3238,12 @@ def two_factor_confirm(request):
     if not two_factor:
         return JsonResponse({"error": "No pending 2FA setup"}, status=400)
     from escalated.services.two_factor_service import TwoFactorService
+
     service = TwoFactorService()
     if not service.verify(two_factor.secret, code):
         return JsonResponse({"error": "Invalid code"}, status=400)
     from django.utils import timezone as tz
+
     two_factor.confirmed_at = tz.now()
     two_factor.save(update_fields=["confirmed_at", "updated_at"])
     return JsonResponse({"success": True})
@@ -3124,7 +3271,11 @@ def custom_objects_index(request):
     if check:
         return check
     objects = CustomObject.objects.annotate(records_count=Count("records")).order_by("name")
-    return render_page(request, "Escalated/Admin/CustomObjects/Index", props={"custom_objects": CustomObjectSerializer.serialize_list(objects)})
+    return render_page(
+        request,
+        "Escalated/Admin/CustomObjects/Index",
+        props={"custom_objects": CustomObjectSerializer.serialize_list(objects)},
+    )
 
 
 @login_required
@@ -3135,7 +3286,9 @@ def custom_objects_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(request, "Escalated/Admin/CustomObjects/Form", props={"errors": {"name": _("Name is required.")}})
+            return render_page(
+                request, "Escalated/Admin/CustomObjects/Form", props={"errors": {"name": _("Name is required.")}}
+            )
         slug_val = slugify(request.POST.get("slug", "") or name)
         try:
             fields_schema = json.loads(request.POST.get("fields_schema", "[]"))
@@ -3164,7 +3317,9 @@ def custom_objects_edit(request, object_id):
             pass
         obj.save()
         return redirect("escalated:admin_custom_objects_index")
-    return render_page(request, "Escalated/Admin/CustomObjects/Form", props={"custom_object": CustomObjectSerializer.serialize(obj)})
+    return render_page(
+        request, "Escalated/Admin/CustomObjects/Form", props={"custom_object": CustomObjectSerializer.serialize(obj)}
+    )
 
 
 @login_required
@@ -3193,17 +3348,21 @@ def custom_object_records(request, object_id):
     records = obj.records.order_by("-created_at")
     paginator = Paginator(records, 25)
     page = paginator.get_page(request.GET.get("page", 1))
-    return render_page(request, "Escalated/Admin/CustomObjects/Records", props={
-        "custom_object": CustomObjectSerializer.serialize(obj),
-        "records": CustomObjectRecordSerializer.serialize_list(page.object_list),
-        "pagination": {
-            "current_page": page.number,
-            "total_pages": paginator.num_pages,
-            "total_count": paginator.count,
-            "has_next": page.has_next(),
-            "has_previous": page.has_previous(),
+    return render_page(
+        request,
+        "Escalated/Admin/CustomObjects/Records",
+        props={
+            "custom_object": CustomObjectSerializer.serialize(obj),
+            "records": CustomObjectRecordSerializer.serialize_list(page.object_list),
+            "pagination": {
+                "current_page": page.number,
+                "total_pages": paginator.num_pages,
+                "total_count": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
         },
-    })
+    )
 
 
 @login_required
@@ -3270,17 +3429,24 @@ def reports_dashboard(request):
     check = _require_admin(request)
     if check:
         return check
-    from escalated.services.reporting_service import ReportingService
     from datetime import timedelta
+
     from django.utils import timezone as tz
+
+    from escalated.services.reporting_service import ReportingService
+
     service = ReportingService()
     end = tz.now()
     start = end - timedelta(days=30)
-    return render_page(request, "Escalated/Admin/Reports/Dashboard", props={
-        "ticket_volume": service.get_ticket_volume_by_date(start, end),
-        "by_status": service.get_tickets_by_status(),
-        "by_priority": service.get_tickets_by_priority(),
-        "avg_response_hours": service.get_average_response_time(start, end),
-        "avg_resolution_hours": service.get_average_resolution_time(start, end),
-        "agent_performance": service.get_agent_performance(start, end),
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Reports/Dashboard",
+        props={
+            "ticket_volume": service.get_ticket_volume_by_date(start, end),
+            "by_status": service.get_tickets_by_status(),
+            "by_priority": service.get_tickets_by_priority(),
+            "avg_response_hours": service.get_average_response_time(start, end),
+            "avg_resolution_hours": service.get_average_resolution_time(start, end),
+            "agent_performance": service.get_agent_performance(start, end),
+        },
+    )

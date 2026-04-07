@@ -3,7 +3,7 @@ Dict-based serializers for the REST API, producing JSON-compatible output that
 matches the Laravel API response format.
 """
 
-from escalated.serializers import _format_dt, _user_dict
+from escalated.serializers import _format_dt
 
 
 class ApiTicketCollectionSerializer:
@@ -34,15 +34,8 @@ class ApiTicketCollectionSerializer:
                 if assignee
                 else None
             ),
-            "department": (
-                {"id": department.pk, "name": department.name}
-                if department
-                else None
-            ),
-            "sla_breached": (
-                ticket.sla_first_response_breached
-                or ticket.sla_resolution_breached
-            ),
+            "department": ({"id": department.pk, "name": department.name} if department else None),
+            "sla_breached": (ticket.sla_first_response_breached or ticket.sla_resolution_breached),
             "created_at": _format_dt(ticket.created_at),
             "updated_at": _format_dt(ticket.updated_at),
         }
@@ -84,15 +77,8 @@ class ApiTicketDetailSerializer:
                 if assignee
                 else None
             ),
-            "department": (
-                {"id": department.pk, "name": department.name}
-                if department
-                else None
-            ),
-            "tags": [
-                {"id": tag.pk, "name": tag.name, "color": tag.color}
-                for tag in ticket.tags.all()
-            ],
+            "department": ({"id": department.pk, "name": department.name} if department else None),
+            "tags": [{"id": tag.pk, "name": tag.name, "color": tag.color} for tag in ticket.tags.all()],
             "sla": {
                 "first_response_due_at": _format_dt(ticket.first_response_due_at),
                 "first_response_at": _format_dt(ticket.first_response_at),
@@ -107,15 +93,11 @@ class ApiTicketDetailSerializer:
         }
 
         if include_replies:
-            data["replies"] = [
-                ApiReplySerializer.serialize(reply)
-                for reply in ticket.replies.filter(is_deleted=False)
-            ]
+            data["replies"] = [ApiReplySerializer.serialize(reply) for reply in ticket.replies.filter(is_deleted=False)]
 
         if include_activities:
             data["activities"] = [
-                ApiActivitySerializer.serialize(activity)
-                for activity in ticket.activities.all()[:20]
+                ApiActivitySerializer.serialize(activity) for activity in ticket.activities.all()[:20]
             ]
 
         return data
@@ -141,10 +123,7 @@ class ApiReplySerializer:
                 if author
                 else None
             ),
-            "attachments": [
-                ApiAttachmentSerializer.serialize(a)
-                for a in reply.attachments.all()
-            ],
+            "attachments": [ApiAttachmentSerializer.serialize(a) for a in reply.attachments.all()],
             "created_at": _format_dt(reply.created_at),
         }
         return data
@@ -165,9 +144,7 @@ class ApiActivitySerializer:
         try:
             causer = activity.causer
             data["causer"] = (
-                {"id": causer.pk, "name": getattr(causer, "get_full_name", lambda: str(causer))()}
-                if causer
-                else None
+                {"id": causer.pk, "name": getattr(causer, "get_full_name", lambda: str(causer))()} if causer else None
             )
         except Exception:
             data["causer"] = None
@@ -279,11 +256,7 @@ class ApiTokenSerializer:
         return {
             "id": token.pk,
             "name": token.name,
-            "user_name": (
-                getattr(tokenable, "get_full_name", lambda: str(tokenable))()
-                if tokenable
-                else None
-            ),
+            "user_name": (getattr(tokenable, "get_full_name", lambda: str(tokenable))() if tokenable else None),
             "user_email": getattr(tokenable, "email", None) if tokenable else None,
             "abilities": token.abilities,
             "last_used_at": _format_dt(token.last_used_at),

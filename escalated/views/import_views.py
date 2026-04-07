@@ -28,10 +28,10 @@ from django.http import (
 )
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
-from escalated.rendering import render_page
 
 from escalated.models import ImportJob
 from escalated.permissions import is_admin
+from escalated.rendering import render_page
 from escalated.services.import_service import ImportService
 
 logger = logging.getLogger("escalated.import")
@@ -70,10 +70,7 @@ def import_index(request):
         return check
 
     service = ImportService()
-    adapters = [
-        {"name": a.name(), "display_name": a.display_name()}
-        for a in service.available_adapters()
-    ]
+    adapters = [{"name": a.name(), "display_name": a.display_name()} for a in service.available_adapters()]
 
     jobs = list(
         ImportJob.objects.order_by("-created_at").values(
@@ -92,10 +89,14 @@ def import_index(request):
             if job[ts_field]:
                 job[ts_field] = job[ts_field].isoformat()
 
-    return render_page(request, "Escalated/Admin/Import/Index", props={
-        "jobs": jobs,
-        "adapters": adapters,
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Import/Index",
+        props={
+            "jobs": jobs,
+            "adapters": adapters,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -120,9 +121,13 @@ def import_create(request):
         for a in service.available_adapters()
     ]
 
-    return render_page(request, "Escalated/Admin/Import/Create", props={
-        "adapters": adapters,
-    })
+    return render_page(
+        request,
+        "Escalated/Admin/Import/Create",
+        props={
+            "adapters": adapters,
+        },
+    )
 
 
 @login_required
@@ -140,8 +145,7 @@ def import_store(request):
         return HttpResponseForbidden(_("Method not allowed."))
 
     platform = request.POST.get("platform") or (
-        request.content_type == "application/json"
-        and __import__("json").loads(request.body or "{}").get("platform")
+        request.content_type == "application/json" and __import__("json").loads(request.body or "{}").get("platform")
     )
 
     service = ImportService()
@@ -234,15 +238,19 @@ def import_mapping(request, job_uuid):
             "current": mappings.get(et, adapter.default_field_mappings(et)),
         }
 
-    return render_page(request, "Escalated/Admin/Import/Mapping", props={
-        "job": {
-            "id": str(job.id),
-            "platform": job.platform,
-            "status": job.status,
+    return render_page(
+        request,
+        "Escalated/Admin/Import/Mapping",
+        props={
+            "job": {
+                "id": str(job.id),
+                "platform": job.platform,
+                "status": job.status,
+            },
+            "entity_types": entity_types,
+            "mapping_data": mapping_data,
         },
-        "entity_types": entity_types,
-        "mapping_data": mapping_data,
-    })
+    )
 
 
 @login_required
@@ -260,6 +268,7 @@ def import_mapping_save(request, job_uuid):
         return HttpResponseNotFound(_("Import job not found."))
 
     import json as _json
+
     try:
         body = _json.loads(request.body or "{}")
         mappings = body.get("mappings", {})
@@ -351,12 +360,14 @@ def import_progress(request, job_uuid):
     if not job:
         return HttpResponseNotFound(_("Import job not found."))
 
-    return JsonResponse({
-        "id": str(job.id),
-        "status": job.status,
-        "progress": job.progress or {},
-        "error_count": len(job.error_log or []),
-    })
+    return JsonResponse(
+        {
+            "id": str(job.id),
+            "status": job.status,
+            "progress": job.progress or {},
+            "error_count": len(job.error_log or []),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -379,21 +390,25 @@ def import_show(request, job_uuid):
     adapter = service.resolve_adapter(job.platform)
     entity_types = adapter.entity_types() if adapter else []
 
-    return render_page(request, "Escalated/Admin/Import/Show", props={
-        "job": {
-            "id": str(job.id),
-            "platform": job.platform,
-            "status": job.status,
-            "progress": job.progress or {},
-            "error_log": (job.error_log or [])[:100],  # cap for page load
-            "field_mappings": job.field_mappings or {},
-            "started_at": job.started_at.isoformat() if job.started_at else None,
-            "completed_at": job.completed_at.isoformat() if job.completed_at else None,
-            "created_at": job.created_at.isoformat() if job.created_at else None,
-            "is_resumable": job.is_resumable(),
+    return render_page(
+        request,
+        "Escalated/Admin/Import/Show",
+        props={
+            "job": {
+                "id": str(job.id),
+                "platform": job.platform,
+                "status": job.status,
+                "progress": job.progress or {},
+                "error_log": (job.error_log or [])[:100],  # cap for page load
+                "field_mappings": job.field_mappings or {},
+                "started_at": job.started_at.isoformat() if job.started_at else None,
+                "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+                "created_at": job.created_at.isoformat() if job.created_at else None,
+                "is_resumable": job.is_resumable(),
+            },
+            "entity_types": entity_types,
         },
-        "entity_types": entity_types,
-    })
+    )
 
 
 # ---------------------------------------------------------------------------

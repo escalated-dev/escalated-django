@@ -1,22 +1,23 @@
 import json
+
 import pytest
 from django.test import RequestFactory
 
 from escalated.validators import (
-    CreateTicketValidator,
-    UpdateTicketValidator,
-    ReplyToTicketValidator,
     AssignTicketValidator,
-    ChangeStatusValidator,
-    ChangePriorityValidator,
-    UpdateTagsValidator,
     BulkActionValidator,
-    StoreDepartmentValidator,
-    StoreTagValidator,
+    ChangePriorityValidator,
+    ChangeStatusValidator,
+    CreateTicketValidator,
+    ReplyToTicketValidator,
     StoreCannedResponseValidator,
+    StoreDepartmentValidator,
+    StoreEscalationRuleValidator,
     StoreMacroValidator,
     StoreSlaPolicyValidator,
-    StoreEscalationRuleValidator,
+    StoreTagValidator,
+    UpdateTagsValidator,
+    UpdateTicketValidator,
 )
 
 
@@ -52,17 +53,13 @@ class TestCreateTicketValidator:
         assert error.status_code == 422
 
     def test_invalid_priority(self, rf):
-        request = _make_request(rf, {
-            "subject": "Help", "description": "I need help", "priority": "INVALID"
-        })
+        request = _make_request(rf, {"subject": "Help", "description": "I need help", "priority": "INVALID"})
         data, error = CreateTicketValidator.validate_request(request)
         assert data is None
         assert error.status_code == 422
 
     def test_valid_priority(self, rf):
-        request = _make_request(rf, {
-            "subject": "Help", "description": "I need help", "priority": "high"
-        })
+        request = _make_request(rf, {"subject": "Help", "description": "I need help", "priority": "high"})
         data, error = CreateTicketValidator.validate_request(request)
         assert error is None
         assert data["priority"] == "high"
@@ -225,10 +222,13 @@ class TestStoreCannedResponseValidator:
 
 class TestStoreMacroValidator:
     def test_valid(self, rf):
-        request = _make_request(rf, {
-            "name": "Close and Tag",
-            "actions": [{"type": "change_status", "value": "closed"}],
-        })
+        request = _make_request(
+            rf,
+            {
+                "name": "Close and Tag",
+                "actions": [{"type": "change_status", "value": "closed"}],
+            },
+        )
         data, error = StoreMacroValidator.validate_request(request)
         assert error is None
 
@@ -241,19 +241,25 @@ class TestStoreMacroValidator:
 
 class TestStoreSlaPolicyValidator:
     def test_valid(self, rf):
-        request = _make_request(rf, {
-            "name": "Default SLA",
-            "first_response_hours": {"low": 24, "medium": 8, "high": 4, "urgent": 1, "critical": 0.5},
-            "resolution_hours": {"low": 72, "medium": 24, "high": 8, "urgent": 4, "critical": 2},
-        })
+        request = _make_request(
+            rf,
+            {
+                "name": "Default SLA",
+                "first_response_hours": {"low": 24, "medium": 8, "high": 4, "urgent": 1, "critical": 0.5},
+                "resolution_hours": {"low": 72, "medium": 24, "high": 8, "urgent": 4, "critical": 2},
+            },
+        )
         data, error = StoreSlaPolicyValidator.validate_request(request)
         assert error is None
 
     def test_missing_name(self, rf):
-        request = _make_request(rf, {
-            "first_response_hours": {"low": 24},
-            "resolution_hours": {"low": 72},
-        })
+        request = _make_request(
+            rf,
+            {
+                "first_response_hours": {"low": 24},
+                "resolution_hours": {"low": 72},
+            },
+        )
         data, error = StoreSlaPolicyValidator.validate_request(request)
         assert data is None
         assert error.status_code == 422
@@ -261,20 +267,26 @@ class TestStoreSlaPolicyValidator:
 
 class TestStoreEscalationRuleValidator:
     def test_valid(self, rf):
-        request = _make_request(rf, {
-            "trigger_type": "time_based",
-            "conditions": [{"field": "priority", "operator": "eq", "value": "critical"}],
-            "actions": [{"type": "assign", "value": 1}],
-        })
+        request = _make_request(
+            rf,
+            {
+                "trigger_type": "time_based",
+                "conditions": [{"field": "priority", "operator": "eq", "value": "critical"}],
+                "actions": [{"type": "assign", "value": 1}],
+            },
+        )
         data, error = StoreEscalationRuleValidator.validate_request(request)
         assert error is None
 
     def test_invalid_trigger_type(self, rf):
-        request = _make_request(rf, {
-            "trigger_type": "invalid",
-            "conditions": [],
-            "actions": [],
-        })
+        request = _make_request(
+            rf,
+            {
+                "trigger_type": "invalid",
+                "conditions": [],
+                "actions": [],
+            },
+        )
         data, error = StoreEscalationRuleValidator.validate_request(request)
         assert data is None
         assert error.status_code == 422
@@ -282,11 +294,14 @@ class TestStoreEscalationRuleValidator:
 
 class TestBulkActionValidator:
     def test_valid(self, rf):
-        request = _make_request(rf, {
-            "ticket_ids": [1, 2, 3],
-            "action": "change_status",
-            "value": "closed",
-        })
+        request = _make_request(
+            rf,
+            {
+                "ticket_ids": [1, 2, 3],
+                "action": "change_status",
+                "value": "closed",
+            },
+        )
         data, error = BulkActionValidator.validate_request(request)
         assert error is None
 

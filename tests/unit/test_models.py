@@ -1,16 +1,16 @@
-import pytest
 from datetime import timedelta
 
+import pytest
 from django.utils import timezone
 
-from escalated.models import Ticket, Reply, SlaPolicy, Tag, Department
+from escalated.models import Reply, Ticket
 from tests.factories import (
-    UserFactory,
-    TicketFactory,
+    DepartmentFactory,
     ReplyFactory,
     SlaPolicyFactory,
     TagFactory,
-    DepartmentFactory,
+    TicketFactory,
+    UserFactory,
 )
 
 

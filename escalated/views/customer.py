@@ -4,12 +4,12 @@ from django.core.paginator import Paginator
 from django.http import HttpResponseForbidden, HttpResponseNotFound
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
-from escalated.rendering import render_page
 
 from escalated.conf import get_setting
-from escalated.models import Ticket, Tag, Department, SatisfactionRating
-from escalated.permissions import can_view_ticket, can_reply_ticket, can_close_ticket
-from escalated.serializers import TicketSerializer, TagSerializer, DepartmentSerializer
+from escalated.models import Department, SatisfactionRating, Ticket
+from escalated.permissions import can_close_ticket, can_reply_ticket, can_view_ticket
+from escalated.rendering import render_page
+from escalated.serializers import DepartmentSerializer, TicketSerializer
 from escalated.services.ticket_service import TicketService
 
 
@@ -17,10 +17,14 @@ from escalated.services.ticket_service import TicketService
 def ticket_list(request):
     """List all tickets for the authenticated customer."""
     ct = ContentType.objects.get_for_model(request.user)
-    tickets = Ticket.objects.filter(
-        requester_content_type=ct,
-        requester_object_id=request.user.pk,
-    ).select_related("assigned_to", "department").prefetch_related("tags")
+    tickets = (
+        Ticket.objects.filter(
+            requester_content_type=ct,
+            requester_object_id=request.user.pk,
+        )
+        .select_related("assigned_to", "department")
+        .prefetch_related("tags")
+    )
 
     # Optional filtering
     status = request.GET.get("status")
@@ -34,37 +38,39 @@ def ticket_list(request):
     paginator = Paginator(tickets, 15)
     page = paginator.get_page(request.GET.get("page", 1))
 
-    return render_page(request, "Escalated/Customer/Index", props={
-        "tickets": TicketSerializer.serialize_list(page.object_list),
-        "pagination": {
-            "current_page": page.number,
-            "total_pages": paginator.num_pages,
-            "total_count": paginator.count,
-            "has_next": page.has_next(),
-            "has_previous": page.has_previous(),
+    return render_page(
+        request,
+        "Escalated/Customer/Index",
+        props={
+            "tickets": TicketSerializer.serialize_list(page.object_list),
+            "pagination": {
+                "current_page": page.number,
+                "total_pages": paginator.num_pages,
+                "total_count": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
+            "filters": {
+                "status": status,
+                "search": search,
+            },
+            "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
         },
-        "filters": {
-            "status": status,
-            "search": search,
-        },
-        "statuses": [
-            {"value": s.value, "label": s.label} for s in Ticket.Status
-        ],
-    })
+    )
 
 
 @login_required
 def ticket_create(request):
     """Show the ticket creation form."""
-    return render_page(request, "Escalated/Customer/Create", props={
-        "departments": DepartmentSerializer.serialize_list(
-            Department.objects.filter(is_active=True)
-        ),
-        "priorities": [
-            {"value": p.value, "label": p.label} for p in Ticket.Priority
-        ],
-        "default_priority": get_setting("DEFAULT_PRIORITY"),
-    })
+    return render_page(
+        request,
+        "Escalated/Customer/Create",
+        props={
+            "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
+            "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+            "default_priority": get_setting("DEFAULT_PRIORITY"),
+        },
+    )
 
 
 @login_required
@@ -89,17 +95,17 @@ def ticket_store(request):
         errors["description"] = _("Description is required.")
 
     if errors:
-        return render_page(request, "Escalated/Customer/Create", props={
-            "errors": errors,
-            "old": data,
-            "departments": DepartmentSerializer.serialize_list(
-                Department.objects.filter(is_active=True)
-            ),
-            "priorities": [
-                {"value": p.value, "label": p.label} for p in Ticket.Priority
-            ],
-            "default_priority": get_setting("DEFAULT_PRIORITY"),
-        })
+        return render_page(
+            request,
+            "Escalated/Customer/Create",
+            props={
+                "errors": errors,
+                "old": data,
+                "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
+                "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+                "default_priority": get_setting("DEFAULT_PRIORITY"),
+            },
+        )
 
     ticket = service.create(request.user, data)
 
@@ -107,13 +113,15 @@ def ticket_store(request):
     files = request.FILES.getlist("attachments")
     if files:
         from escalated.services.attachment_service import AttachmentService
-        for f in files[:get_setting("MAX_ATTACHMENTS")]:
+
+        for f in files[: get_setting("MAX_ATTACHMENTS")]:
             try:
                 AttachmentService.attach(ticket, f)
             except Exception:
                 pass  # Non-blocking; attachment errors don't fail ticket creation
 
     from django.shortcuts import redirect
+
     return redirect("escalated:customer_ticket_show", ticket_id=ticket.pk)
 
 
@@ -121,11 +129,11 @@ def ticket_store(request):
 def ticket_show(request, ticket_id):
     """Show a single ticket and its replies."""
     try:
-        ticket = Ticket.objects.select_related(
-            "assigned_to", "department", "sla_policy"
-        ).prefetch_related(
-            "tags", "replies__author", "replies__attachments", "attachments"
-        ).get(pk=ticket_id)
+        ticket = (
+            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
+            .prefetch_related("tags", "replies__author", "replies__attachments", "attachments")
+            .get(pk=ticket_id)
+        )
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
@@ -135,14 +143,19 @@ def ticket_show(request, ticket_id):
     # Filter out internal notes for customers
     replies = ticket.replies.filter(is_deleted=False, is_internal_note=False)
 
-    from escalated.serializers import ReplySerializer, AttachmentSerializer
-    return render_page(request, "Escalated/Customer/Show", props={
-        "ticket": TicketSerializer.serialize(ticket),
-        "replies": ReplySerializer.serialize_list(replies),
-        "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
-        "can_reply": can_reply_ticket(request.user, ticket),
-        "can_close": can_close_ticket(request.user, ticket),
-    })
+    from escalated.serializers import AttachmentSerializer, ReplySerializer
+
+    return render_page(
+        request,
+        "Escalated/Customer/Show",
+        props={
+            "ticket": TicketSerializer.serialize(ticket),
+            "replies": ReplySerializer.serialize_list(replies),
+            "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
+            "can_reply": can_reply_ticket(request.user, ticket),
+            "can_close": can_close_ticket(request.user, ticket),
+        },
+    )
 
 
 @login_required
@@ -162,6 +175,7 @@ def ticket_reply(request, ticket_id):
     body = request.POST.get("body", "").strip()
     if not body:
         from django.shortcuts import redirect
+
         return redirect("escalated:customer_ticket_show", ticket_id=ticket_id)
 
     service = TicketService()
@@ -171,13 +185,15 @@ def ticket_reply(request, ticket_id):
     files = request.FILES.getlist("attachments")
     if files:
         from escalated.services.attachment_service import AttachmentService
-        for f in files[:get_setting("MAX_ATTACHMENTS")]:
+
+        for f in files[: get_setting("MAX_ATTACHMENTS")]:
             try:
                 AttachmentService.attach(reply, f)
             except Exception:
                 pass
 
     from django.shortcuts import redirect
+
     return redirect("escalated:customer_ticket_show", ticket_id=ticket_id)
 
 
@@ -199,6 +215,7 @@ def ticket_close(request, ticket_id):
     service.close(ticket, request.user)
 
     from django.shortcuts import redirect
+
     return redirect("escalated:customer_ticket_show", ticket_id=ticket_id)
 
 
@@ -214,10 +231,7 @@ def ticket_reopen(request, ticket_id):
         return HttpResponseNotFound(_("Ticket not found"))
 
     ct = ContentType.objects.get_for_model(request.user)
-    is_requester = (
-        ticket.requester_content_type == ct
-        and ticket.requester_object_id == request.user.pk
-    )
+    is_requester = ticket.requester_content_type == ct and ticket.requester_object_id == request.user.pk
     if not is_requester:
         return HttpResponseForbidden(_("You cannot reopen this ticket."))
 

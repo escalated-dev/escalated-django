@@ -9,10 +9,7 @@ logger = logging.getLogger("escalated")
 
 
 class Command(BaseCommand):
-    help = (
-        "Poll an IMAP mailbox for new inbound emails and process them as "
-        "tickets or replies."
-    )
+    help = "Poll an IMAP mailbox for new inbound emails and process them as tickets or replies."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -32,29 +29,21 @@ class Command(BaseCommand):
         if not get_setting("INBOUND_EMAIL_ENABLED"):
             self.stderr.write(
                 self.style.ERROR(
-                    "Inbound email processing is disabled. "
-                    "Set ESCALATED['INBOUND_EMAIL_ENABLED'] = True in settings."
+                    "Inbound email processing is disabled. Set ESCALATED['INBOUND_EMAIL_ENABLED'] = True in settings."
                 )
             )
             return
 
         host = get_setting("IMAP_HOST")
         if not host:
-            self.stderr.write(
-                self.style.ERROR(
-                    "IMAP host not configured. "
-                    "Set ESCALATED['IMAP_HOST'] in settings."
-                )
-            )
+            self.stderr.write(self.style.ERROR("IMAP host not configured. Set ESCALATED['IMAP_HOST'] in settings."))
             return
 
         continuous = options["continuous"]
         interval = options["interval"]
 
         if continuous:
-            self.stdout.write(
-                f"Starting continuous IMAP polling (interval: {interval}s)..."
-            )
+            self.stdout.write(f"Starting continuous IMAP polling (interval: {interval}s)...")
             while True:
                 try:
                     self._poll_once()
@@ -62,9 +51,7 @@ class Command(BaseCommand):
                     self.stdout.write("\nStopping IMAP polling.")
                     break
                 except Exception as exc:
-                    self.stderr.write(
-                        self.style.ERROR(f"Error during IMAP poll: {exc}")
-                    )
+                    self.stderr.write(self.style.ERROR(f"Error during IMAP poll: {exc}"))
                     logger.exception("Error during IMAP poll")
 
                 time.sleep(interval)
@@ -99,22 +86,11 @@ class Command(BaseCommand):
             inbound = InboundEmailService.process(message, adapter_name="imap")
             if inbound.status == "processed":
                 processed += 1
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"  Processed: {message.from_email} - {message.subject}"
-                    )
-                )
+                self.stdout.write(self.style.SUCCESS(f"  Processed: {message.from_email} - {message.subject}"))
             else:
                 failed += 1
                 self.stdout.write(
-                    self.style.ERROR(
-                        f"  Failed: {message.from_email} - {message.subject}"
-                        f" ({inbound.error_message})"
-                    )
+                    self.style.ERROR(f"  Failed: {message.from_email} - {message.subject} ({inbound.error_message})")
                 )
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"IMAP poll complete: {processed} processed, {failed} failed."
-            )
-        )
+        self.stdout.write(self.style.SUCCESS(f"IMAP poll complete: {processed} processed, {failed} failed."))

@@ -14,14 +14,13 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST, require_http_methods
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from escalated.api_serializers import (
     ApiAgentSerializer,
     ApiCannedResponseSerializer,
     ApiDepartmentSerializer,
     ApiMacroSerializer,
-    ApiReplySerializer,
     ApiTagSerializer,
     ApiTicketCollectionSerializer,
     ApiTicketDetailSerializer,
@@ -33,14 +32,14 @@ from escalated.models import (
     Tag,
     Ticket,
 )
-from escalated.permissions import is_agent, is_admin
+from escalated.permissions import is_admin, is_agent
 from escalated.services.ticket_service import TicketService
 from escalated.validators import (
+    AssignTicketValidator,
+    ChangePriorityValidator,
+    ChangeStatusValidator,
     CreateTicketValidator,
     ReplyToTicketValidator,
-    ChangeStatusValidator,
-    ChangePriorityValidator,
-    AssignTicketValidator,
     UpdateTagsValidator,
 )
 
@@ -77,14 +76,16 @@ def _resolve_ticket(reference):
     Returns (ticket, None) on success, or (None, JsonResponse) on failure.
     """
     try:
-        ticket = Ticket.objects.select_related(
-            "assigned_to", "department", "sla_policy"
-        ).prefetch_related(
-            "tags",
-            "replies__author",
-            "replies__attachments",
-            "activities",
-        ).get(reference=reference)
+        ticket = (
+            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
+            .prefetch_related(
+                "tags",
+                "replies__author",
+                "replies__attachments",
+                "activities",
+            )
+            .get(reference=reference)
+        )
         return ticket, None
     except Ticket.DoesNotExist:
         pass
@@ -92,14 +93,16 @@ def _resolve_ticket(reference):
     # Fall back to lookup by numeric ID
     try:
         ticket_id = int(reference)
-        ticket = Ticket.objects.select_related(
-            "assigned_to", "department", "sla_policy"
-        ).prefetch_related(
-            "tags",
-            "replies__author",
-            "replies__attachments",
-            "activities",
-        ).get(pk=ticket_id)
+        ticket = (
+            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
+            .prefetch_related(
+                "tags",
+                "replies__author",
+                "replies__attachments",
+                "activities",
+            )
+            .get(pk=ticket_id)
+        )
         return ticket, None
     except (ValueError, Ticket.DoesNotExist):
         return None, JsonResponse({"message": "Ticket not found."}, status=404)
@@ -121,20 +124,20 @@ def auth_validate(request):
     user = request.user
     api_token = getattr(request, "api_token", None)
 
-    return JsonResponse({
-        "user": {
-            "id": user.pk,
-            "name": getattr(user, "get_full_name", lambda: str(user))(),
-            "email": getattr(user, "email", ""),
-        },
-        "abilities": api_token.abilities if api_token else [],
-        "is_agent": is_agent(user),
-        "is_admin": is_admin(user),
-        "token_name": api_token.name if api_token else None,
-        "expires_at": (
-            api_token.expires_at.isoformat() if api_token and api_token.expires_at else None
-        ),
-    })
+    return JsonResponse(
+        {
+            "user": {
+                "id": user.pk,
+                "name": getattr(user, "get_full_name", lambda: str(user))(),
+                "email": getattr(user, "email", ""),
+            },
+            "abilities": api_token.abilities if api_token else [],
+            "is_agent": is_agent(user),
+            "is_admin": is_admin(user),
+            "token_name": api_token.name if api_token else None,
+            "expires_at": (api_token.expires_at.isoformat() if api_token and api_token.expires_at else None),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -158,15 +161,10 @@ def dashboard(request):
         "my_assigned": Ticket.objects.assigned_to(user_id).open().count(),
         "unassigned": Ticket.objects.unassigned().open().count(),
         "sla_breached": Ticket.objects.open().breached_sla().count(),
-        "resolved_today": Ticket.objects.filter(
-            resolved_at__gte=today_start
-        ).count(),
+        "resolved_today": Ticket.objects.filter(resolved_at__gte=today_start).count(),
     }
 
-    recent_tickets = (
-        Ticket.objects.select_related("assigned_to", "department")
-        .order_by("-created_at")[:10]
-    )
+    recent_tickets = Ticket.objects.select_related("assigned_to", "department").order_by("-created_at")[:10]
 
     recent_tickets_data = [
         {
@@ -177,9 +175,7 @@ def dashboard(request):
             "priority": t.priority,
             "requester_name": t.requester_name,
             "assignee_name": (
-                getattr(t.assigned_to, "get_full_name", lambda: str(t.assigned_to))()
-                if t.assigned_to
-                else None
+                getattr(t.assigned_to, "get_full_name", lambda: str(t.assigned_to))() if t.assigned_to else None
             ),
             "created_at": t.created_at.isoformat(),
         }
@@ -187,9 +183,7 @@ def dashboard(request):
     ]
 
     # Needs attention: SLA breaching tickets
-    sla_breaching = Ticket.objects.open().breached_sla().select_related(
-        "assigned_to"
-    )[:5]
+    sla_breaching = Ticket.objects.open().breached_sla().select_related("assigned_to")[:5]
     sla_breaching_data = [
         {
             "reference": t.reference,
@@ -201,11 +195,7 @@ def dashboard(request):
     ]
 
     # Unassigned urgent tickets
-    unassigned_urgent = (
-        Ticket.objects.unassigned()
-        .open()
-        .filter(priority__in=["urgent", "critical"])[:5]
-    )
+    unassigned_urgent = Ticket.objects.unassigned().open().filter(priority__in=["urgent", "critical"])[:5]
     unassigned_urgent_data = [
         {
             "reference": t.reference,
@@ -217,21 +207,21 @@ def dashboard(request):
     ]
 
     # My performance
-    my_resolved_this_week = Ticket.objects.assigned_to(user_id).filter(
-        resolved_at__gte=week_start
-    ).count()
+    my_resolved_this_week = Ticket.objects.assigned_to(user_id).filter(resolved_at__gte=week_start).count()
 
-    return JsonResponse({
-        "stats": stats,
-        "recent_tickets": recent_tickets_data,
-        "needs_attention": {
-            "sla_breaching": sla_breaching_data,
-            "unassigned_urgent": unassigned_urgent_data,
-        },
-        "my_performance": {
-            "resolved_this_week": my_resolved_this_week,
-        },
-    })
+    return JsonResponse(
+        {
+            "stats": stats,
+            "recent_tickets": recent_tickets_data,
+            "needs_attention": {
+                "sla_breaching": sla_breaching_data,
+                "unassigned_urgent": unassigned_urgent_data,
+            },
+            "my_performance": {
+                "resolved_this_week": my_resolved_this_week,
+            },
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -248,9 +238,7 @@ def ticket_list(request):
     Query params: status, priority, department_id, assigned_to, unassigned,
                   search, sla_breached, following, sort_by, sort_dir, per_page, page
     """
-    tickets = Ticket.objects.select_related(
-        "assigned_to", "department"
-    ).prefetch_related("tags")
+    tickets = Ticket.objects.select_related("assigned_to", "department").prefetch_related("tags")
 
     # Filters
     status = request.GET.get("status")
@@ -293,7 +281,11 @@ def ticket_list(request):
     sort_by = request.GET.get("sort_by", "created_at")
     sort_dir = request.GET.get("sort_dir", "desc")
     allowed_sort_fields = [
-        "created_at", "updated_at", "priority", "status", "subject",
+        "created_at",
+        "updated_at",
+        "priority",
+        "status",
+        "subject",
     ]
     if sort_by in allowed_sort_fields:
         order = f"-{sort_by}" if sort_dir == "desc" else sort_by
@@ -312,15 +304,17 @@ def ticket_list(request):
         page_num = 1
     page = paginator.get_page(page_num)
 
-    return JsonResponse({
-        "data": ApiTicketCollectionSerializer.serialize_list(page.object_list),
-        "meta": {
-            "current_page": page.number,
-            "last_page": paginator.num_pages,
-            "per_page": per_page,
-            "total": paginator.count,
-        },
-    })
+    return JsonResponse(
+        {
+            "data": ApiTicketCollectionSerializer.serialize_list(page.object_list),
+            "meta": {
+                "current_page": page.number,
+                "last_page": paginator.num_pages,
+                "per_page": per_page,
+                "total": paginator.count,
+            },
+        }
+    )
 
 
 @require_GET
@@ -334,9 +328,11 @@ def ticket_show(request, reference):
     if error:
         return error
 
-    return JsonResponse({
-        "data": ApiTicketDetailSerializer.serialize(ticket),
-    })
+    return JsonResponse(
+        {
+            "data": ApiTicketDetailSerializer.serialize(ticket),
+        }
+    )
 
 
 @csrf_exempt
@@ -371,15 +367,11 @@ def ticket_create(request):
     ticket = service.create(request.user, ticket_data)
 
     # Reload with relations
-    ticket = Ticket.objects.select_related(
-        "assigned_to", "department"
-    ).prefetch_related("tags").get(pk=ticket.pk)
+    ticket = Ticket.objects.select_related("assigned_to", "department").prefetch_related("tags").get(pk=ticket.pk)
 
     return JsonResponse(
         {
-            "data": ApiTicketDetailSerializer.serialize(
-                ticket, include_replies=False, include_activities=False
-            ),
+            "data": ApiTicketDetailSerializer.serialize(ticket, include_replies=False, include_activities=False),
             "message": "Ticket created.",
         },
         status=201,
@@ -557,9 +549,7 @@ def ticket_apply_macro(request, reference):
         )
 
     try:
-        macro = Macro.objects.filter(
-            Q(is_shared=True) | Q(created_by=request.user)
-        ).get(pk=int(macro_id))
+        macro = Macro.objects.filter(Q(is_shared=True) | Q(created_by=request.user)).get(pk=int(macro_id))
     except (Macro.DoesNotExist, ValueError, TypeError):
         return JsonResponse({"message": "Macro not found."}, status=404)
 
@@ -670,9 +660,7 @@ def resource_canned_responses(request):
 
     List canned responses available to the authenticated user.
     """
-    responses = CannedResponse.objects.filter(
-        Q(is_shared=True) | Q(created_by=request.user)
-    )
+    responses = CannedResponse.objects.filter(Q(is_shared=True) | Q(created_by=request.user))
     return JsonResponse({"data": ApiCannedResponseSerializer.serialize_list(responses)})
 
 
@@ -683,9 +671,7 @@ def resource_macros(request):
 
     List macros available to the authenticated user.
     """
-    macros = Macro.objects.filter(
-        Q(is_shared=True) | Q(created_by=request.user)
-    ).order_by("order")
+    macros = Macro.objects.filter(Q(is_shared=True) | Q(created_by=request.user)).order_by("order")
     return JsonResponse({"data": ApiMacroSerializer.serialize_list(macros)})
 
 

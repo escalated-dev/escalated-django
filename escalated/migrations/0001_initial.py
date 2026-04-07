@@ -6,7 +6,6 @@ from escalated.conf import get_table_name
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -68,14 +67,16 @@ class Migration(migrations.Migration):
                     "first_response_hours",
                     models.JSONField(
                         default=dict,
-                        help_text='Map of priority to hours, e.g. {"low": 24, "medium": 8, "high": 4, "urgent": 1, "critical": 0.5}',
+                        help_text="Map of priority to hours, e.g."
+                        ' {"low": 24, "medium": 8, "high": 4, "urgent": 1, "critical": 0.5}',
                     ),
                 ),
                 (
                     "resolution_hours",
                     models.JSONField(
                         default=dict,
-                        help_text='Map of priority to hours, e.g. {"low": 72, "medium": 24, "high": 8, "urgent": 4, "critical": 2}',
+                        help_text="Map of priority to hours, e.g."
+                        ' {"low": 72, "medium": 24, "high": 8, "urgent": 4, "critical": 2}',
                     ),
                 ),
                 ("business_hours_only", models.BooleanField(default=False)),
@@ -235,9 +236,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "tags",
-                    models.ManyToManyField(
-                        blank=True, related_name="tickets", to="escalated.tag"
-                    ),
+                    models.ManyToManyField(blank=True, related_name="tickets", to="escalated.tag"),
                 ),
             ],
             options={
@@ -247,33 +246,23 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="ticket",
-            index=models.Index(
-                fields=["status"], name="escalated_t_status_idx"
-            ),
+            index=models.Index(fields=["status"], name="escalated_t_status_idx"),
         ),
         migrations.AddIndex(
             model_name="ticket",
-            index=models.Index(
-                fields=["priority"], name="escalated_t_priority_idx"
-            ),
+            index=models.Index(fields=["priority"], name="escalated_t_priority_idx"),
         ),
         migrations.AddIndex(
             model_name="ticket",
-            index=models.Index(
-                fields=["reference"], name="escalated_t_reference_idx"
-            ),
+            index=models.Index(fields=["reference"], name="escalated_t_reference_idx"),
         ),
         migrations.AddIndex(
             model_name="ticket",
-            index=models.Index(
-                fields=["assigned_to"], name="escalated_t_assigned_idx"
-            ),
+            index=models.Index(fields=["assigned_to"], name="escalated_t_assigned_idx"),
         ),
         migrations.AddIndex(
             model_name="ticket",
-            index=models.Index(
-                fields=["created_at"], name="escalated_t_created_idx"
-            ),
+            index=models.Index(fields=["created_at"], name="escalated_t_created_idx"),
         ),
         # Reply
         migrations.CreateModel(
@@ -355,9 +344,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "size",
-                    models.PositiveIntegerField(
-                        default=0, help_text="File size in bytes"
-                    ),
+                    models.PositiveIntegerField(default=0, help_text="File size in bytes"),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),

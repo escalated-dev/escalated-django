@@ -7,18 +7,12 @@ and request.api_token (as the middleware would do).
 """
 
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.test import RequestFactory
-from django.utils import timezone
 
 from escalated.models import (
-    ApiToken,
-    CannedResponse,
-    Department,
-    Macro,
-    Tag,
     Ticket,
 )
 from escalated.views import api
@@ -176,9 +170,7 @@ class TestApiTicketList:
         TicketFactory(status=Ticket.Status.OPEN)
         TicketFactory(status=Ticket.Status.CLOSED)
 
-        request = _api_get(
-            rf, "/api/tickets/", user, token, {"status": "open"}
-        )
+        request = _api_get(rf, "/api/tickets/", user, token, {"status": "open"})
         response = api.ticket_list(request)
 
         data = json.loads(response.content)
@@ -194,9 +186,7 @@ class TestApiTicketList:
         TicketFactory(priority=Ticket.Priority.HIGH)
         TicketFactory(priority=Ticket.Priority.LOW)
 
-        request = _api_get(
-            rf, "/api/tickets/", user, token, {"priority": "high"}
-        )
+        request = _api_get(rf, "/api/tickets/", user, token, {"priority": "high"})
         response = api.ticket_list(request)
 
         data = json.loads(response.content)
@@ -212,9 +202,7 @@ class TestApiTicketList:
         TicketFactory(subject="Payment refund issue")
         TicketFactory(subject="General question")
 
-        request = _api_get(
-            rf, "/api/tickets/", user, token, {"search": "Payment"}
-        )
+        request = _api_get(rf, "/api/tickets/", user, token, {"search": "Payment"})
         response = api.ticket_list(request)
 
         data = json.loads(response.content)
@@ -229,9 +217,7 @@ class TestApiTicketList:
         for _ in range(30):
             TicketFactory()
 
-        request = _api_get(
-            rf, "/api/tickets/", user, token, {"per_page": "10", "page": "2"}
-        )
+        request = _api_get(rf, "/api/tickets/", user, token, {"per_page": "10", "page": "2"})
         response = api.ticket_list(request)
 
         data = json.loads(response.content)
@@ -322,19 +308,23 @@ class TestApiTicketCreate:
         token = ApiTokenFactory(user=user)
 
         # Create real ticket to return
-        ticket = TicketFactory(
-            requester=user, subject="API Test", description="API Description"
-        )
+        ticket = TicketFactory(requester=user, subject="API Test", description="API Description")
 
         mock_svc = MagicMock()
         mock_svc.create.return_value = ticket
         MockService.return_value = mock_svc
 
-        request = _api_post(rf, "/api/tickets/create/", user, token, {
-            "subject": "API Test",
-            "description": "API Description",
-            "priority": "high",
-        })
+        request = _api_post(
+            rf,
+            "/api/tickets/create/",
+            user,
+            token,
+            {
+                "subject": "API Test",
+                "description": "API Description",
+                "priority": "high",
+            },
+        )
         response = api.ticket_create(request)
 
         assert response.status_code == 201
@@ -348,9 +338,15 @@ class TestApiTicketCreate:
         department.agents.add(user)
         token = ApiTokenFactory(user=user)
 
-        request = _api_post(rf, "/api/tickets/create/", user, token, {
-            "description": "Some desc",
-        })
+        request = _api_post(
+            rf,
+            "/api/tickets/create/",
+            user,
+            token,
+            {
+                "description": "Some desc",
+            },
+        )
         response = api.ticket_create(request)
 
         assert response.status_code == 422
@@ -363,9 +359,15 @@ class TestApiTicketCreate:
         department.agents.add(user)
         token = ApiTokenFactory(user=user)
 
-        request = _api_post(rf, "/api/tickets/create/", user, token, {
-            "subject": "Subject only",
-        })
+        request = _api_post(
+            rf,
+            "/api/tickets/create/",
+            user,
+            token,
+            {
+                "subject": "Subject only",
+            },
+        )
         response = api.ticket_create(request)
 
         assert response.status_code == 422
@@ -378,11 +380,17 @@ class TestApiTicketCreate:
         department.agents.add(user)
         token = ApiTokenFactory(user=user)
 
-        request = _api_post(rf, "/api/tickets/create/", user, token, {
-            "subject": "Test",
-            "description": "Test",
-            "priority": "invalid_priority",
-        })
+        request = _api_post(
+            rf,
+            "/api/tickets/create/",
+            user,
+            token,
+            {
+                "subject": "Test",
+                "description": "Test",
+                "priority": "invalid_priority",
+            },
+        )
         response = api.ticket_create(request)
 
         assert response.status_code == 422
@@ -412,7 +420,10 @@ class TestApiTicketReply:
         MockService.return_value = mock_svc
 
         request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/reply/", user, token,
+            rf,
+            f"/api/tickets/{ticket.reference}/reply/",
+            user,
+            token,
             {"body": "Reply body"},
         )
         response = api.ticket_reply(request, ticket.reference)
@@ -430,9 +441,7 @@ class TestApiTicketReply:
 
         ticket = TicketFactory()
 
-        request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/reply/", user, token, {}
-        )
+        request = _api_post(rf, f"/api/tickets/{ticket.reference}/reply/", user, token, {})
         response = api.ticket_reply(request, ticket.reference)
 
         assert response.status_code == 422
@@ -444,7 +453,10 @@ class TestApiTicketReply:
         token = ApiTokenFactory(user=user)
 
         request = _api_post(
-            rf, "/api/tickets/NONEXIST/reply/", user, token,
+            rf,
+            "/api/tickets/NONEXIST/reply/",
+            user,
+            token,
             {"body": "Reply"},
         )
         response = api.ticket_reply(request, "NONEXIST")
@@ -472,7 +484,10 @@ class TestApiTicketStatus:
         MockService.return_value = mock_svc
 
         request = _api_patch(
-            rf, f"/api/tickets/{ticket.reference}/status/", user, token,
+            rf,
+            f"/api/tickets/{ticket.reference}/status/",
+            user,
+            token,
             {"status": "in_progress"},
         )
         response = api.ticket_status(request, ticket.reference)
@@ -491,7 +506,10 @@ class TestApiTicketStatus:
         ticket = TicketFactory()
 
         request = _api_patch(
-            rf, f"/api/tickets/{ticket.reference}/status/", user, token,
+            rf,
+            f"/api/tickets/{ticket.reference}/status/",
+            user,
+            token,
             {"status": "nonexistent"},
         )
         response = api.ticket_status(request, ticket.reference)
@@ -519,7 +537,10 @@ class TestApiTicketPriority:
         MockService.return_value = mock_svc
 
         request = _api_patch(
-            rf, f"/api/tickets/{ticket.reference}/priority/", user, token,
+            rf,
+            f"/api/tickets/{ticket.reference}/priority/",
+            user,
+            token,
             {"priority": "urgent"},
         )
         response = api.ticket_priority(request, ticket.reference)
@@ -537,7 +558,10 @@ class TestApiTicketPriority:
         ticket = TicketFactory()
 
         request = _api_patch(
-            rf, f"/api/tickets/{ticket.reference}/priority/", user, token,
+            rf,
+            f"/api/tickets/{ticket.reference}/priority/",
+            user,
+            token,
             {"priority": "super_duper"},
         )
         response = api.ticket_priority(request, ticket.reference)
@@ -566,7 +590,10 @@ class TestApiTicketAssign:
         MockService.return_value = mock_svc
 
         request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/assign/", user, token,
+            rf,
+            f"/api/tickets/{ticket.reference}/assign/",
+            user,
+            token,
             {"agent_id": agent.pk},
         )
         response = api.ticket_assign(request, ticket.reference)
@@ -583,9 +610,7 @@ class TestApiTicketAssign:
 
         ticket = TicketFactory()
 
-        request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/assign/", user, token, {}
-        )
+        request = _api_post(rf, f"/api/tickets/{ticket.reference}/assign/", user, token, {})
         response = api.ticket_assign(request, ticket.reference)
 
         assert response.status_code == 422
@@ -599,7 +624,10 @@ class TestApiTicketAssign:
         ticket = TicketFactory()
 
         request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/assign/", user, token,
+            rf,
+            f"/api/tickets/{ticket.reference}/assign/",
+            user,
+            token,
             {"agent_id": 99999},
         )
         response = api.ticket_assign(request, ticket.reference)
@@ -623,18 +651,14 @@ class TestApiTicketFollow:
         ticket = TicketFactory()
 
         # Follow
-        request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/follow/", user, token
-        )
+        request = _api_post(rf, f"/api/tickets/{ticket.reference}/follow/", user, token)
         response = api.ticket_follow(request, ticket.reference)
 
         data = json.loads(response.content)
         assert data["following"] is True
 
         # Unfollow
-        request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/follow/", user, token
-        )
+        request = _api_post(rf, f"/api/tickets/{ticket.reference}/follow/", user, token)
         response = api.ticket_follow(request, ticket.reference)
 
         data = json.loads(response.content)
@@ -663,7 +687,10 @@ class TestApiTicketTags:
         MockService.return_value = mock_svc
 
         request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/tags/", user, token,
+            rf,
+            f"/api/tickets/{ticket.reference}/tags/",
+            user,
+            token,
             {"tag_ids": [tag1.pk, tag2.pk]},
         )
         response = api.ticket_tags(request, ticket.reference)
@@ -680,9 +707,7 @@ class TestApiTicketTags:
 
         ticket = TicketFactory()
 
-        request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/tags/", user, token, {}
-        )
+        request = _api_post(rf, f"/api/tickets/{ticket.reference}/tags/", user, token, {})
         response = api.ticket_tags(request, ticket.reference)
 
         assert response.status_code == 422
@@ -704,7 +729,10 @@ class TestApiTicketMacro:
         ticket = TicketFactory()
 
         request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/macro/", user, token,
+            rf,
+            f"/api/tickets/{ticket.reference}/macro/",
+            user,
+            token,
             {"macro_id": 99999},
         )
         response = api.ticket_apply_macro(request, ticket.reference)
@@ -719,9 +747,7 @@ class TestApiTicketMacro:
 
         ticket = TicketFactory()
 
-        request = _api_post(
-            rf, f"/api/tickets/{ticket.reference}/macro/", user, token, {}
-        )
+        request = _api_post(rf, f"/api/tickets/{ticket.reference}/macro/", user, token, {})
         response = api.ticket_apply_macro(request, ticket.reference)
 
         assert response.status_code == 422
@@ -743,9 +769,7 @@ class TestApiTicketDelete:
         ticket = TicketFactory()
         ticket_pk = ticket.pk
 
-        request = _api_delete(
-            rf, f"/api/tickets/{ticket.reference}/delete/", user, token
-        )
+        request = _api_delete(rf, f"/api/tickets/{ticket.reference}/delete/", user, token)
         response = api.ticket_destroy(request, ticket.reference)
 
         assert response.status_code == 200
@@ -759,9 +783,7 @@ class TestApiTicketDelete:
         department.agents.add(user)
         token = ApiTokenFactory(user=user)
 
-        request = _api_delete(
-            rf, "/api/tickets/NONEXIST/delete/", user, token
-        )
+        request = _api_delete(rf, "/api/tickets/NONEXIST/delete/", user, token)
         response = api.ticket_destroy(request, "NONEXIST")
 
         assert response.status_code == 404

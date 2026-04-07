@@ -49,10 +49,7 @@ class MailgunAdapter(BaseAdapter):
         """
         signing_key = get_setting("MAILGUN_SIGNING_KEY")
         if not signing_key:
-            logger.warning(
-                "Mailgun signing key not configured. "
-                "Set ESCALATED['MAILGUN_SIGNING_KEY'] in settings."
-            )
+            logger.warning("Mailgun signing key not configured. Set ESCALATED['MAILGUN_SIGNING_KEY'] in settings.")
             return False
 
         timestamp = request.POST.get("timestamp", "")
@@ -73,14 +70,12 @@ class MailgunAdapter(BaseAdapter):
             return False
 
         if abs(int(time.time()) - ts) > 300:
-            logger.warning(
-                "Mailgun webhook timestamp too old — possible replay attack."
-            )
+            logger.warning("Mailgun webhook timestamp too old — possible replay attack.")
             return False
 
         expected = hmac.new(
             signing_key.encode("utf-8"),
-            f"{timestamp}{token}".encode("utf-8"),
+            f"{timestamp}{token}".encode(),
             hashlib.sha256,
         ).hexdigest()
 
@@ -111,12 +106,14 @@ class MailgunAdapter(BaseAdapter):
         for i in range(1, attachment_count + 1):
             uploaded_file = request.FILES.get(f"attachment-{i}")
             if uploaded_file:
-                attachments.append({
-                    "filename": uploaded_file.name,
-                    "content_type": uploaded_file.content_type,
-                    "size": uploaded_file.size,
-                    "file": uploaded_file,
-                })
+                attachments.append(
+                    {
+                        "filename": uploaded_file.name,
+                        "content_type": uploaded_file.content_type,
+                        "size": uploaded_file.size,
+                        "file": uploaded_file,
+                    }
+                )
 
         return InboundMessage(
             from_email=from_email,

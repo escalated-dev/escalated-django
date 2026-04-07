@@ -1,7 +1,6 @@
 import hashlib
 import secrets
 import uuid
-from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -12,7 +11,6 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from escalated.conf import get_table_name
-
 
 # ---------------------------------------------------------------------------
 # Managers / QuerySets
@@ -42,16 +40,10 @@ class TicketQuerySet(models.QuerySet):
         return self.filter(assigned_to_id=user_id)
 
     def breached_sla(self):
-        return self.filter(
-            Q(sla_first_response_breached=True) | Q(sla_resolution_breached=True)
-        )
+        return self.filter(Q(sla_first_response_breached=True) | Q(sla_resolution_breached=True))
 
     def search(self, term):
-        return self.filter(
-            Q(subject__icontains=term)
-            | Q(description__icontains=term)
-            | Q(reference__icontains=term)
-        )
+        return self.filter(Q(subject__icontains=term) | Q(description__icontains=term) | Q(reference__icontains=term))
 
     def by_department(self, department_id):
         return self.filter(department_id=department_id)
@@ -227,23 +219,20 @@ class Ticket(models.Model):
     guest_name = models.CharField(max_length=255, null=True, blank=True)
     guest_email = models.EmailField(null=True, blank=True)
     guest_token = models.CharField(
-        max_length=64, null=True, blank=True, unique=True,
+        max_length=64,
+        null=True,
+        blank=True,
+        unique=True,
         help_text=_("Unique token for guest ticket access"),
     )
 
     subject = models.CharField(max_length=500)
     description = models.TextField()
-    status = models.CharField(
-        max_length=30, choices=Status.choices, default=Status.OPEN
-    )
-    priority = models.CharField(
-        max_length=20, choices=Priority.choices, default=Priority.MEDIUM
-    )
+    status = models.CharField(max_length=30, choices=Status.choices, default=Status.OPEN)
+    priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.MEDIUM)
     channel = models.CharField(max_length=50, default="web")
     reference = models.CharField(max_length=20, unique=True, editable=False)
-    ticket_type = models.CharField(
-        max_length=50, choices=TicketType.choices, default=TicketType.QUESTION
-    )
+    ticket_type = models.CharField(max_length=50, choices=TicketType.choices, default=TicketType.QUESTION)
     merged_into = models.ForeignKey(
         "self",
         on_delete=models.SET_NULL,
@@ -402,9 +391,7 @@ class Reply(models.Model):
         NOTE = "note", _("Internal Note")
         SYSTEM = "system", _("System")
 
-    ticket = models.ForeignKey(
-        Ticket, on_delete=models.CASCADE, related_name="replies"
-    )
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="replies")
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -452,9 +439,7 @@ class Attachment(models.Model):
     file = models.FileField(upload_to="escalated/attachments/%Y/%m/")
     original_filename = models.CharField(max_length=500)
     mime_type = models.CharField(max_length=255, blank=True, default="")
-    size = models.PositiveIntegerField(
-        default=0, help_text=_("File size in bytes")
-    )
+    size = models.PositiveIntegerField(default=0, help_text=_("File size in bytes"))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -542,9 +527,7 @@ class TicketActivity(models.Model):
         ATTACHMENT_ADDED = "attachment_added", _("Attachment Added")
         MERGED = "merged", _("Merged")
 
-    ticket = models.ForeignKey(
-        Ticket, on_delete=models.CASCADE, related_name="activities"
-    )
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="activities")
 
     # Causer via GenericForeignKey
     causer_content_type = models.ForeignKey(
@@ -595,9 +578,7 @@ class EscalatedSetting(models.Model):
     @classmethod
     def set(cls, key, value):
         """Set a setting value by key."""
-        obj, _ = cls.objects.update_or_create(
-            key=key, defaults={"value": str(value) if value is not None else None}
-        )
+        obj, _ = cls.objects.update_or_create(key=key, defaults={"value": str(value) if value is not None else None})
         return obj
 
     @classmethod
@@ -750,9 +731,7 @@ class InboundEmail(models.Model):
         related_name="inbound_emails",
     )
 
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     adapter = models.CharField(max_length=50)
     error_message = models.TextField(null=True, blank=True)
     processed_at = models.DateTimeField(null=True, blank=True)
@@ -778,9 +757,15 @@ class InboundEmail(models.Model):
         self.ticket = ticket
         self.reply = reply
         self.processed_at = timezone.now()
-        self.save(update_fields=[
-            "status", "ticket", "reply", "processed_at", "updated_at",
-        ])
+        self.save(
+            update_fields=[
+                "status",
+                "ticket",
+                "reply",
+                "processed_at",
+                "updated_at",
+            ]
+        )
 
     def mark_failed(self, error_message):
         """Mark this inbound email as failed."""
@@ -802,9 +787,7 @@ class InboundEmail(models.Model):
 class ApiTokenQuerySet(models.QuerySet):
     def active(self):
         """Return tokens that are not expired."""
-        return self.filter(
-            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
-        )
+        return self.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
 
     def expired(self):
         """Return tokens that have expired."""
@@ -914,12 +897,14 @@ class AuditLog(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="escalated_audit_logs",
     )
     action = models.CharField(max_length=50)
     auditable_content_type = models.ForeignKey(
-        ContentType, on_delete=models.CASCADE,
+        ContentType,
+        on_delete=models.CASCADE,
         related_name="escalated_audit_logs",
     )
     auditable_object_id = models.PositiveIntegerField()
@@ -978,6 +963,7 @@ class TicketStatus(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             from django.utils.text import slugify
+
             self.slug = slugify(self.label).replace("-", "_")
         super().save(*args, **kwargs)
 
@@ -1007,7 +993,9 @@ class BusinessSchedule(models.Model):
 
 class Holiday(models.Model):
     schedule = models.ForeignKey(
-        BusinessSchedule, on_delete=models.CASCADE, related_name="holidays",
+        BusinessSchedule,
+        on_delete=models.CASCADE,
+        related_name="holidays",
     )
     name = models.CharField(max_length=255)
     date = models.DateField()
@@ -1047,11 +1035,15 @@ class Role(models.Model):
     description = models.TextField(blank=True, default="")
     is_system = models.BooleanField(default=False)
     permissions = models.ManyToManyField(
-        "Permission", related_name="roles", blank=True,
+        "Permission",
+        related_name="roles",
+        blank=True,
         db_table=get_table_name("role_permission"),
     )
     users = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, related_name="escalated_roles", blank=True,
+        settings.AUTH_USER_MODEL,
+        related_name="escalated_roles",
+        blank=True,
         db_table=get_table_name("role_user"),
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1066,6 +1058,7 @@ class Role(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             from django.utils.text import slugify
+
             self.slug = slugify(self.name).replace("-", "_")
         super().save(*args, **kwargs)
 
@@ -1096,9 +1089,7 @@ class CustomField(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     type = models.CharField(max_length=50, choices=FieldType.choices)
-    context = models.CharField(
-        max_length=50, choices=Context.choices, default=Context.TICKET
-    )
+    context = models.CharField(max_length=50, choices=Context.choices, default=Context.TICKET)
     options = models.JSONField(null=True, blank=True)
     required = models.BooleanField(default=False)
     placeholder = models.CharField(max_length=255, null=True, blank=True)
@@ -1120,6 +1111,7 @@ class CustomField(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             from django.utils.text import slugify
+
             self.slug = slugify(self.name).replace("-", "_")
         super().save(*args, **kwargs)
 
@@ -1213,12 +1205,8 @@ class SideConversation(models.Model):
         related_name="side_conversations",
     )
     subject = models.CharField(max_length=255)
-    channel = models.CharField(
-        max_length=50, choices=Channel.choices, default=Channel.INTERNAL
-    )
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.OPEN
-    )
+    channel = models.CharField(max_length=50, choices=Channel.choices, default=Channel.INTERNAL)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -1319,10 +1307,7 @@ class ArticleQuerySet(models.QuerySet):
         return self.filter(status="draft")
 
     def search(self, term):
-        return self.filter(
-            Q(title__icontains=term)
-            | Q(body__icontains=term)
-        )
+        return self.filter(Q(title__icontains=term) | Q(body__icontains=term))
 
 
 class ArticleManager(models.Manager):
@@ -1354,9 +1339,7 @@ class Article(models.Model):
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     body = models.TextField(blank=True, default="")
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.DRAFT
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -1475,6 +1458,7 @@ class Skill(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             from django.utils.text import slugify
+
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
@@ -1682,6 +1666,7 @@ class EncryptedJSONField(models.TextField):
     def _get_fernet(self):
         import base64
         import hashlib
+
         from cryptography.fernet import Fernet
         from django.conf import settings as django_settings
 
@@ -1695,11 +1680,13 @@ class EncryptedJSONField(models.TextField):
             return None
         if isinstance(value, str) and value.startswith(self.PREFIX):
             import json
+
             fernet = self._get_fernet()
-            decrypted = fernet.decrypt(value[len(self.PREFIX):].encode()).decode()
+            decrypted = fernet.decrypt(value[len(self.PREFIX) :].encode()).decode()
             return json.loads(decrypted)
         # Legacy plain JSON (shouldn't happen in prod, but handles dev fixtures)
         import json
+
         try:
             return json.loads(value)
         except Exception:
@@ -1714,6 +1701,7 @@ class EncryptedJSONField(models.TextField):
         if value is None:
             return None
         import json
+
         fernet = self._get_fernet()
         plaintext = json.dumps(value).encode()
         token = fernet.encrypt(plaintext).decode()
@@ -1791,9 +1779,7 @@ class ImportJob(models.Model):
         allowed = self.VALID_TRANSITIONS.get(current, [])
 
         if new_status not in allowed:
-            raise ValueError(
-                f"Cannot transition ImportJob from '{current}' to '{new_status}'."
-            )
+            raise ValueError(f"Cannot transition ImportJob from '{current}' to '{new_status}'.")
 
         self.status = new_status
         self.save(update_fields=["status", "updated_at"])
@@ -1814,9 +1800,16 @@ class ImportJob(models.Model):
     ) -> None:
         """Merge partial progress for a single entity type and save."""
         progress = dict(self.progress or {})
-        current = progress.get(entity_type, {
-            "total": 0, "processed": 0, "skipped": 0, "failed": 0, "cursor": None,
-        })
+        current = progress.get(
+            entity_type,
+            {
+                "total": 0,
+                "processed": 0,
+                "skipped": 0,
+                "failed": 0,
+                "cursor": None,
+            },
+        )
 
         if processed is not None:
             current["processed"] = processed
@@ -1841,12 +1834,14 @@ class ImportJob(models.Model):
         """Append an error entry to the log (capped at 10 000 entries)."""
         log = list(self.error_log or [])
         if len(log) < 10_000:
-            log.append({
-                "entity_type": entity_type,
-                "source_id": source_id,
-                "error": error,
-                "timestamp": timezone.now().isoformat(),
-            })
+            log.append(
+                {
+                    "entity_type": entity_type,
+                    "source_id": source_id,
+                    "error": error,
+                    "timestamp": timezone.now().isoformat(),
+                }
+            )
             self.error_log = log
             self.save(update_fields=["error_log", "updated_at"])
 
@@ -1897,10 +1892,7 @@ class ImportSourceMap(models.Model):
         ]
 
     def __str__(self):
-        return (
-            f"ImportSourceMap({self.entity_type} "
-            f"{self.source_id} → {self.escalated_id})"
-        )
+        return f"ImportSourceMap({self.entity_type} {self.source_id} → {self.escalated_id})"
 
     # ------------------------------------------------------------------
     # Class-level helpers
@@ -1912,11 +1904,15 @@ class ImportSourceMap(models.Model):
         Return the Escalated ID for a given source ID, or ``None`` if not yet
         imported.
         """
-        return cls.objects.filter(
-            import_job_id=job_id,
-            entity_type=entity_type,
-            source_id=source_id,
-        ).values_list("escalated_id", flat=True).first()
+        return (
+            cls.objects.filter(
+                import_job_id=job_id,
+                entity_type=entity_type,
+                source_id=source_id,
+            )
+            .values_list("escalated_id", flat=True)
+            .first()
+        )
 
     @classmethod
     def has_been_imported(cls, job_id, entity_type: str, source_id: str) -> bool:

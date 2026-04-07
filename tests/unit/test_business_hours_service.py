@@ -1,6 +1,7 @@
-import pytest
-from datetime import datetime, date
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
+
+import pytest
 
 from escalated.services.business_hours_service import BusinessHoursCalculator
 from tests.factories import BusinessScheduleFactory, HolidayFactory
@@ -38,8 +39,10 @@ class TestBusinessHoursCalculator:
     def test_is_not_within_business_hours_holiday(self):
         schedule = BusinessScheduleFactory(timezone="UTC")
         HolidayFactory(
-            schedule=schedule, name="Test Holiday",
-            date=date(2026, 3, 2), recurring=False,
+            schedule=schedule,
+            name="Test Holiday",
+            date=date(2026, 3, 2),
+            recurring=False,
         )
         dt = datetime(2026, 3, 2, 10, 0, tzinfo=ZoneInfo("UTC"))
         assert self.calculator.is_within_business_hours(dt, schedule) is False
@@ -79,8 +82,10 @@ class TestBusinessHoursCalculator:
     def test_recurring_holiday_matches_any_year(self):
         schedule = BusinessScheduleFactory(timezone="UTC")
         HolidayFactory(
-            schedule=schedule, name="Christmas",
-            date=date(2025, 12, 25), recurring=True,
+            schedule=schedule,
+            name="Christmas",
+            date=date(2025, 12, 25),
+            recurring=True,
         )
         # Christmas 2026 should also be a holiday
         dt = datetime(2026, 12, 25, 10, 0, tzinfo=ZoneInfo("UTC"))
@@ -89,8 +94,10 @@ class TestBusinessHoursCalculator:
     def test_non_recurring_holiday_only_matches_exact_date(self):
         schedule = BusinessScheduleFactory(timezone="UTC")
         HolidayFactory(
-            schedule=schedule, name="Company Event",
-            date=date(2026, 3, 2), recurring=False,
+            schedule=schedule,
+            name="Company Event",
+            date=date(2026, 3, 2),
+            recurring=False,
         )
         # Same date = holiday
         dt1 = datetime(2026, 3, 2, 10, 0, tzinfo=ZoneInfo("UTC"))
@@ -99,8 +106,10 @@ class TestBusinessHoursCalculator:
         # Different year = not a holiday (need fresh schedule to clear cache)
         schedule2 = BusinessScheduleFactory(timezone="UTC")
         HolidayFactory(
-            schedule=schedule2, name="Company Event",
-            date=date(2026, 3, 2), recurring=False,
+            schedule=schedule2,
+            name="Company Event",
+            date=date(2026, 3, 2),
+            recurring=False,
         )
         dt2 = datetime(2027, 3, 2, 10, 0, tzinfo=ZoneInfo("UTC"))
         assert self.calculator.is_within_business_hours(dt2, schedule2) is True
