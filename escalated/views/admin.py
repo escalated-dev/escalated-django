@@ -2355,6 +2355,72 @@ def ticket_merge(request, ticket_id):
 
 
 # ---------------------------------------------------------------------------
+# Ticket Snooze / Unsnooze
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_snooze(request, ticket_id):
+    """Snooze a ticket until a specified datetime."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    snoozed_until = body.get("snoozed_until")
+    if not snoozed_until:
+        return JsonResponse({"error": "snoozed_until is required"}, status=400)
+
+    from django.utils.dateparse import parse_datetime
+
+    dt = parse_datetime(snoozed_until)
+    if dt is None:
+        return JsonResponse({"error": "Invalid datetime format"}, status=400)
+
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt)
+
+    ticket.snooze(until=dt, user=request.user)
+
+    return JsonResponse({"success": True, "snoozed_until": dt.isoformat()})
+
+
+@login_required
+def ticket_unsnooze(request, ticket_id):
+    """Unsnooze a ticket, restoring its previous status."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    if not ticket.is_snoozed:
+        return JsonResponse({"error": "Ticket is not snoozed"}, status=400)
+
+    ticket.unsnooze()
+
+    return JsonResponse({"success": True, "status": ticket.status})
+
+
+# ---------------------------------------------------------------------------
 # Side Conversations
 # ---------------------------------------------------------------------------
 
