@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import requests
 
@@ -29,7 +29,7 @@ class WebhookDispatcher:
             {
                 "event": event,
                 "payload": payload,
-                "timestamp": datetime.now(UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 
@@ -53,7 +53,7 @@ class WebhookDispatcher:
             response = requests.post(webhook.url, data=body, headers=headers, timeout=10)
             delivery.response_code = response.status_code
             delivery.response_body = response.text[:2000]
-            delivery.delivered_at = datetime.now(UTC)
+            delivery.delivered_at = datetime.now(timezone.utc)
             delivery.attempts = attempt
             delivery.save()
 

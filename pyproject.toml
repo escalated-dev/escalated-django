@@ -33,11 +33,11 @@ Homepage = "https://github.com/escalated-dev/escalated-django"
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "DJ"]
-ignore = ["DJ001"]
+ignore = ["DJ001", "UP017"]
 
 [tool.ruff.format]
 quote-style = "double"
