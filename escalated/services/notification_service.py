@@ -4,7 +4,6 @@ import json
 import logging
 
 from django.conf import settings
-from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 
@@ -24,6 +23,9 @@ class NotificationService:
         channels = get_setting("NOTIFICATION_CHANNELS")
 
         if "email" in channels:
+            from escalated.mail.threading import get_threading_headers
+
+            headers = get_threading_headers(ticket, reply=None)
             NotificationService._send_email(
                 subject="[{}] {}".format(
                     ticket.reference,
@@ -32,6 +34,7 @@ class NotificationService:
                 template="escalated/emails/new_ticket.html",
                 context={"ticket": ticket},
                 recipient=NotificationService._get_requester_email(ticket),
+                extra_headers=headers,
             )
 
         NotificationService._fire_webhook(
@@ -50,6 +53,10 @@ class NotificationService:
         channels = get_setting("NOTIFICATION_CHANNELS")
 
         if "email" in channels:
+            from escalated.mail.threading import get_threading_headers
+
+            headers = get_threading_headers(ticket, reply=reply)
+
             # Notify the requester if an agent replied
             requester_email = NotificationService._get_requester_email(ticket)
             if requester_email and reply.author != ticket.requester:
@@ -61,6 +68,7 @@ class NotificationService:
                     template="escalated/emails/reply.html",
                     context={"ticket": ticket, "reply": reply},
                     recipient=requester_email,
+                    extra_headers=headers,
                 )
 
             # Notify assigned agent if customer replied
@@ -75,6 +83,7 @@ class NotificationService:
                         template="escalated/emails/reply.html",
                         context={"ticket": ticket, "reply": reply},
                         recipient=agent_email,
+                        extra_headers=headers,
                     )
 
             # Notify followers (except the author and assignee, already notified)
@@ -307,21 +316,31 @@ class NotificationService:
         return None
 
     @staticmethod
-    def _send_email(subject, template, context, recipient):
-        """Send an HTML email using Django's mail system."""
+    def _send_email(subject, template, context, recipient, extra_headers=None):
+        """Send an HTML email using Django's mail system with optional headers."""
         if not recipient:
             return
 
         try:
+            # Inject branding context for templates that use it
+            from escalated.mail.threading import get_branding_context
+
+            context.setdefault("branding", get_branding_context())
+
             html_body = render_to_string(template, context)
-            send_mail(
+            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "support@escalated.dev")
+
+            from django.core.mail import EmailMessage
+
+            msg = EmailMessage(
                 subject=subject,
-                message="",  # Plain text fallback
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "support@escalated.dev"),
-                recipient_list=[recipient],
-                html_message=html_body,
-                fail_silently=True,
+                body=html_body,
+                from_email=from_email,
+                to=[recipient],
+                headers=extra_headers or {},
             )
+            msg.content_subtype = "html"
+            msg.send(fail_silently=True)
         except Exception as e:
             logger.error(f"Failed to send email to {recipient}: {e}")
 
