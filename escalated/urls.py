@@ -66,6 +66,12 @@ admin_patterns = [
     ),
     # Ticket Merging
     path("admin/tickets/<int:ticket_id>/merge/", admin.ticket_merge, name="admin_ticket_merge"),
+    # Saved Views
+    path("admin/saved-views/", admin.saved_views_index, name="admin_saved_views_index"),
+    path("admin/saved-views/store/", admin.saved_views_store, name="admin_saved_views_store"),
+    path("admin/saved-views/<int:view_id>/update/", admin.saved_views_update, name="admin_saved_views_update"),
+    path("admin/saved-views/<int:view_id>/delete/", admin.saved_views_delete, name="admin_saved_views_delete"),
+    path("admin/saved-views/reorder/", admin.saved_views_reorder, name="admin_saved_views_reorder"),
     # Side Conversations
     path(
         "admin/tickets/<int:ticket_id>/side-conversations/",

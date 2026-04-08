@@ -2355,6 +2355,185 @@ def ticket_merge(request, ticket_id):
 
 
 # ---------------------------------------------------------------------------
+# Saved Views
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def saved_views_index(request):
+    """List saved views for the current user (own + shared)."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    from escalated.models import SavedView
+
+    views = SavedView.objects.filter(Q(user=request.user) | Q(is_shared=True)).order_by("position", "name")
+
+    return JsonResponse(
+        {
+            "views": [
+                {
+                    "id": v.pk,
+                    "name": v.name,
+                    "filters": v.filters,
+                    "is_shared": v.is_shared,
+                    "is_default": v.is_default,
+                    "position": v.position,
+                    "icon": v.icon,
+                    "color": v.color,
+                    "is_own": v.user_id == request.user.pk,
+                }
+                for v in views
+            ]
+        }
+    )
+
+
+@login_required
+def saved_views_store(request):
+    """Create a new saved view."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    name = body.get("name", "").strip()
+    if not name:
+        return JsonResponse({"error": "name is required"}, status=400)
+
+    from escalated.models import SavedView
+
+    view = SavedView.objects.create(
+        name=name,
+        filters=body.get("filters", {}),
+        user=request.user,
+        is_shared=body.get("is_shared", False),
+        is_default=body.get("is_default", False),
+        position=body.get("position", 0),
+        icon=body.get("icon", ""),
+        color=body.get("color", "#6b7280"),
+    )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "view": {
+                "id": view.pk,
+                "name": view.name,
+            },
+        }
+    )
+
+
+@login_required
+def saved_views_update(request, view_id):
+    """Update an existing saved view."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    from escalated.models import SavedView
+
+    try:
+        view = SavedView.objects.get(pk=view_id)
+    except SavedView.DoesNotExist:
+        return HttpResponseNotFound(_("Saved view not found"))
+
+    # Only owner or admin can update
+    if view.user_id != request.user.pk and not request.user.is_superuser:
+        return HttpResponseForbidden(_("Cannot update this view"))
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    if "name" in body:
+        view.name = body["name"]
+    if "filters" in body:
+        view.filters = body["filters"]
+    if "is_shared" in body:
+        view.is_shared = body["is_shared"]
+    if "is_default" in body:
+        view.is_default = body["is_default"]
+    if "position" in body:
+        view.position = body["position"]
+    if "icon" in body:
+        view.icon = body["icon"]
+    if "color" in body:
+        view.color = body["color"]
+
+    view.save()
+
+    return JsonResponse({"success": True})
+
+
+@login_required
+def saved_views_delete(request, view_id):
+    """Delete a saved view."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    from escalated.models import SavedView
+
+    try:
+        view = SavedView.objects.get(pk=view_id)
+    except SavedView.DoesNotExist:
+        return HttpResponseNotFound(_("Saved view not found"))
+
+    if view.user_id != request.user.pk and not request.user.is_superuser:
+        return HttpResponseForbidden(_("Cannot delete this view"))
+
+    view.delete()
+
+    return JsonResponse({"success": True})
+
+
+@login_required
+def saved_views_reorder(request):
+    """Reorder saved views."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    order = body.get("order", [])
+    if not isinstance(order, list):
+        return JsonResponse({"error": "order must be a list of view IDs"}, status=400)
+
+    from escalated.models import SavedView
+
+    for position, view_id in enumerate(order):
+        SavedView.objects.filter(
+            pk=view_id,
+        ).filter(Q(user=request.user) | Q(is_shared=True)).update(position=position)
+
+    return JsonResponse({"success": True})
+
+
+# ---------------------------------------------------------------------------
 # Side Conversations
 # ---------------------------------------------------------------------------
 
