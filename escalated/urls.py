@@ -1,7 +1,18 @@
 from django.urls import include, path
 
 from escalated.conf import get_setting
-from escalated.views import admin, admin_plugins, agent, customer, guest, import_views, inbound, widget
+from escalated.views import (
+    admin,
+    admin_plugins,
+    agent,
+    chat,
+    customer,
+    guest,
+    import_views,
+    inbound,
+    widget,
+    widget_chat,
+)
 
 app_name = "escalated"
 
@@ -271,6 +282,18 @@ guest_patterns = [
     path("guest/<str:token>/rate/", guest.ticket_rate, name="guest_ticket_rate"),
 ]
 
+# Agent chat URLs
+chat_patterns = [
+    path("agent/chat/active/", chat.active_chats, name="agent_chat_active"),
+    path("agent/chat/queue/", chat.chat_queue, name="agent_chat_queue"),
+    path("agent/chat/<int:session_id>/accept/", chat.accept_chat, name="agent_chat_accept"),
+    path("agent/chat/<int:session_id>/end/", chat.end_chat, name="agent_chat_end"),
+    path("agent/chat/<int:session_id>/transfer/", chat.transfer_chat, name="agent_chat_transfer"),
+    path("agent/chat/status/", chat.update_status, name="agent_chat_status"),
+    path("agent/chat/<int:session_id>/message/", chat.send_message, name="agent_chat_message"),
+    path("agent/chat/<int:session_id>/typing/", chat.update_typing, name="agent_chat_typing"),
+]
+
 # Widget public API (no authentication)
 widget_patterns = [
     path("widget/config/", widget.widget_config, name="widget_config"),
@@ -280,17 +303,27 @@ widget_patterns = [
     path("widget/tickets/lookup/", widget.widget_lookup_ticket, name="widget_lookup_ticket"),
 ]
 
+# Widget chat API (no authentication)
+widget_chat_patterns = [
+    path("widget/chat/availability/", widget_chat.chat_availability, name="widget_chat_availability"),
+    path("widget/chat/start/", widget_chat.start_chat, name="widget_chat_start"),
+    path("widget/chat/message/", widget_chat.send_message, name="widget_chat_message"),
+    path("widget/chat/typing/", widget_chat.update_typing, name="widget_chat_typing"),
+    path("widget/chat/end/", widget_chat.end_chat, name="widget_chat_end"),
+    path("widget/chat/rate/", widget_chat.rate_chat, name="widget_chat_rate"),
+]
+
 # Inbound email webhook (no authentication — external services POST here)
 inbound_patterns = [
     path("inbound/<str:adapter_name>/", inbound.inbound_webhook, name="inbound_webhook"),
 ]
 
 # Core routes (always registered)
-urlpatterns = list(inbound_patterns) + list(widget_patterns)
+urlpatterns = list(inbound_patterns) + list(widget_patterns) + list(widget_chat_patterns)
 
 # UI routes (only when UI is enabled)
 if get_setting("UI_ENABLED"):
-    urlpatterns = customer_patterns + agent_patterns + admin_patterns + guest_patterns + urlpatterns
+    urlpatterns = customer_patterns + agent_patterns + chat_patterns + admin_patterns + guest_patterns + urlpatterns
 
 # Inject plugin bridge routes (pages, API endpoints, webhooks) if the SDK
 # bridge has booted and registered patterns from plugin manifests.
