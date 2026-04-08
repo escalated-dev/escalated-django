@@ -66,6 +66,8 @@ admin_patterns = [
     ),
     # Ticket Merging
     path("admin/tickets/<int:ticket_id>/merge/", admin.ticket_merge, name="admin_ticket_merge"),
+    # Ticket Splitting
+    path("admin/tickets/<int:ticket_id>/split/", admin.ticket_split, name="admin_ticket_split"),
     # Side Conversations
     path(
         "admin/tickets/<int:ticket_id>/side-conversations/",
