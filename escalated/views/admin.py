@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
 
+from escalated.kb_guards import require_kb_enabled
 from escalated.models import (
     AgentCapacity,
     Article,
@@ -2534,6 +2535,130 @@ def saved_views_reorder(request):
 
 
 # ---------------------------------------------------------------------------
+# Ticket Snooze / Unsnooze
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_snooze(request, ticket_id):
+    """Snooze a ticket until a specified datetime."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    snoozed_until = body.get("snoozed_until")
+    if not snoozed_until:
+        return JsonResponse({"error": "snoozed_until is required"}, status=400)
+
+    from django.utils.dateparse import parse_datetime
+
+    dt = parse_datetime(snoozed_until)
+    if dt is None:
+        return JsonResponse({"error": "Invalid datetime format"}, status=400)
+
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt)
+
+    ticket.snooze(until=dt, user=request.user)
+
+    return JsonResponse({"success": True, "snoozed_until": dt.isoformat()})
+
+
+@login_required
+def ticket_unsnooze(request, ticket_id):
+    """Unsnooze a ticket, restoring its previous status."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    if not ticket.is_snoozed:
+        return JsonResponse({"error": "Ticket is not snoozed"}, status=400)
+
+    ticket.unsnooze()
+
+    return JsonResponse({"success": True, "status": ticket.status})
+
+
+# ---------------------------------------------------------------------------
+# Ticket Splitting
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_split(request, ticket_id):
+    """Split a reply from a ticket into a new ticket."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        source = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    reply_id = body.get("reply_id")
+    if not reply_id:
+        return JsonResponse({"error": "reply_id is required"}, status=400)
+
+    try:
+        reply = Reply.objects.get(pk=reply_id, ticket=source)
+    except Reply.DoesNotExist:
+        return JsonResponse({"error": "Reply not found on this ticket"}, status=404)
+
+    data = {
+        "subject": body.get("subject"),
+        "priority": body.get("priority"),
+        "department_id": body.get("department_id"),
+        "assigned_to_id": body.get("assigned_to_id"),
+    }
+
+    from escalated.services.ticket_split_service import TicketSplitService
+
+    service = TicketSplitService()
+    new_ticket = service.split_ticket(source, reply, data, split_by_user_id=request.user.pk)
+
+    return JsonResponse(
+        {
+            "success": True,
+            "new_ticket": {
+                "id": new_ticket.pk,
+                "reference": new_ticket.reference,
+                "subject": new_ticket.subject,
+            },
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
 # Side Conversations
 # ---------------------------------------------------------------------------
 
@@ -2692,6 +2817,7 @@ def side_conversations_close(request, ticket_id, conversation_id):
 # ---------------------------------------------------------------------------
 
 
+@require_kb_enabled
 @login_required
 def articles_index(request):
     """List all KB articles with filters."""
@@ -2738,6 +2864,7 @@ def articles_index(request):
     )
 
 
+@require_kb_enabled
 @login_required
 def articles_create(request):
     """Create a new KB article."""
@@ -2784,6 +2911,7 @@ def articles_create(request):
     )
 
 
+@require_kb_enabled
 @login_required
 def articles_edit(request, article_id):
     """Edit a KB article."""
@@ -2822,6 +2950,7 @@ def articles_edit(request, article_id):
     )
 
 
+@require_kb_enabled
 @login_required
 def articles_delete(request, article_id):
     """Delete a KB article."""
@@ -2846,6 +2975,7 @@ def articles_delete(request, article_id):
 # ---------------------------------------------------------------------------
 
 
+@require_kb_enabled
 @login_required
 def kb_categories_index(request):
     """List all KB categories with article counts."""
@@ -2864,6 +2994,7 @@ def kb_categories_index(request):
     )
 
 
+@require_kb_enabled
 @login_required
 def kb_categories_store(request):
     """Create a new KB category."""
@@ -2891,6 +3022,7 @@ def kb_categories_store(request):
     return redirect("escalated:admin_kb_categories_index")
 
 
+@require_kb_enabled
 @login_required
 def kb_categories_update(request, category_id):
     """Update a KB category."""
@@ -2919,6 +3051,7 @@ def kb_categories_update(request, category_id):
     return redirect("escalated:admin_kb_categories_index")
 
 
+@require_kb_enabled
 @login_required
 def kb_categories_delete(request, category_id):
     """Delete a KB category."""

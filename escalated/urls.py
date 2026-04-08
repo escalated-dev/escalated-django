@@ -1,7 +1,7 @@
 from django.urls import include, path
 
 from escalated.conf import get_setting
-from escalated.views import admin, admin_plugins, agent, customer, guest, import_views, inbound
+from escalated.views import admin, admin_plugins, agent, customer, guest, import_views, inbound, widget
 
 app_name = "escalated"
 
@@ -72,6 +72,11 @@ admin_patterns = [
     path("admin/saved-views/<int:view_id>/update/", admin.saved_views_update, name="admin_saved_views_update"),
     path("admin/saved-views/<int:view_id>/delete/", admin.saved_views_delete, name="admin_saved_views_delete"),
     path("admin/saved-views/reorder/", admin.saved_views_reorder, name="admin_saved_views_reorder"),
+    # Ticket Snooze
+    path("admin/tickets/<int:ticket_id>/snooze/", admin.ticket_snooze, name="admin_ticket_snooze"),
+    path("admin/tickets/<int:ticket_id>/unsnooze/", admin.ticket_unsnooze, name="admin_ticket_unsnooze"),
+    # Ticket Splitting
+    path("admin/tickets/<int:ticket_id>/split/", admin.ticket_split, name="admin_ticket_split"),
     # Side Conversations
     path(
         "admin/tickets/<int:ticket_id>/side-conversations/",
@@ -266,13 +271,22 @@ guest_patterns = [
     path("guest/<str:token>/rate/", guest.ticket_rate, name="guest_ticket_rate"),
 ]
 
+# Widget public API (no authentication)
+widget_patterns = [
+    path("widget/config/", widget.widget_config, name="widget_config"),
+    path("widget/articles/search/", widget.widget_article_search, name="widget_article_search"),
+    path("widget/articles/<int:article_id>/", widget.widget_article_detail, name="widget_article_detail"),
+    path("widget/tickets/create/", widget.widget_create_ticket, name="widget_create_ticket"),
+    path("widget/tickets/lookup/", widget.widget_lookup_ticket, name="widget_lookup_ticket"),
+]
+
 # Inbound email webhook (no authentication — external services POST here)
 inbound_patterns = [
     path("inbound/<str:adapter_name>/", inbound.inbound_webhook, name="inbound_webhook"),
 ]
 
 # Core routes (always registered)
-urlpatterns = list(inbound_patterns)
+urlpatterns = list(inbound_patterns) + list(widget_patterns)
 
 # UI routes (only when UI is enabled)
 if get_setting("UI_ENABLED"):

@@ -61,6 +61,18 @@ class TicketQuerySet(models.QuerySet):
         """Filter tickets that are followed by a specific user."""
         return self.filter(ticket_followers__user_id=user_id)
 
+    def snoozed(self):
+        """Return tickets that are currently snoozed."""
+        return self.filter(snoozed_until__isnull=False, snoozed_until__gt=timezone.now())
+
+    def not_snoozed(self):
+        """Exclude currently snoozed tickets."""
+        return self.exclude(snoozed_until__isnull=False, snoozed_until__gt=timezone.now())
+
+    def snooze_expired(self):
+        """Return tickets whose snooze period has expired."""
+        return self.filter(snoozed_until__isnull=False, snoozed_until__lte=timezone.now())
+
 
 class TicketManager(models.Manager):
     def get_queryset(self):
@@ -83,6 +95,15 @@ class TicketManager(models.Manager):
 
     def search(self, term):
         return self.get_queryset().search(term)
+
+    def snoozed(self):
+        return self.get_queryset().snoozed()
+
+    def not_snoozed(self):
+        return self.get_queryset().not_snoozed()
+
+    def snooze_expired(self):
+        return self.get_queryset().snooze_expired()
 
 
 # ---------------------------------------------------------------------------
@@ -241,6 +262,17 @@ class Ticket(models.Model):
         related_name="merged_tickets",
     )
 
+    # Snooze fields
+    snoozed_until = models.DateTimeField(null=True, blank=True)
+    snoozed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="escalated_snoozed_tickets",
+    )
+    status_before_snooze = models.CharField(max_length=30, null=True, blank=True)
+
     # SLA tracking fields
     first_response_at = models.DateTimeField(null=True, blank=True)
     first_response_due_at = models.DateTimeField(null=True, blank=True)
@@ -383,6 +415,36 @@ class Ticket(models.Model):
         if not self.resolution_due_at or self.resolved_at:
             return None
         return self.resolution_due_at - timezone.now()
+
+    # ----- Snooze helpers -----
+
+    @property
+    def is_snoozed(self):
+        """Check if the ticket is currently snoozed."""
+        return self.snoozed_until is not None and self.snoozed_until > timezone.now()
+
+    def snooze(self, until, user=None):
+        """
+        Snooze this ticket until the given datetime.
+
+        Saves the current status so it can be restored on unsnooze.
+        """
+        self.status_before_snooze = self.status
+        self.snoozed_until = until
+        self.snoozed_by = user
+        self.status = self.Status.CLOSED
+        self.save(update_fields=["status", "snoozed_until", "snoozed_by", "status_before_snooze", "updated_at"])
+
+    def unsnooze(self):
+        """
+        Unsnooze this ticket, restoring its previous status.
+        """
+        restored_status = self.status_before_snooze or self.Status.OPEN
+        self.status = restored_status
+        self.snoozed_until = None
+        self.snoozed_by = None
+        self.status_before_snooze = None
+        self.save(update_fields=["status", "snoozed_until", "snoozed_by", "status_before_snooze", "updated_at"])
 
 
 class Reply(models.Model):
