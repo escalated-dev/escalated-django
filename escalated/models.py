@@ -73,6 +73,12 @@ class TicketQuerySet(models.QuerySet):
         """Return tickets whose snooze period has expired."""
         return self.filter(snoozed_until__isnull=False, snoozed_until__lte=timezone.now())
 
+    def live_chats(self):
+        """Return tickets that are live chat conversations."""
+        return self.filter(channel="chat", chat_ended_at__isnull=True).exclude(
+            status__in=[Ticket.Status.RESOLVED, Ticket.Status.CLOSED]
+        )
+
 
 class TicketManager(models.Manager):
     def get_queryset(self):
@@ -95,6 +101,9 @@ class TicketManager(models.Manager):
 
     def search(self, term):
         return self.get_queryset().search(term)
+
+    def live_chats(self):
+        return self.get_queryset().live_chats()
 
     def snoozed(self):
         return self.get_queryset().snoozed()
@@ -262,6 +271,10 @@ class Ticket(models.Model):
         related_name="merged_tickets",
     )
 
+    # Live chat fields
+    chat_ended_at = models.DateTimeField(null=True, blank=True)
+    chat_metadata = models.JSONField(null=True, blank=True)
+
     # Snooze fields
     snoozed_until = models.DateTimeField(null=True, blank=True)
     snoozed_by = models.ForeignKey(
@@ -354,6 +367,11 @@ class Ticket(models.Model):
     @property
     def is_closed(self):
         return self.status == self.Status.CLOSED
+
+    @property
+    def is_live_chat(self):
+        """Check if this ticket is a live chat conversation."""
+        return self.channel == "chat"
 
     @property
     def is_guest(self):
@@ -1485,8 +1503,15 @@ class AgentProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="escalated_agent_profile",
     )
+
+    class ChatStatus(models.TextChoices):
+        ONLINE = "online", _("Online")
+        AWAY = "away", _("Away")
+        OFFLINE = "offline", _("Offline")
+
     agent_type = models.CharField(max_length=20, default="full")
     max_tickets = models.PositiveIntegerField(null=True, blank=True)
+    chat_status = models.CharField(max_length=20, choices=ChatStatus.choices, default=ChatStatus.OFFLINE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1495,6 +1520,9 @@ class AgentProfile(models.Model):
 
     def __str__(self):
         return f"Agent profile for {self.user}"
+
+    def is_chat_online(self) -> bool:
+        return self.chat_status == self.ChatStatus.ONLINE
 
     def is_light_agent(self) -> bool:
         return self.agent_type == "light"
@@ -2013,3 +2041,159 @@ class ImportSourceMap(models.Model):
     def has_been_imported(cls, job_id, entity_type: str, source_id: str) -> bool:
         """Return True if this source record has already been imported."""
         return cls.resolve(job_id, entity_type, source_id) is not None
+
+
+# ---------------------------------------------------------------------------
+# Live Chat Models
+# ---------------------------------------------------------------------------
+
+
+class ChatSessionQuerySet(models.QuerySet):
+    def waiting(self):
+        return self.filter(status=ChatSession.Status.WAITING)
+
+    def active(self):
+        return self.filter(status=ChatSession.Status.ACTIVE)
+
+    def ended(self):
+        return self.filter(status=ChatSession.Status.ENDED)
+
+    def abandoned(self):
+        return self.filter(status=ChatSession.Status.ABANDONED)
+
+    def for_agent(self, user_id):
+        return self.filter(agent_id=user_id)
+
+    def for_customer(self, session_id):
+        return self.filter(customer_session_id=session_id)
+
+
+class ChatSessionManager(models.Manager):
+    def get_queryset(self):
+        return ChatSessionQuerySet(self.model, using=self._db)
+
+    def waiting(self):
+        return self.get_queryset().waiting()
+
+    def active(self):
+        return self.get_queryset().active()
+
+    def ended(self):
+        return self.get_queryset().ended()
+
+    def for_agent(self, user_id):
+        return self.get_queryset().for_agent(user_id)
+
+    def for_customer(self, session_id):
+        return self.get_queryset().for_customer(session_id)
+
+
+class ChatSession(models.Model):
+    class Status(models.TextChoices):
+        WAITING = "waiting", _("Waiting")
+        ACTIVE = "active", _("Active")
+        ENDED = "ended", _("Ended")
+        ABANDONED = "abandoned", _("Abandoned")
+
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="chat_sessions")
+    customer_session_id = models.CharField(max_length=255, db_index=True)
+    agent = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="escalated_chat_sessions",
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.WAITING, db_index=True)
+    customer_typing_at = models.DateTimeField(null=True, blank=True)
+    agent_typing_at = models.DateTimeField(null=True, blank=True)
+    metadata = models.JSONField(null=True, blank=True)
+    rating = models.PositiveSmallIntegerField(null=True, blank=True)
+    rating_comment = models.TextField(blank=True, default="")
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ChatSessionManager()
+
+    class Meta:
+        db_table = get_table_name("chat_sessions")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"ChatSession {self.pk} ({self.status})"
+
+    @property
+    def is_active(self):
+        return self.status == self.Status.ACTIVE
+
+    @property
+    def is_waiting(self):
+        return self.status == self.Status.WAITING
+
+
+class ChatRoutingRuleQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(is_active=True)
+
+    def for_department(self, department_id):
+        return self.filter(Q(department_id=department_id) | Q(department__isnull=True))
+
+
+class ChatRoutingRuleManager(models.Manager):
+    def get_queryset(self):
+        return ChatRoutingRuleQuerySet(self.model, using=self._db)
+
+    def active(self):
+        return self.get_queryset().active()
+
+    def for_department(self, department_id):
+        return self.get_queryset().for_department(department_id)
+
+
+class ChatRoutingRule(models.Model):
+    class RoutingStrategy(models.TextChoices):
+        ROUND_ROBIN = "round_robin", _("Round Robin")
+        LEAST_ACTIVE = "least_active", _("Least Active")
+        RANDOM = "random", _("Random")
+
+    class OfflineBehavior(models.TextChoices):
+        QUEUE = "queue", _("Queue")
+        TICKET = "ticket", _("Create Ticket")
+        HIDE = "hide", _("Hide Chat")
+
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="chat_routing_rules",
+    )
+    routing_strategy = models.CharField(
+        max_length=30,
+        choices=RoutingStrategy.choices,
+        default=RoutingStrategy.ROUND_ROBIN,
+    )
+    offline_behavior = models.CharField(
+        max_length=30,
+        choices=OfflineBehavior.choices,
+        default=OfflineBehavior.TICKET,
+    )
+    max_concurrent_chats = models.PositiveIntegerField(default=5)
+    welcome_message = models.TextField(blank=True, default="")
+    offline_message = models.TextField(blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ChatRoutingRuleManager()
+
+    class Meta:
+        db_table = get_table_name("chat_routing_rules")
+        ordering = ["position"]
+
+    def __str__(self):
+        dept = self.department.name if self.department else "Global"
+        return f"ChatRoutingRule: {dept} ({self.routing_strategy})"
