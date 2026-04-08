@@ -2355,6 +2355,64 @@ def ticket_merge(request, ticket_id):
 
 
 # ---------------------------------------------------------------------------
+# Ticket Splitting
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def ticket_split(request, ticket_id):
+    """Split a reply from a ticket into a new ticket."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        source = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    reply_id = body.get("reply_id")
+    if not reply_id:
+        return JsonResponse({"error": "reply_id is required"}, status=400)
+
+    try:
+        reply = Reply.objects.get(pk=reply_id, ticket=source)
+    except Reply.DoesNotExist:
+        return JsonResponse({"error": "Reply not found on this ticket"}, status=404)
+
+    data = {
+        "subject": body.get("subject"),
+        "priority": body.get("priority"),
+        "department_id": body.get("department_id"),
+        "assigned_to_id": body.get("assigned_to_id"),
+    }
+
+    from escalated.services.ticket_split_service import TicketSplitService
+
+    service = TicketSplitService()
+    new_ticket = service.split_ticket(source, reply, data, split_by_user_id=request.user.pk)
+
+    return JsonResponse(
+        {
+            "success": True,
+            "new_ticket": {
+                "id": new_ticket.pk,
+                "reference": new_ticket.reference,
+                "subject": new_ticket.subject,
+            },
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
 # Side Conversations
 # ---------------------------------------------------------------------------
 

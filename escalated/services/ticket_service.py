@@ -105,3 +105,19 @@ class TicketService:
         from escalated.models import Ticket
 
         return self.driver.transition_status(ticket, user, Ticket.Status.ESCALATED)
+
+    def split_ticket(self, source, reply, data):
+        """
+        Split a reply out of a ticket into a new ticket.
+
+        Args:
+            source: The source ticket.
+            reply: The reply whose body becomes the new ticket description.
+            data: dict with optional subject, priority, department_id, assigned_to_id.
+        Returns:
+            The newly created Ticket.
+        """
+        from escalated.services.ticket_split_service import TicketSplitService
+
+        service = TicketSplitService()
+        return service.split_ticket(source, reply, data)
