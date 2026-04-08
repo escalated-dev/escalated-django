@@ -1202,6 +1202,39 @@ class CustomFieldValue(models.Model):
 
 
 # ---------------------------------------------------------------------------
+# Saved Views
+# ---------------------------------------------------------------------------
+
+
+class SavedView(models.Model):
+    """Custom saved filter / queue for tickets."""
+
+    name = models.CharField(max_length=255)
+    filters = models.JSONField(default=dict)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="escalated_saved_views",
+    )
+    is_shared = models.BooleanField(default=False)
+    is_default = models.BooleanField(default=False)
+    position = models.IntegerField(default=0)
+    icon = models.CharField(max_length=100, blank=True, default="")
+    color = models.CharField(max_length=20, blank=True, default="#6b7280")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("saved_views")
+        ordering = ["position", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+# ---------------------------------------------------------------------------
 # Ticket Links
 # ---------------------------------------------------------------------------
 
