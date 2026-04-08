@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
 
+from escalated.kb_guards import require_kb_enabled
 from escalated.models import (
     AgentCapacity,
     Article,
@@ -2571,6 +2572,7 @@ def side_conversations_close(request, ticket_id, conversation_id):
 # ---------------------------------------------------------------------------
 
 
+@require_kb_enabled
 @login_required
 def articles_index(request):
     """List all KB articles with filters."""
@@ -2617,6 +2619,7 @@ def articles_index(request):
     )
 
 
+@require_kb_enabled
 @login_required
 def articles_create(request):
     """Create a new KB article."""
@@ -2663,6 +2666,7 @@ def articles_create(request):
     )
 
 
+@require_kb_enabled
 @login_required
 def articles_edit(request, article_id):
     """Edit a KB article."""
@@ -2701,6 +2705,7 @@ def articles_edit(request, article_id):
     )
 
 
+@require_kb_enabled
 @login_required
 def articles_delete(request, article_id):
     """Delete a KB article."""
@@ -2725,6 +2730,7 @@ def articles_delete(request, article_id):
 # ---------------------------------------------------------------------------
 
 
+@require_kb_enabled
 @login_required
 def kb_categories_index(request):
     """List all KB categories with article counts."""
@@ -2743,6 +2749,7 @@ def kb_categories_index(request):
     )
 
 
+@require_kb_enabled
 @login_required
 def kb_categories_store(request):
     """Create a new KB category."""
@@ -2770,6 +2777,7 @@ def kb_categories_store(request):
     return redirect("escalated:admin_kb_categories_index")
 
 
+@require_kb_enabled
 @login_required
 def kb_categories_update(request, category_id):
     """Update a KB category."""
@@ -2798,6 +2806,7 @@ def kb_categories_update(request, category_id):
     return redirect("escalated:admin_kb_categories_index")
 
 
+@require_kb_enabled
 @login_required
 def kb_categories_delete(request, category_id):
     """Delete a KB category."""
