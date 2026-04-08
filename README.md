@@ -25,6 +25,15 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 - **Department routing** — Organize agents into departments with auto-assignment (round-robin)
 - **Tagging system** — Categorize tickets with colored tags
 - **Inertia.js + Vue 3 UI** — Shared frontend via [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated)
+- **Ticket splitting** — Split a reply into a new standalone ticket while preserving the original context
+- **Ticket snooze** — Snooze tickets with presets (1h, 4h, tomorrow, next week); `python manage.py wake_snoozed_tickets` management command auto-wakes them on schedule
+- **Saved views / custom queues** — Save, name, and share filter presets as reusable ticket views
+- **Embeddable support widget** — Lightweight `<script>` widget with KB search, ticket form, and status check
+- **Email threading** — Outbound emails include proper `In-Reply-To` and `References` headers for correct threading in mail clients
+- **Branded email templates** — Configurable logo, primary color, and footer text for all outbound emails
+- **Real-time broadcasting** — Opt-in broadcasting via Django Channels with automatic polling fallback
+- **Knowledge base toggle** — Enable or disable the public knowledge base from admin settings
+
 ## Requirements
 
 - Python 3.10+
