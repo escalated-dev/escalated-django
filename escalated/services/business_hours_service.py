@@ -1,4 +1,4 @@
-from datetime import UTC, timedelta
+from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
 
 
@@ -70,7 +70,7 @@ class BusinessHoursCalculator:
                 remaining_minutes -= available_minutes
                 current = (current + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
-        return current.astimezone(UTC)
+        return current.astimezone(timezone.utc)
 
     def _get_day_schedule(self, dt_local, schedule):
         """Get the schedule for a specific day of the week."""
