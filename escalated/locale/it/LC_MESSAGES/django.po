@@ -1,0 +1,436 @@
+# Escalated Django translations
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: it\n"
+
+# --- Model TextChoices: Ticket.Status ---
+msgid "Open"
+msgstr "Aperto"
+
+msgid "In Progress"
+msgstr "In corso"
+
+msgid "Waiting on Customer"
+msgstr "In attesa del cliente"
+
+msgid "Waiting on Agent"
+msgstr "In attesa dell'agente"
+
+msgid "Escalated"
+msgstr "Escalato"
+
+msgid "Resolved"
+msgstr "Risolto"
+
+msgid "Closed"
+msgstr "Chiuso"
+
+msgid "Reopened"
+msgstr "Riaperto"
+
+# --- Model TextChoices: Ticket.Priority ---
+msgid "Low"
+msgstr "Bassa"
+
+msgid "Medium"
+msgstr "Media"
+
+msgid "High"
+msgstr "Alta"
+
+msgid "Urgent"
+msgstr "Urgente"
+
+msgid "Critical"
+msgstr "Critica"
+
+# --- Model TextChoices: Reply.Type ---
+msgid "Reply"
+msgstr "Risposta"
+
+msgid "Internal Note"
+msgstr "Nota interna"
+
+msgid "System"
+msgstr "Sistema"
+
+# --- Model TextChoices: TicketActivity.ActivityType ---
+msgid "Created"
+msgstr "Creato"
+
+msgid "Status Changed"
+msgstr "Stato modificato"
+
+msgid "Priority Changed"
+msgstr "Priorita modificata"
+
+msgid "Assigned"
+msgstr "Assegnato"
+
+msgid "Unassigned"
+msgstr "Non assegnato"
+
+msgid "Reply Added"
+msgstr "Risposta aggiunta"
+
+msgid "Note Added"
+msgstr "Nota aggiunta"
+
+msgid "Tag Added"
+msgstr "Tag aggiunto"
+
+msgid "Tag Removed"
+msgstr "Tag rimosso"
+
+msgid "Department Changed"
+msgstr "Reparto modificato"
+
+msgid "SLA Breached"
+msgstr "SLA violato"
+
+msgid "Attachment Added"
+msgstr "Allegato aggiunto"
+
+msgid "Merged"
+msgstr "Unito"
+
+# --- Model TextChoices: EscalationRule.TriggerType ---
+msgid "SLA Breach"
+msgstr "Violazione SLA"
+
+msgid "Priority Change"
+msgstr "Cambio priorita"
+
+msgid "No Response"
+msgstr "Nessuna risposta"
+
+msgid "Customer Reply"
+msgstr "Risposta del cliente"
+
+msgid "Time Based"
+msgstr "Basato sul tempo"
+
+# --- Model TextChoices: InboundEmail.Status ---
+msgid "Pending"
+msgstr "In sospeso"
+
+msgid "Processed"
+msgstr "Elaborato"
+
+msgid "Failed"
+msgstr "Fallito"
+
+msgid "Spam"
+msgstr "Spam"
+
+# --- Model verbose_name / help_text ---
+msgid "SLA Policy"
+msgstr "Policy SLA"
+
+msgid "SLA Policies"
+msgstr "Policy SLA"
+
+msgid "Ticket activities"
+msgstr "Attivita dei ticket"
+
+msgid "Map of priority to hours, e.g. {\"low\": 24, \"medium\": 8, \"high\": 4, \"urgent\": 1, \"critical\": 0.5}"
+msgstr "Map of priority to hours, e.g. {\\"low\\": 24, \\"medium\\": 8, \\"high\\": 4, \\"urgent\\": 1, \\"critical\\": 0.5}"
+
+msgid "Map of priority to hours, e.g. {\"low\": 72, \"medium\": 24, \"high\": 8, \"urgent\": 4, \"critical\": 2}"
+msgstr "Map of priority to hours, e.g. {\\"low\\": 72, \\"medium\\": 24, \\"high\\": 8, \\"urgent\\": 4, \\"critical\\": 2}"
+
+msgid "Unique token for guest ticket access"
+msgstr "Unique token for guest ticket access"
+
+msgid "JSON conditions that must be met for the rule to fire"
+msgstr "JSON conditions that must be met for the rule to fire"
+
+msgid "JSON actions to take when the rule fires (e.g., assign, notify, change priority)"
+msgstr "JSON actions to take when the rule fires (e.g., assign, notify, change priority)"
+
+msgid "File size in bytes"
+msgstr "File size in bytes"
+
+msgid "JSON array of actions, e.g. [{\"type\": \"set_status\", \"value\": \"open\"}]"
+msgstr "JSON array of actions, e.g. [{\\"type\\": \\"set_status\\", \\"value\\": \\"open\\"}]"
+
+msgid "Rating from 1 to 5"
+msgstr "Rating from 1 to 5"
+
+# --- Middleware messages ---
+msgid "You do not have permission to access the agent dashboard."
+msgstr "Non hai il permesso di accedere alla dashboard dell'agente."
+
+msgid "You do not have permission to access the admin area."
+msgstr "Non hai il permesso di accedere all'area amministrativa."
+
+# --- View messages: common ---
+msgid "Method not allowed"
+msgstr "Metodo non consentito"
+
+msgid "Ticket not found"
+msgstr "Ticket non trovato"
+
+msgid "Agent access required."
+msgstr "Accesso agente richiesto."
+
+msgid "Admin access required."
+msgstr "Accesso amministratore richiesto."
+
+# --- View messages: customer.py ---
+msgid "Subject is required."
+msgstr "L'oggetto e obbligatorio."
+
+msgid "Description is required."
+msgstr "La descrizione e obbligatoria."
+
+msgid "You cannot view this ticket."
+msgstr "Non puoi visualizzare questo ticket."
+
+msgid "You cannot reply to this ticket."
+msgstr "Non puoi rispondere a questo ticket."
+
+msgid "You cannot close this ticket."
+msgstr "Non puoi chiudere questo ticket."
+
+msgid "You cannot reopen this ticket."
+msgstr "Non puoi riaprire questo ticket."
+
+msgid "You can only rate resolved or closed tickets."
+msgstr "Puoi valutare solo i ticket risolti o chiusi."
+
+msgid "This ticket has already been rated."
+msgstr "Questo ticket e gia stato valutato."
+
+msgid "Rating must be between 1 and 5."
+msgstr "La valutazione deve essere tra 1 e 5."
+
+msgid "Invalid rating value."
+msgstr "Valore di valutazione non valido."
+
+# --- View messages: agent.py ---
+msgid "You cannot update this ticket."
+msgstr "Non puoi aggiornare questo ticket."
+
+msgid "Agent not found"
+msgstr "Agente non trovato"
+
+msgid "Invalid status."
+msgstr "Stato non valido."
+
+msgid "Invalid priority."
+msgstr "Priorita non valida."
+
+msgid "Only internal notes can be pinned."
+msgstr "Solo le note interne possono essere fissate."
+
+msgid "Macro not found"
+msgstr "Macro non trovata"
+
+msgid "Reply not found"
+msgstr "Risposta non trovata"
+
+# --- View messages: guest.py ---
+msgid "Guest tickets are not enabled."
+msgstr "I ticket per gli ospiti non sono abilitati."
+
+msgid "Name is required."
+msgstr "Il nome e obbligatorio."
+
+msgid "Email is required."
+msgstr "L'email e obbligatoria."
+
+msgid "Ticket not found."
+msgstr "Ticket non trovato."
+
+msgid "This ticket is closed."
+msgstr "Questo ticket e chiuso."
+
+# --- View messages: admin.py ---
+msgid "Department not found"
+msgstr "Reparto non trovato"
+
+msgid "SLA Policy not found"
+msgstr "Policy SLA non trovata"
+
+msgid "Escalation rule not found"
+msgstr "Regola di escalation non trovata"
+
+msgid "Tag not found"
+msgstr "Tag non trovato"
+
+msgid "Canned response not found"
+msgstr "Risposta predefinita non trovata"
+
+msgid "Title is required."
+msgstr "Il titolo e obbligatorio."
+
+# --- View messages: inbound.py ---
+msgid "Inbound email processing is disabled."
+msgstr "L'elaborazione delle email in entrata e disabilitata."
+
+msgid "Request verification failed."
+msgstr "Verifica della richiesta fallita."
+
+# --- Notification service: email subjects ---
+msgid "New ticket: %(subject)s"
+msgstr "Nuovo ticket: %(subject)s"
+
+msgid "New reply on: %(subject)s"
+msgstr "Nuova risposta su: %(subject)s"
+
+msgid "Customer reply on: %(subject)s"
+msgstr "Risposta del cliente su: %(subject)s"
+
+msgid "Ticket assigned to you: %(subject)s"
+msgstr "Ticket assegnato a te: %(subject)s"
+
+msgid "Status updated: %(subject)s"
+msgstr "Stato aggiornato: %(subject)s"
+
+msgid "%(breach_type)s: %(subject)s"
+msgstr "%(breach_type)s: %(subject)s"
+
+# --- Management command: check_sla ---
+msgid "Check all open tickets for SLA breaches and send warnings."
+msgstr "Controlla tutti i ticket aperti per violazioni SLA e invia avvisi."
+
+msgid "Minutes before SLA deadline to trigger warning (default: 30)"
+msgstr "Minuti prima della scadenza SLA per attivare l'avviso (predefinito: 30)"
+
+msgid "Checking SLA deadlines for all open tickets..."
+msgstr "Controllo scadenze SLA per tutti i ticket aperti..."
+
+msgid "SLA check complete: %(breached)d breaches detected, %(warned)d warnings sent."
+msgstr "Controllo SLA completato: %(breached)d violazioni rilevate, %(warned)d avvisi inviati."
+
+# --- Management command: close_resolved ---
+msgid "Auto-close tickets that have been resolved for a configurable number of days."
+msgstr "Chiudi automaticamente i ticket risolti da un numero configurabile di giorni."
+
+msgid "Days after resolution to auto-close (overrides setting)"
+msgstr "Giorni dopo la risoluzione per la chiusura automatica"
+
+msgid "Show what would be closed without making changes"
+msgstr "Mostra cosa verrebbe chiuso senza apportare modifiche"
+
+msgid "[DRY RUN] Would close %(count)d tickets resolved more than %(days)d days ago."
+msgstr "[SIMULAZIONE] Verrebbero chiusi %(count)d ticket risolti da piu di %(days)d giorni."
+
+msgid "No resolved tickets to auto-close."
+msgstr "Nessun ticket risolto da chiudere automaticamente."
+
+msgid "Auto-closed %(count)d tickets that were resolved more than %(days)d days ago."
+msgstr "Chiusi automaticamente %(count)d ticket risolti da piu di %(days)d giorni."
+
+# --- Management command: evaluate_escalations ---
+msgid "Evaluate all active escalation rules against open tickets."
+msgstr "Valuta tutte le regole di escalation attive sui ticket aperti."
+
+msgid "Evaluating escalation rules..."
+msgstr "Valutazione regole di escalation..."
+
+msgid "Escalation evaluation complete: %(count)d actions taken."
+msgstr "Valutazione escalation completata: %(count)d azioni eseguite."
+
+# --- Email templates ---
+msgid "New Support Ticket Created"
+msgstr "Nuovo ticket di supporto creato"
+
+msgid "Your support ticket has been created successfully."
+msgstr "Il tuo ticket di supporto e stato creato con successo."
+
+msgid "Reference:"
+msgstr "Riferimento:"
+
+msgid "Subject:"
+msgstr "Oggetto:"
+
+msgid "Priority:"
+msgstr "Priorita:"
+
+msgid "Status:"
+msgstr "Stato:"
+
+msgid "Description:"
+msgstr "Descrizione:"
+
+msgid "Our team will review your ticket shortly. You will receive updates as your ticket progresses."
+msgstr "Il nostro team esaminera il tuo ticket a breve. Riceverai aggiornamenti."
+
+msgid "This is an automated message from the support system. Please do not reply directly to this email."
+msgstr "Questo e un messaggio automatico dal sistema di supporto. Non rispondere direttamente."
+
+msgid "New Reply on Ticket"
+msgstr "Nuova risposta sul ticket"
+
+msgid "A new reply has been added:"
+msgstr "Una nuova risposta e stata aggiunta:"
+
+msgid "Log in to your account to view the full conversation and respond."
+msgstr "Accedi al tuo account per visualizzare la conversazione completa e rispondere."
+
+msgid "Ticket Assigned to You"
+msgstr "Ticket assegnato a te"
+
+msgid "A support ticket has been assigned to you."
+msgstr "Un ticket di supporto ti e stato assegnato."
+
+msgid "Department:"
+msgstr "Reparto:"
+
+msgid "Please review and respond to this ticket at your earliest convenience."
+msgstr "Si prega di esaminare e rispondere al piu presto."
+
+msgid "This is an automated message from the support system."
+msgstr "Questo e un messaggio automatico dal sistema di supporto."
+
+msgid "Ticket Status Updated"
+msgstr "Stato del ticket aggiornato"
+
+msgid "Log in to your account to view the full details of your ticket."
+msgstr "Accedi per visualizzare tutti i dettagli del tuo ticket."
+
+msgid "SLA Breach Alert"
+msgstr "Avviso violazione SLA"
+
+msgid "Breach Type:"
+msgstr "Tipo di violazione:"
+
+msgid "Assigned To:"
+msgstr "Assegnato a:"
+
+msgid "Immediate action is required."
+msgstr "E richiesta un'azione immediata."
+
+msgid "Please review this ticket and take appropriate action."
+msgstr "Si prega di esaminare questo ticket e intraprendere l'azione appropriata."
+
+msgid "This is an automated SLA monitoring alert from the support system."
+msgstr "Avviso automatico di monitoraggio SLA."
+
+msgid "Ticket Escalated"
+msgstr "Ticket escalato"
+
+msgid "Reason:"
+msgstr "Motivo:"
+
+msgid "This ticket requires immediate attention. Please review and take action."
+msgstr "Questo ticket richiede attenzione immediata."
+
+msgid "This is an automated escalation alert from the support system."
+msgstr "Avviso automatico di escalation."
+
+msgid "Ticket Resolved"
+msgstr "Ticket risolto"
+
+msgid "If you believe this issue is not fully resolved, you can reopen the ticket by logging into your account."
+msgstr "Se il problema non e risolto, puoi riaprire il ticket accedendo al tuo account."
+
+msgid "Thank you for reaching out to us. We hope we were able to help!"
+msgstr "Grazie per averci contattato!"
+
+# --- Escalated Support (app verbose name) ---
+msgid "Escalated Support"
+msgstr "Supporto Escalated"

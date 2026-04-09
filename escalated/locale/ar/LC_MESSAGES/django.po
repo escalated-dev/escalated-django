@@ -1,0 +1,436 @@
+# Escalated Django translations
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ar\n"
+
+# --- Model TextChoices: Ticket.Status ---
+msgid "Open"
+msgstr "مفتوح"
+
+msgid "In Progress"
+msgstr "قيد التنفيذ"
+
+msgid "Waiting on Customer"
+msgstr "بانتظار العميل"
+
+msgid "Waiting on Agent"
+msgstr "بانتظار الوكيل"
+
+msgid "Escalated"
+msgstr "مُصعَّد"
+
+msgid "Resolved"
+msgstr "تم الحل"
+
+msgid "Closed"
+msgstr "مغلق"
+
+msgid "Reopened"
+msgstr "أُعيد فتحه"
+
+# --- Model TextChoices: Ticket.Priority ---
+msgid "Low"
+msgstr "منخفض"
+
+msgid "Medium"
+msgstr "متوسط"
+
+msgid "High"
+msgstr "مرتفع"
+
+msgid "Urgent"
+msgstr "عاجل"
+
+msgid "Critical"
+msgstr "حرج"
+
+# --- Model TextChoices: Reply.Type ---
+msgid "Reply"
+msgstr "رد"
+
+msgid "Internal Note"
+msgstr "ملاحظة داخلية"
+
+msgid "System"
+msgstr "النظام"
+
+# --- Model TextChoices: TicketActivity.ActivityType ---
+msgid "Created"
+msgstr "تم الإنشاء"
+
+msgid "Status Changed"
+msgstr "تم تغيير الحالة"
+
+msgid "Priority Changed"
+msgstr "تم تغيير الأولوية"
+
+msgid "Assigned"
+msgstr "تم التعيين"
+
+msgid "Unassigned"
+msgstr "غير معيَّن"
+
+msgid "Reply Added"
+msgstr "تمت إضافة رد"
+
+msgid "Note Added"
+msgstr "تمت إضافة ملاحظة"
+
+msgid "Tag Added"
+msgstr "تمت إضافة وسم"
+
+msgid "Tag Removed"
+msgstr "تمت إزالة وسم"
+
+msgid "Department Changed"
+msgstr "تم تغيير القسم"
+
+msgid "SLA Breached"
+msgstr "تم انتهاك SLA"
+
+msgid "Attachment Added"
+msgstr "تمت إضافة مرفق"
+
+msgid "Merged"
+msgstr "تم الدمج"
+
+# --- Model TextChoices: EscalationRule.TriggerType ---
+msgid "SLA Breach"
+msgstr "انتهاك SLA"
+
+msgid "Priority Change"
+msgstr "تغيير الأولوية"
+
+msgid "No Response"
+msgstr "لا استجابة"
+
+msgid "Customer Reply"
+msgstr "رد العميل"
+
+msgid "Time Based"
+msgstr "مبني على الوقت"
+
+# --- Model TextChoices: InboundEmail.Status ---
+msgid "Pending"
+msgstr "قيد الانتظار"
+
+msgid "Processed"
+msgstr "تمت المعالجة"
+
+msgid "Failed"
+msgstr "فشل"
+
+msgid "Spam"
+msgstr "بريد مزعج"
+
+# --- Model verbose_name / help_text ---
+msgid "SLA Policy"
+msgstr "سياسة SLA"
+
+msgid "SLA Policies"
+msgstr "سياسات SLA"
+
+msgid "Ticket activities"
+msgstr "أنشطة التذاكر"
+
+msgid "Map of priority to hours, e.g. {\"low\": 24, \"medium\": 8, \"high\": 4, \"urgent\": 1, \"critical\": 0.5}"
+msgstr "Map of priority to hours, e.g. {\\"low\\": 24, \\"medium\\": 8, \\"high\\": 4, \\"urgent\\": 1, \\"critical\\": 0.5}"
+
+msgid "Map of priority to hours, e.g. {\"low\": 72, \"medium\": 24, \"high\": 8, \"urgent\": 4, \"critical\": 2}"
+msgstr "Map of priority to hours, e.g. {\\"low\\": 72, \\"medium\\": 24, \\"high\\": 8, \\"urgent\\": 4, \\"critical\\": 2}"
+
+msgid "Unique token for guest ticket access"
+msgstr "Unique token for guest ticket access"
+
+msgid "JSON conditions that must be met for the rule to fire"
+msgstr "JSON conditions that must be met for the rule to fire"
+
+msgid "JSON actions to take when the rule fires (e.g., assign, notify, change priority)"
+msgstr "JSON actions to take when the rule fires (e.g., assign, notify, change priority)"
+
+msgid "File size in bytes"
+msgstr "File size in bytes"
+
+msgid "JSON array of actions, e.g. [{\"type\": \"set_status\", \"value\": \"open\"}]"
+msgstr "JSON array of actions, e.g. [{\\"type\\": \\"set_status\\", \\"value\\": \\"open\\"}]"
+
+msgid "Rating from 1 to 5"
+msgstr "Rating from 1 to 5"
+
+# --- Middleware messages ---
+msgid "You do not have permission to access the agent dashboard."
+msgstr "ليس لديك إذن للوصول إلى لوحة الوكيل."
+
+msgid "You do not have permission to access the admin area."
+msgstr "ليس لديك إذن للوصول إلى منطقة الإدارة."
+
+# --- View messages: common ---
+msgid "Method not allowed"
+msgstr "الطريقة غير مسموحة"
+
+msgid "Ticket not found"
+msgstr "التذكرة غير موجودة"
+
+msgid "Agent access required."
+msgstr "يتطلب صلاحية وكيل."
+
+msgid "Admin access required."
+msgstr "يتطلب صلاحية مسؤول."
+
+# --- View messages: customer.py ---
+msgid "Subject is required."
+msgstr "الموضوع مطلوب."
+
+msgid "Description is required."
+msgstr "الوصف مطلوب."
+
+msgid "You cannot view this ticket."
+msgstr "لا يمكنك عرض هذه التذكرة."
+
+msgid "You cannot reply to this ticket."
+msgstr "لا يمكنك الرد على هذه التذكرة."
+
+msgid "You cannot close this ticket."
+msgstr "لا يمكنك إغلاق هذه التذكرة."
+
+msgid "You cannot reopen this ticket."
+msgstr "لا يمكنك إعادة فتح هذه التذكرة."
+
+msgid "You can only rate resolved or closed tickets."
+msgstr "يمكنك تقييم التذاكر المحلولة أو المغلقة فقط."
+
+msgid "This ticket has already been rated."
+msgstr "تم تقييم هذه التذكرة بالفعل."
+
+msgid "Rating must be between 1 and 5."
+msgstr "يجب أن يكون التقييم بين 1 و 5."
+
+msgid "Invalid rating value."
+msgstr "قيمة تقييم غير صالحة."
+
+# --- View messages: agent.py ---
+msgid "You cannot update this ticket."
+msgstr "لا يمكنك تحديث هذه التذكرة."
+
+msgid "Agent not found"
+msgstr "الوكيل غير موجود"
+
+msgid "Invalid status."
+msgstr "حالة غير صالحة."
+
+msgid "Invalid priority."
+msgstr "أولوية غير صالحة."
+
+msgid "Only internal notes can be pinned."
+msgstr "يمكن تثبيت الملاحظات الداخلية فقط."
+
+msgid "Macro not found"
+msgstr "الماكرو غير موجود"
+
+msgid "Reply not found"
+msgstr "الرد غير موجود"
+
+# --- View messages: guest.py ---
+msgid "Guest tickets are not enabled."
+msgstr "تذاكر الضيوف غير مفعّلة."
+
+msgid "Name is required."
+msgstr "الاسم مطلوب."
+
+msgid "Email is required."
+msgstr "البريد الإلكتروني مطلوب."
+
+msgid "Ticket not found."
+msgstr "التذكرة غير موجودة."
+
+msgid "This ticket is closed."
+msgstr "هذه التذكرة مغلقة."
+
+# --- View messages: admin.py ---
+msgid "Department not found"
+msgstr "القسم غير موجود"
+
+msgid "SLA Policy not found"
+msgstr "سياسة SLA غير موجودة"
+
+msgid "Escalation rule not found"
+msgstr "قاعدة التصعيد غير موجودة"
+
+msgid "Tag not found"
+msgstr "الوسم غير موجود"
+
+msgid "Canned response not found"
+msgstr "الرد الجاهز غير موجود"
+
+msgid "Title is required."
+msgstr "العنوان مطلوب."
+
+# --- View messages: inbound.py ---
+msgid "Inbound email processing is disabled."
+msgstr "معالجة البريد الوارد معطلة."
+
+msgid "Request verification failed."
+msgstr "فشل التحقق من الطلب."
+
+# --- Notification service: email subjects ---
+msgid "New ticket: %(subject)s"
+msgstr "تذكرة جديدة: %(subject)s"
+
+msgid "New reply on: %(subject)s"
+msgstr "رد جديد على: %(subject)s"
+
+msgid "Customer reply on: %(subject)s"
+msgstr "رد العميل على: %(subject)s"
+
+msgid "Ticket assigned to you: %(subject)s"
+msgstr "تم تعيين تذكرة لك: %(subject)s"
+
+msgid "Status updated: %(subject)s"
+msgstr "تم تحديث الحالة: %(subject)s"
+
+msgid "%(breach_type)s: %(subject)s"
+msgstr "%(breach_type)s: %(subject)s"
+
+# --- Management command: check_sla ---
+msgid "Check all open tickets for SLA breaches and send warnings."
+msgstr "فحص جميع التذاكر المفتوحة لانتهاكات SLA وإرسال تحذيرات."
+
+msgid "Minutes before SLA deadline to trigger warning (default: 30)"
+msgstr "دقائق قبل موعد SLA لإطلاق تحذير (افتراضي: 30)"
+
+msgid "Checking SLA deadlines for all open tickets..."
+msgstr "جارٍ فحص مواعيد SLA لجميع التذاكر المفتوحة..."
+
+msgid "SLA check complete: %(breached)d breaches detected, %(warned)d warnings sent."
+msgstr "اكتمل فحص SLA: تم اكتشاف %(breached)d انتهاك، تم إرسال %(warned)d تحذير."
+
+# --- Management command: close_resolved ---
+msgid "Auto-close tickets that have been resolved for a configurable number of days."
+msgstr "إغلاق التذاكر تلقائيا التي تم حلها منذ عدد قابل للتهيئة من الأيام."
+
+msgid "Days after resolution to auto-close (overrides setting)"
+msgstr "الأيام بعد الحل للإغلاق التلقائي (يتجاوز الإعداد)"
+
+msgid "Show what would be closed without making changes"
+msgstr "عرض ما سيتم إغلاقه دون إجراء تغييرات"
+
+msgid "[DRY RUN] Would close %(count)d tickets resolved more than %(days)d days ago."
+msgstr "[تجربة] سيتم إغلاق %(count)d تذكرة تم حلها منذ أكثر من %(days)d يوم."
+
+msgid "No resolved tickets to auto-close."
+msgstr "لا توجد تذاكر محلولة للإغلاق التلقائي."
+
+msgid "Auto-closed %(count)d tickets that were resolved more than %(days)d days ago."
+msgstr "تم إغلاق %(count)d تذكرة تلقائيا تم حلها منذ أكثر من %(days)d يوم."
+
+# --- Management command: evaluate_escalations ---
+msgid "Evaluate all active escalation rules against open tickets."
+msgstr "تقييم جميع قواعد التصعيد النشطة على التذاكر المفتوحة."
+
+msgid "Evaluating escalation rules..."
+msgstr "جارٍ تقييم قواعد التصعيد..."
+
+msgid "Escalation evaluation complete: %(count)d actions taken."
+msgstr "اكتمل تقييم التصعيد: تم اتخاذ %(count)d إجراء."
+
+# --- Email templates ---
+msgid "New Support Ticket Created"
+msgstr "تم إنشاء تذكرة دعم جديدة"
+
+msgid "Your support ticket has been created successfully."
+msgstr "تم إنشاء تذكرة الدعم بنجاح."
+
+msgid "Reference:"
+msgstr "المرجع:"
+
+msgid "Subject:"
+msgstr "الموضوع:"
+
+msgid "Priority:"
+msgstr "الأولوية:"
+
+msgid "Status:"
+msgstr "الحالة:"
+
+msgid "Description:"
+msgstr "الوصف:"
+
+msgid "Our team will review your ticket shortly. You will receive updates as your ticket progresses."
+msgstr "سيقوم فريقنا بمراجعة تذكرتك قريبا. ستتلقى تحديثات مع تقدم تذكرتك."
+
+msgid "This is an automated message from the support system. Please do not reply directly to this email."
+msgstr "هذه رسالة تلقائية من نظام الدعم. يرجى عدم الرد مباشرة على هذا البريد."
+
+msgid "New Reply on Ticket"
+msgstr "رد جديد على التذكرة"
+
+msgid "A new reply has been added:"
+msgstr "تمت إضافة رد جديد:"
+
+msgid "Log in to your account to view the full conversation and respond."
+msgstr "سجل الدخول إلى حسابك لعرض المحادثة الكاملة والرد."
+
+msgid "Ticket Assigned to You"
+msgstr "تم تعيين تذكرة لك"
+
+msgid "A support ticket has been assigned to you."
+msgstr "تم تعيين تذكرة دعم لك."
+
+msgid "Department:"
+msgstr "القسم:"
+
+msgid "Please review and respond to this ticket at your earliest convenience."
+msgstr "يرجى المراجعة والرد على هذه التذكرة في أقرب وقت."
+
+msgid "This is an automated message from the support system."
+msgstr "هذه رسالة تلقائية من نظام الدعم."
+
+msgid "Ticket Status Updated"
+msgstr "تم تحديث حالة التذكرة"
+
+msgid "Log in to your account to view the full details of your ticket."
+msgstr "سجل الدخول إلى حسابك لعرض جميع تفاصيل تذكرتك."
+
+msgid "SLA Breach Alert"
+msgstr "تنبيه انتهاك SLA"
+
+msgid "Breach Type:"
+msgstr "نوع الانتهاك:"
+
+msgid "Assigned To:"
+msgstr "معيَّن إلى:"
+
+msgid "Immediate action is required."
+msgstr "يتطلب إجراء فوري."
+
+msgid "Please review this ticket and take appropriate action."
+msgstr "يرجى مراجعة هذه التذكرة واتخاذ الإجراء المناسب."
+
+msgid "This is an automated SLA monitoring alert from the support system."
+msgstr "هذا تنبيه مراقبة SLA تلقائي من نظام الدعم."
+
+msgid "Ticket Escalated"
+msgstr "تم تصعيد التذكرة"
+
+msgid "Reason:"
+msgstr "السبب:"
+
+msgid "This ticket requires immediate attention. Please review and take action."
+msgstr "تتطلب هذه التذكرة اهتماما فوريا. يرجى المراجعة واتخاذ إجراء."
+
+msgid "This is an automated escalation alert from the support system."
+msgstr "هذا تنبيه تصعيد تلقائي من نظام الدعم."
+
+msgid "Ticket Resolved"
+msgstr "تم حل التذكرة"
+
+msgid "If you believe this issue is not fully resolved, you can reopen the ticket by logging into your account."
+msgstr "إذا كنت تعتقد أن هذه المشكلة لم تُحل بالكامل، يمكنك إعادة فتح التذكرة بتسجيل الدخول."
+
+msgid "Thank you for reaching out to us. We hope we were able to help!"
+msgstr "شكرا لتواصلك معنا. نأمل أننا تمكنا من مساعدتك!"
+
+# --- Escalated Support (app verbose name) ---
+msgid "Escalated Support"
+msgstr "الدعم المتصاعد"
