@@ -14,6 +14,7 @@ from escalated.views import (
     mentions,
     widget,
     widget_chat,
+    workflows,
 )
 
 app_name = "escalated"
@@ -261,6 +262,15 @@ admin_patterns = [
     ),
     # Reports
     path("admin/reports/dashboard/", admin.reports_dashboard, name="admin_reports_dashboard"),
+    # Workflows
+    path("admin/workflows/", workflows.workflow_list, name="admin_workflows"),
+    path("admin/workflows/create/", workflows.workflow_create, name="admin_workflow_create"),
+    path("admin/workflows/reorder/", workflows.workflow_reorder, name="admin_workflow_reorder"),
+    path("admin/workflows/<int:workflow_id>/", workflows.workflow_update, name="admin_workflow_update"),
+    path("admin/workflows/<int:workflow_id>/delete/", workflows.workflow_delete, name="admin_workflow_delete"),
+    path("admin/workflows/<int:workflow_id>/toggle/", workflows.workflow_toggle, name="admin_workflow_toggle"),
+    path("admin/workflows/<int:workflow_id>/logs/", workflows.workflow_logs, name="admin_workflow_logs"),
+    path("admin/workflows/<int:workflow_id>/dry-run/", workflows.workflow_dry_run, name="admin_workflow_dry_run"),
     # Advanced Reports
     path("admin/reports/advanced/sla-trends/", advanced_reports.sla_trends, name="admin_reports_sla_trends"),
     path(
