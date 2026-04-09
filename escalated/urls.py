@@ -4,6 +4,7 @@ from escalated.conf import get_setting
 from escalated.views import (
     admin,
     admin_plugins,
+    advanced_reports,
     agent,
     chat,
     customer,
@@ -260,6 +261,29 @@ admin_patterns = [
     ),
     # Reports
     path("admin/reports/dashboard/", admin.reports_dashboard, name="admin_reports_dashboard"),
+    # Advanced Reports
+    path("admin/reports/advanced/sla-trends/", advanced_reports.sla_trends, name="admin_reports_sla_trends"),
+    path(
+        "admin/reports/advanced/frt-distribution/",
+        advanced_reports.frt_distribution,
+        name="admin_reports_frt_distribution",
+    ),
+    path("admin/reports/advanced/frt-trends/", advanced_reports.frt_trends, name="admin_reports_frt_trends"),
+    path("admin/reports/advanced/frt-by-agent/", advanced_reports.frt_by_agent, name="admin_reports_frt_by_agent"),
+    path(
+        "admin/reports/advanced/resolution-distribution/",
+        advanced_reports.resolution_distribution,
+        name="admin_reports_resolution_distribution",
+    ),
+    path(
+        "admin/reports/advanced/resolution-trends/",
+        advanced_reports.resolution_trends,
+        name="admin_reports_resolution_trends",
+    ),
+    path("admin/reports/advanced/agent-ranking/", advanced_reports.agent_ranking, name="admin_reports_agent_ranking"),
+    path("admin/reports/advanced/cohort/", advanced_reports.cohort, name="admin_reports_cohort"),
+    path("admin/reports/advanced/comparison/", advanced_reports.comparison, name="admin_reports_comparison"),
+    path("admin/reports/advanced/export/", advanced_reports.export, name="admin_reports_export"),
     # Import
     path("admin/import/", import_views.import_index, name="admin_import_index"),
     path("admin/import/create/", import_views.import_create, name="admin_import_create"),
