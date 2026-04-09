@@ -1,0 +1,436 @@
+# Escalated Django translations
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ko\n"
+
+# --- Model TextChoices: Ticket.Status ---
+msgid "Open"
+msgstr "열림"
+
+msgid "In Progress"
+msgstr "진행 중"
+
+msgid "Waiting on Customer"
+msgstr "고객 대기"
+
+msgid "Waiting on Agent"
+msgstr "상담원 대기"
+
+msgid "Escalated"
+msgstr "에스컬레이션됨"
+
+msgid "Resolved"
+msgstr "해결됨"
+
+msgid "Closed"
+msgstr "종료"
+
+msgid "Reopened"
+msgstr "재개됨"
+
+# --- Model TextChoices: Ticket.Priority ---
+msgid "Low"
+msgstr "낮음"
+
+msgid "Medium"
+msgstr "보통"
+
+msgid "High"
+msgstr "높음"
+
+msgid "Urgent"
+msgstr "긴급"
+
+msgid "Critical"
+msgstr "심각"
+
+# --- Model TextChoices: Reply.Type ---
+msgid "Reply"
+msgstr "답변"
+
+msgid "Internal Note"
+msgstr "내부 메모"
+
+msgid "System"
+msgstr "시스템"
+
+# --- Model TextChoices: TicketActivity.ActivityType ---
+msgid "Created"
+msgstr "생성됨"
+
+msgid "Status Changed"
+msgstr "상태 변경"
+
+msgid "Priority Changed"
+msgstr "우선순위 변경"
+
+msgid "Assigned"
+msgstr "할당됨"
+
+msgid "Unassigned"
+msgstr "미할당"
+
+msgid "Reply Added"
+msgstr "답변 추가됨"
+
+msgid "Note Added"
+msgstr "메모 추가됨"
+
+msgid "Tag Added"
+msgstr "태그 추가됨"
+
+msgid "Tag Removed"
+msgstr "태그 제거됨"
+
+msgid "Department Changed"
+msgstr "부서 변경"
+
+msgid "SLA Breached"
+msgstr "SLA 위반"
+
+msgid "Attachment Added"
+msgstr "첨부파일 추가됨"
+
+msgid "Merged"
+msgstr "병합됨"
+
+# --- Model TextChoices: EscalationRule.TriggerType ---
+msgid "SLA Breach"
+msgstr "SLA 위반"
+
+msgid "Priority Change"
+msgstr "우선순위 변경"
+
+msgid "No Response"
+msgstr "응답 없음"
+
+msgid "Customer Reply"
+msgstr "고객 답변"
+
+msgid "Time Based"
+msgstr "시간 기반"
+
+# --- Model TextChoices: InboundEmail.Status ---
+msgid "Pending"
+msgstr "대기 중"
+
+msgid "Processed"
+msgstr "처리됨"
+
+msgid "Failed"
+msgstr "실패"
+
+msgid "Spam"
+msgstr "스팸"
+
+# --- Model verbose_name / help_text ---
+msgid "SLA Policy"
+msgstr "SLA 정책"
+
+msgid "SLA Policies"
+msgstr "SLA 정책"
+
+msgid "Ticket activities"
+msgstr "티켓 활동"
+
+msgid "Map of priority to hours, e.g. {\"low\": 24, \"medium\": 8, \"high\": 4, \"urgent\": 1, \"critical\": 0.5}"
+msgstr "Map of priority to hours, e.g. {\\"low\\": 24, \\"medium\\": 8, \\"high\\": 4, \\"urgent\\": 1, \\"critical\\": 0.5}"
+
+msgid "Map of priority to hours, e.g. {\"low\": 72, \"medium\": 24, \"high\": 8, \"urgent\": 4, \"critical\": 2}"
+msgstr "Map of priority to hours, e.g. {\\"low\\": 72, \\"medium\\": 24, \\"high\\": 8, \\"urgent\\": 4, \\"critical\\": 2}"
+
+msgid "Unique token for guest ticket access"
+msgstr "Unique token for guest ticket access"
+
+msgid "JSON conditions that must be met for the rule to fire"
+msgstr "JSON conditions that must be met for the rule to fire"
+
+msgid "JSON actions to take when the rule fires (e.g., assign, notify, change priority)"
+msgstr "JSON actions to take when the rule fires (e.g., assign, notify, change priority)"
+
+msgid "File size in bytes"
+msgstr "File size in bytes"
+
+msgid "JSON array of actions, e.g. [{\"type\": \"set_status\", \"value\": \"open\"}]"
+msgstr "JSON array of actions, e.g. [{\\"type\\": \\"set_status\\", \\"value\\": \\"open\\"}]"
+
+msgid "Rating from 1 to 5"
+msgstr "Rating from 1 to 5"
+
+# --- Middleware messages ---
+msgid "You do not have permission to access the agent dashboard."
+msgstr "상담원 대시보드에 접근할 권한이 없습니다."
+
+msgid "You do not have permission to access the admin area."
+msgstr "관리자 영역에 접근할 권한이 없습니다."
+
+# --- View messages: common ---
+msgid "Method not allowed"
+msgstr "허용되지 않는 메서드"
+
+msgid "Ticket not found"
+msgstr "티켓을 찾을 수 없음"
+
+msgid "Agent access required."
+msgstr "상담원 접근 권한이 필요합니다."
+
+msgid "Admin access required."
+msgstr "관리자 접근 권한이 필요합니다."
+
+# --- View messages: customer.py ---
+msgid "Subject is required."
+msgstr "제목은 필수입니다."
+
+msgid "Description is required."
+msgstr "설명은 필수입니다."
+
+msgid "You cannot view this ticket."
+msgstr "이 티켓을 볼 수 없습니다."
+
+msgid "You cannot reply to this ticket."
+msgstr "이 티켓에 답변할 수 없습니다."
+
+msgid "You cannot close this ticket."
+msgstr "이 티켓을 종료할 수 없습니다."
+
+msgid "You cannot reopen this ticket."
+msgstr "이 티켓을 재개할 수 없습니다."
+
+msgid "You can only rate resolved or closed tickets."
+msgstr "해결되었거나 종료된 티켓만 평가할 수 있습니다."
+
+msgid "This ticket has already been rated."
+msgstr "이 티켓은 이미 평가되었습니다."
+
+msgid "Rating must be between 1 and 5."
+msgstr "평가는 1에서 5 사이여야 합니다."
+
+msgid "Invalid rating value."
+msgstr "잘못된 평가 값입니다."
+
+# --- View messages: agent.py ---
+msgid "You cannot update this ticket."
+msgstr "이 티켓을 업데이트할 수 없습니다."
+
+msgid "Agent not found"
+msgstr "상담원을 찾을 수 없음"
+
+msgid "Invalid status."
+msgstr "잘못된 상태입니다."
+
+msgid "Invalid priority."
+msgstr "잘못된 우선순위입니다."
+
+msgid "Only internal notes can be pinned."
+msgstr "내부 메모만 고정할 수 있습니다."
+
+msgid "Macro not found"
+msgstr "매크로를 찾을 수 없음"
+
+msgid "Reply not found"
+msgstr "답변을 찾을 수 없음"
+
+# --- View messages: guest.py ---
+msgid "Guest tickets are not enabled."
+msgstr "게스트 티켓이 활성화되지 않았습니다."
+
+msgid "Name is required."
+msgstr "이름은 필수입니다."
+
+msgid "Email is required."
+msgstr "이메일은 필수입니다."
+
+msgid "Ticket not found."
+msgstr "티켓을 찾을 수 없습니다."
+
+msgid "This ticket is closed."
+msgstr "이 티켓은 종료되었습니다."
+
+# --- View messages: admin.py ---
+msgid "Department not found"
+msgstr "부서를 찾을 수 없음"
+
+msgid "SLA Policy not found"
+msgstr "SLA 정책을 찾을 수 없음"
+
+msgid "Escalation rule not found"
+msgstr "에스컬레이션 규칙을 찾을 수 없음"
+
+msgid "Tag not found"
+msgstr "태그를 찾을 수 없음"
+
+msgid "Canned response not found"
+msgstr "정형 응답을 찾을 수 없음"
+
+msgid "Title is required."
+msgstr "제목은 필수입니다."
+
+# --- View messages: inbound.py ---
+msgid "Inbound email processing is disabled."
+msgstr "수신 이메일 처리가 비활성화되어 있습니다."
+
+msgid "Request verification failed."
+msgstr "요청 인증에 실패했습니다."
+
+# --- Notification service: email subjects ---
+msgid "New ticket: %(subject)s"
+msgstr "새 티켓: %(subject)s"
+
+msgid "New reply on: %(subject)s"
+msgstr "새 답변: %(subject)s"
+
+msgid "Customer reply on: %(subject)s"
+msgstr "고객 답변: %(subject)s"
+
+msgid "Ticket assigned to you: %(subject)s"
+msgstr "티켓이 할당되었습니다: %(subject)s"
+
+msgid "Status updated: %(subject)s"
+msgstr "상태 업데이트: %(subject)s"
+
+msgid "%(breach_type)s: %(subject)s"
+msgstr "%(breach_type)s: %(subject)s"
+
+# --- Management command: check_sla ---
+msgid "Check all open tickets for SLA breaches and send warnings."
+msgstr "Check all open tickets for SLA breaches and send warnings."
+
+msgid "Minutes before SLA deadline to trigger warning (default: 30)"
+msgstr "Minutes before SLA deadline to trigger warning (default: 30)"
+
+msgid "Checking SLA deadlines for all open tickets..."
+msgstr "Checking SLA deadlines for all open tickets..."
+
+msgid "SLA check complete: %(breached)d breaches detected, %(warned)d warnings sent."
+msgstr "SLA check complete: %(breached)d breaches detected, %(warned)d warnings sent."
+
+# --- Management command: close_resolved ---
+msgid "Auto-close tickets that have been resolved for a configurable number of days."
+msgstr "Auto-close tickets that have been resolved for a configurable number of days."
+
+msgid "Days after resolution to auto-close (overrides setting)"
+msgstr "Days after resolution to auto-close (overrides setting)"
+
+msgid "Show what would be closed without making changes"
+msgstr "Show what would be closed without making changes"
+
+msgid "[DRY RUN] Would close %(count)d tickets resolved more than %(days)d days ago."
+msgstr "[DRY RUN] Would close %(count)d tickets resolved more than %(days)d days ago."
+
+msgid "No resolved tickets to auto-close."
+msgstr "No resolved tickets to auto-close."
+
+msgid "Auto-closed %(count)d tickets that were resolved more than %(days)d days ago."
+msgstr "Auto-closed %(count)d tickets that were resolved more than %(days)d days ago."
+
+# --- Management command: evaluate_escalations ---
+msgid "Evaluate all active escalation rules against open tickets."
+msgstr "Evaluate all active escalation rules against open tickets."
+
+msgid "Evaluating escalation rules..."
+msgstr "Evaluating escalation rules..."
+
+msgid "Escalation evaluation complete: %(count)d actions taken."
+msgstr "Escalation evaluation complete: %(count)d actions taken."
+
+# --- Email templates ---
+msgid "New Support Ticket Created"
+msgstr "새 지원 티켓 생성됨"
+
+msgid "Your support ticket has been created successfully."
+msgstr "지원 티켓이 성공적으로 생성되었습니다."
+
+msgid "Reference:"
+msgstr "참조:"
+
+msgid "Subject:"
+msgstr "제목:"
+
+msgid "Priority:"
+msgstr "우선순위:"
+
+msgid "Status:"
+msgstr "상태:"
+
+msgid "Description:"
+msgstr "설명:"
+
+msgid "Our team will review your ticket shortly. You will receive updates as your ticket progresses."
+msgstr "Our team will review your ticket shortly. You will receive updates as your ticket progresses."
+
+msgid "This is an automated message from the support system. Please do not reply directly to this email."
+msgstr "This is an automated message from the support system. Please do not reply directly to this email."
+
+msgid "New Reply on Ticket"
+msgstr "티켓에 새 답변"
+
+msgid "A new reply has been added:"
+msgstr "A new reply has been added:"
+
+msgid "Log in to your account to view the full conversation and respond."
+msgstr "Log in to your account to view the full conversation and respond."
+
+msgid "Ticket Assigned to You"
+msgstr "티켓이 할당되었습니다"
+
+msgid "A support ticket has been assigned to you."
+msgstr "지원 티켓이 할당되었습니다."
+
+msgid "Department:"
+msgstr "부서:"
+
+msgid "Please review and respond to this ticket at your earliest convenience."
+msgstr "Please review and respond to this ticket at your earliest convenience."
+
+msgid "This is an automated message from the support system."
+msgstr "This is an automated message from the support system."
+
+msgid "Ticket Status Updated"
+msgstr "티켓 상태 업데이트됨"
+
+msgid "Log in to your account to view the full details of your ticket."
+msgstr "Log in to your account to view the full details of your ticket."
+
+msgid "SLA Breach Alert"
+msgstr "SLA 위반 알림"
+
+msgid "Breach Type:"
+msgstr "위반 유형:"
+
+msgid "Assigned To:"
+msgstr "담당자:"
+
+msgid "Immediate action is required."
+msgstr "Immediate action is required."
+
+msgid "Please review this ticket and take appropriate action."
+msgstr "Please review this ticket and take appropriate action."
+
+msgid "This is an automated SLA monitoring alert from the support system."
+msgstr "This is an automated SLA monitoring alert from the support system."
+
+msgid "Ticket Escalated"
+msgstr "티켓 에스컬레이션됨"
+
+msgid "Reason:"
+msgstr "사유:"
+
+msgid "This ticket requires immediate attention. Please review and take action."
+msgstr "This ticket requires immediate attention. Please review and take action."
+
+msgid "This is an automated escalation alert from the support system."
+msgstr "This is an automated escalation alert from the support system."
+
+msgid "Ticket Resolved"
+msgstr "티켓 해결됨"
+
+msgid "If you believe this issue is not fully resolved, you can reopen the ticket by logging into your account."
+msgstr "If you believe this issue is not fully resolved, you can reopen the ticket by logging into your account."
+
+msgid "Thank you for reaching out to us. We hope we were able to help!"
+msgstr "Thank you for reaching out to us. We hope we were able to help!"
+
+# --- Escalated Support (app verbose name) ---
+msgid "Escalated Support"
+msgstr "Escalated 지원"
