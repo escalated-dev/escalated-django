@@ -30,26 +30,26 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 
 ## Funzionalità
 
-- **Ticket lifecycle** — Create, assign, reply, resolve, close, reopen with configurable status transitions
-- **SLA engine** — Per-priority response and resolution targets, business hours calculation, automatic breach detection
-- **Escalation rules** — Condition-based rules that auto-escalate, reprioritize, reassign, or notify
-- **Agent dashboard** — Ticket queue with filters, bulk actions, internal notes, canned responses
-- **Customer portal** — Self-service ticket creation, replies, and status tracking
-- **Admin panel** — Manage departments, SLA policies, escalation rules, tags, and view reports
-- **File attachments** — Drag-and-drop uploads with configurable storage and size limits
-- **Activity timeline** — Full audit log of every action on every ticket
-- **Email notifications** — Configurable per-event notifications with webhook support
-- **Department routing** — Organize agents into departments with auto-assignment (round-robin)
-- **Tagging system** — Categorize tickets with colored tags
+- **Ciclo di vita del ticket** — Creare, assegnare, rispondere, risolvere, chiudere, riaprire con transizioni di stato configurabili
+- **Motore SLA** — Obiettivi di risposta e risoluzione per priorità, calcolo delle ore lavorative, rilevamento automatico delle violazioni
+- **Regole di escalation** — Regole basate su condizioni che escalano, ripriorizzano, riassegnano o notificano automaticamente
+- **Dashboard dell'agente** — Coda ticket con filtri, azioni di massa, note interne, risposte predefinite
+- **Portale clienti** — Creazione ticket self-service, risposte e tracciamento dello stato
+- **Pannello di amministrazione** — Gestire reparti, policy SLA, regole di escalation, tag e visualizzare report
+- **Allegati** — Upload drag-and-drop con archiviazione configurabile e limiti di dimensione
+- **Timeline delle attività** — Log di audit completo di ogni azione su ogni ticket
+- **Notifiche email** — Notifiche configurabili per evento con supporto webhook
+- **Routing per reparto** — Organizzare gli agenti in reparti con assegnazione automatica (round-robin)
+- **Sistema di tagging** — Categorizzare i ticket con tag colorati
 - **Inertia.js + Vue 3 UI** — Shared frontend via [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated)
-- **Ticket splitting** — Split a reply into a new standalone ticket while preserving the original context
+- **Divisione ticket** — Dividere una risposta in un nuovo ticket autonomo preservando il contesto originale
 - **Ticket snooze** — Snooze tickets with presets (1h, 4h, tomorrow, next week); `python manage.py wake_snoozed_tickets` management command auto-wakes them on schedule
-- **Saved views / custom queues** — Save, name, and share filter presets as reusable ticket views
-- **Embeddable support widget** — Lightweight `<script>` widget with KB search, ticket form, and status check
-- **Email threading** — Outbound emails include proper `In-Reply-To` and `References` headers for correct threading in mail clients
-- **Branded email templates** — Configurable logo, primary color, and footer text for all outbound emails
+- **Viste salvate / code personalizzate** — Salvare, denominare e condividere preset di filtri come viste ticket riutilizzabili
+- **Widget di supporto integrabile** — Widget leggero `<script>` con ricerca KB, modulo ticket e verifica stato
+- **Threading email** — Le email in uscita includono gli header `In-Reply-To` e `References` per un threading corretto nei client di posta
+- **Template email personalizzati** — Logo, colore primario e testo del footer configurabili per tutte le email in uscita
 - **Real-time broadcasting** — Opt-in broadcasting via Django Channels with automatic polling fallback
-- **Knowledge base toggle** — Enable or disable the public knowledge base from admin settings
+- **Toggle base di conoscenza** — Abilitare o disabilitare la base di conoscenza pubblica dalle impostazioni admin
 
 ## Requisiti
 
@@ -94,11 +94,11 @@ python manage.py migrate escalated
 
 Visit `/support` — you're live.
 
-## Frontend Setup
+## Configurazione Frontend
 
 Escalated uses Inertia.js with Vue 3. The frontend components are provided by the [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated) npm package.
 
-### Tailwind Content
+### Contenuto Tailwind
 
 Add the Escalated package to your Tailwind `content` config so its classes aren't purged:
 
@@ -110,7 +110,7 @@ content: [
 ],
 ```
 
-### Page Resolver
+### Risolutore di Pagine
 
 Add the Escalated pages to your Inertia page resolver:
 
@@ -141,7 +141,7 @@ createInertiaApp({
 })
 ```
 
-### Theming (Optional)
+### Temi (Opzionale)
 
 Register the `EscalatedPlugin` to render Escalated pages inside your app's layout — no page duplication needed:
 
@@ -171,7 +171,7 @@ See the [`@escalated-dev/escalated` README](https://github.com/escalated-dev/esc
 
 ## Modalità di Hosting
 
-### Self-Hosted (default)
+### Self-Hosted (predefinito)
 
 Everything stays in your database. No external calls. Full autonomy.
 
@@ -181,7 +181,7 @@ ESCALATED = {
 }
 ```
 
-### Synced
+### Sincronizzato
 
 Local database + automatic sync to `cloud.escalated.dev` for unified inbox across multiple apps. If the cloud is unreachable, your app keeps working — events queue and retry.
 
@@ -246,7 +246,7 @@ ESCALATED = {
 }
 ```
 
-## Management Commands
+## Comandi di Gestione
 
 ```bash
 # Check SLA deadlines and fire breach notifications
@@ -264,7 +264,7 @@ python manage.py purge_activities --days 90
 
 Schedule these with cron, Celery Beat, or django-crontab for automated enforcement.
 
-## Route
+## Percorsi
 
 All routes use the configurable prefix (default: `support`).
 
@@ -289,7 +289,7 @@ All routes use the configurable prefix (default: `support`).
 | `/support/agent/tickets/<id>/pin/<reply_id>/` | POST | Pin/unpin an internal note |
 | `/support/tickets/<id>/rate/` | POST | Submit satisfaction rating |
 
-## Signals
+## Segnali
 
 Connect to ticket lifecycle events:
 
@@ -307,16 +307,16 @@ def on_ticket_resolved(sender, ticket, user, **kwargs):
 
 Available signals: `ticket_created`, `ticket_updated`, `ticket_status_changed`, `ticket_assigned`, `ticket_unassigned`, `ticket_priority_changed`, `ticket_escalated`, `ticket_resolved`, `ticket_closed`, `ticket_reopened`, `reply_created`, `internal_note_added`, `sla_breached`, `sla_warning`, `tag_added`, `tag_removed`, `department_changed`.
 
-## Plugin SDK
+## SDK Plugin
 
 Escalated supports framework-agnostic plugins built with the [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk). Plugins are written once in TypeScript and work across all Escalated backends.
 
-### Requirements
+### Requisiti
 
 - Node.js 20+
 - `@escalated-dev/plugin-runtime` installed in your project
 
-### Installing Plugins
+### Installazione dei Plugin
 
 ```bash
 npm install @escalated-dev/plugin-runtime
@@ -324,7 +324,7 @@ npm install @escalated-dev/plugin-slack
 npm install @escalated-dev/plugin-jira
 ```
 
-### Enabling SDK Plugins
+### Abilitazione Plugin SDK
 
 ```python
 # settings.py
@@ -334,11 +334,11 @@ ESCALATED = {
 }
 ```
 
-### How It Works
+### Come Funziona
 
 SDK plugins run as a long-lived Node.js subprocess managed by `@escalated-dev/plugin-runtime`, communicating with Django over JSON-RPC 2.0 via stdio. Every ticket lifecycle signal is dual-dispatched — first to Django signal handlers, then forwarded to the plugin runtime.
 
-### Building Your Own Plugin
+### Creare il Proprio Plugin
 
 ```typescript
 import { definePlugin } from '@escalated-dev/plugin-sdk'
@@ -354,7 +354,7 @@ export default definePlugin({
 })
 ```
 
-### Resources
+### Risorse
 
 - [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk) — TypeScript SDK for building plugins
 - [Plugin Runtime](https://github.com/escalated-dev/escalated-plugin-runtime) — Runtime host for plugins
@@ -362,7 +362,7 @@ export default definePlugin({
 
 See the detailed [SDK Plugin Bridge](#sdk-plugin-bridge) section below for the full architecture, supported `ctx.*` callbacks, hook event mapping, and resilience documentation.
 
-## SDK Plugin Bridge
+## Bridge Plugin SDK
 
 The Plugin Bridge connects your Django app to the Node.js
 `@escalated-dev/plugin-runtime` process via JSON-RPC 2.0 over stdio.
@@ -385,13 +385,13 @@ project.
    (`ctx.tickets.find`, `ctx.store.set`, `ctx.config.get`, etc.) over the
    same bidirectional JSON-RPC channel.
 
-### Requirements
+### Requisiti
 
 - Node.js 18+
 - `@escalated-dev/plugin-runtime` installed in your project's
   `node_modules`
 
-### Quick start
+### Avvio rapido
 
 **1. Install the runtime**
 
@@ -467,7 +467,7 @@ Every ticket signal fires a corresponding SDK hook:
 | `reply_created` | `reply.created` |
 | `sla_breached` | `sla.breached` |
 
-### Resilience
+### Resilienza
 
 - The bridge is spawned **lazily** on first use — health-check requests are
   never slowed down.
@@ -489,7 +489,7 @@ Every ticket signal fires a corresponding SDK hook:
 
 Same architecture, same Vue UI, same three hosting modes — for every major backend framework.
 
-## Development
+## Sviluppo
 
 ```bash
 pip install -e ".[dev]"
