@@ -29,8 +29,8 @@ class AdvancedReportingService:
                     "frt_breaches": day_tickets.filter(
                         sla_first_response_breached=True,
                         first_response_at__isnull=True,
-                        sla_first_response_due_at__gte=day_start,
-                        sla_first_response_due_at__lt=day_end,
+                        first_response_due_at__gte=day_start,
+                        first_response_due_at__lt=day_end,
                     ).count(),
                     "resolution_breaches": day_tickets.filter(
                         sla_resolution_breached=True,
