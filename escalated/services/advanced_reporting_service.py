@@ -35,8 +35,8 @@ class AdvancedReportingService:
                     "resolution_breaches": day_tickets.filter(
                         sla_resolution_breached=True,
                         resolved_at__isnull=True,
-                        sla_resolution_due_at__gte=day_start,
-                        sla_resolution_due_at__lt=day_end,
+                        resolution_due_at__gte=day_start,
+                        resolution_due_at__lt=day_end,
                     ).count(),
                     "total_breaches": day_tickets.filter(
                         Q(sla_first_response_breached=True) | Q(sla_resolution_breached=True),
