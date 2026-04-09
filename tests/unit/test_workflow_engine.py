@@ -66,7 +66,7 @@ class TestWorkflowEngine:
         assert self.engine.evaluate_conditions(conditions, ticket) is True
 
     def test_evaluate_is_empty(self):
-        ticket = self._create_ticket(ticket_type=None)
+        ticket = self._create_ticket(ticket_type="")
         conditions = {"all": [{"field": "ticket_type", "operator": "is_empty", "value": ""}]}
         assert self.engine.evaluate_conditions(conditions, ticket) is True
 
