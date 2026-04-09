@@ -10,6 +10,7 @@ from escalated.views import (
     guest,
     import_views,
     inbound,
+    mentions,
     widget,
     widget_chat,
 )
@@ -46,6 +47,10 @@ agent_patterns = [
     path("agent/tickets/<int:ticket_id>/follow/", agent.ticket_follow, name="agent_ticket_follow"),
     path("agent/tickets/<int:ticket_id>/presence/", agent.ticket_presence, name="agent_ticket_presence"),
     path("agent/tickets/<int:ticket_id>/<int:reply_id>/pin/", agent.ticket_pin_reply, name="agent_ticket_pin"),
+    # Mentions
+    path("agent/mentions/", mentions.mention_list, name="agent_mentions"),
+    path("agent/mentions/mark-read/", mentions.mention_mark_read, name="agent_mentions_mark_read"),
+    path("agent/mentions/search-agents/", mentions.search_agents, name="agent_mentions_search_agents"),
 ]
 
 # Admin-facing URLs
