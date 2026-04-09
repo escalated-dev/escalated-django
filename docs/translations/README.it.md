@@ -1,18 +1,18 @@
 <p align="center">
-  <a href="docs/translations/README.ar.md">العربية</a> •
-  <a href="docs/translations/README.de.md">Deutsch</a> •
-  <b>English</b> •
-  <a href="docs/translations/README.es.md">Español</a> •
-  <a href="docs/translations/README.fr.md">Français</a> •
-  <a href="docs/translations/README.it.md">Italiano</a> •
-  <a href="docs/translations/README.ja.md">日本語</a> •
-  <a href="docs/translations/README.ko.md">한국어</a> •
-  <a href="docs/translations/README.nl.md">Nederlands</a> •
-  <a href="docs/translations/README.pl.md">Polski</a> •
-  <a href="docs/translations/README.pt-BR.md">Português (BR)</a> •
-  <a href="docs/translations/README.ru.md">Русский</a> •
-  <a href="docs/translations/README.tr.md">Türkçe</a> •
-  <a href="docs/translations/README.zh-CN.md">简体中文</a>
+  <a href="README.ar.md">العربية</a> •
+  <a href="README.de.md">Deutsch</a> •
+  <a href="../../README.md">English</a> •
+  <a href="README.es.md">Español</a> •
+  <a href="README.fr.md">Français</a> •
+  <b>Italiano</b> •
+  <a href="README.ja.md">日本語</a> •
+  <a href="README.ko.md">한국어</a> •
+  <a href="README.nl.md">Nederlands</a> •
+  <a href="README.pl.md">Polski</a> •
+  <a href="README.pt-BR.md">Português (BR)</a> •
+  <a href="README.ru.md">Русский</a> •
+  <a href="README.tr.md">Türkçe</a> •
+  <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 # Escalated for Django
@@ -28,7 +28,7 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 
 **Three hosting modes.** Run entirely self-hosted, sync to a central cloud for multi-app visibility, or proxy everything to the cloud. Switch modes with a single config change.
 
-## Features
+## Funzionalità
 
 - **Ticket lifecycle** — Create, assign, reply, resolve, close, reopen with configurable status transitions
 - **SLA engine** — Per-priority response and resolution targets, business hours calculation, automatic breach detection
@@ -51,13 +51,13 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 - **Real-time broadcasting** — Opt-in broadcasting via Django Channels with automatic polling fallback
 - **Knowledge base toggle** — Enable or disable the public knowledge base from admin settings
 
-## Requirements
+## Requisiti
 
 - Python 3.10+
 - Django 4.2+
 - Node.js 18+ (for frontend assets)
 
-## Quick Start
+## Avvio Rapido
 
 ```bash
 pip install escalated-django
@@ -169,7 +169,7 @@ Your layout component must accept a `#header` slot and a default slot. Escalated
 
 See the [`@escalated-dev/escalated` README](https://github.com/escalated-dev/escalated) for full theming documentation and CSS custom properties.
 
-## Hosting Modes
+## Modalità di Hosting
 
 ### Self-Hosted (default)
 
@@ -207,7 +207,7 @@ ESCALATED = {
 
 All three modes share the same views, UI, and business logic. The driver pattern handles the rest.
 
-## Configuration
+## Configurazione
 
 Add to your `settings.py`:
 
@@ -264,7 +264,7 @@ python manage.py purge_activities --days 90
 
 Schedule these with cron, Celery Beat, or django-crontab for automated enforcement.
 
-## Routes
+## Route
 
 All routes use the configurable prefix (default: `support`).
 
@@ -478,7 +478,7 @@ Every ticket signal fires a corresponding SDK hook:
 - The action queue is capped at 1 000 in-flight entries to prevent memory
   growth.
 
-## Also Available For
+## Disponibile Anche Per
 
 - **[Escalated for Laravel](https://github.com/escalated-dev/escalated-laravel)** — Laravel Composer package
 - **[Escalated for Rails](https://github.com/escalated-dev/escalated-rails)** — Ruby on Rails engine
@@ -496,6 +496,6 @@ pip install -e ".[dev]"
 pytest
 ```
 
-## License
+## Licenza
 
 MIT
