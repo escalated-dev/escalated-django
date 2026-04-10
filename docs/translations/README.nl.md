@@ -22,11 +22,11 @@
 [![Django](https://img.shields.io/badge/django-4.2+-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A full-featured, embeddable support ticket system for Django. Drop it into any app — get a complete helpdesk with SLA tracking, escalation rules, agent workflows, and a customer portal. No external services required.
+Een volledig uitgerust, inbedbaar support-ticketsysteem voor Django. Voeg het toe aan elke app — krijg een complete helpdesk met SLA-tracking, escalatieregels, agent-workflows en een klantenportaal. Geen externe diensten vereist.
 
-> **[escalated.dev](https://escalated.dev)** — Learn more, view demos, and compare Cloud vs Self-Hosted options.
+> **[escalated.dev](https://escalated.dev)** — Meer informatie, bekijk demo's en vergelijk Cloud- met Self-Hosted-opties.
 
-**Three hosting modes.** Run entirely self-hosted, sync to a central cloud for multi-app visibility, or proxy everything to the cloud. Switch modes with a single config change.
+**Drie hostingmodi.** Volledig zelf hosten, synchroniseren met een centrale cloud voor multi-app-zichtbaarheid, of alles via de cloud proxyen. Wissel van modus met één configuratiewijziging.
 
 ## Functies
 
@@ -41,21 +41,21 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 - **E-mailnotificaties** — Configureerbare notificaties per gebeurtenis met webhook-ondersteuning
 - **Afdelingsroutering** — Agents organiseren in afdelingen met automatische toewijzing (round-robin)
 - **Taggingsysteem** — Tickets categoriseren met gekleurde tags
-- **Inertia.js + Vue 3 UI** — Shared frontend via [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated)
+- **Inertia.js + Vue 3 UI** — Gedeelde frontend via [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated)
 - **Ticket splitsen** — Een antwoord afsplitsen naar een nieuw zelfstandig ticket met behoud van de originele context
-- **Ticket snooze** — Snooze tickets with presets (1h, 4h, tomorrow, next week); `python manage.py wake_snoozed_tickets` management command auto-wakes them on schedule
+- **Ticket snooze** — Tickets snoozen met voorinstellingen (1u, 4u, morgen, volgende week); het beheercommando `python manage.py wake_snoozed_tickets` wekt ze automatisch volgens schema
 - **Opgeslagen weergaven / aangepaste wachtrijen** — Filterpresets opslaan, benoemen en delen als herbruikbare ticketweergaven
 - **Inbedbare supportwidget** — Lichtgewicht `<script>`-widget met KB-zoeken, ticketformulier en statuscontrole
 - **E-mailthreading** — Uitgaande e-mails bevatten de juiste `In-Reply-To`- en `References`-headers voor correcte threading in mailclients
 - **E-mailsjablonen met branding** — Configureerbaar logo, primaire kleur en voettekst voor alle uitgaande e-mails
-- **Real-time broadcasting** — Opt-in broadcasting via Django Channels with automatic polling fallback
+- **Real-time broadcasting** — Opt-in broadcasting via Django Channels met automatische polling-fallback
 - **Kennisbank-schakelaar** — De publieke kennisbank in- of uitschakelen vanuit beheerinstellingen
 
 ## Vereisten
 
 - Python 3.10+
 - Django 4.2+
-- Node.js 18+ (for frontend assets)
+- Node.js 18+ (voor frontend-assets)
 
 ## Snelstart
 
@@ -96,11 +96,11 @@ Visit `/support` — you're live.
 
 ## Frontend-configuratie
 
-Escalated uses Inertia.js with Vue 3. The frontend components are provided by the [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated) npm package.
+Escalated gebruikt Inertia.js met Vue 3. De frontend-componenten worden geleverd door het npm-pakket [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated).
 
 ### Tailwind-inhoud
 
-Add the Escalated package to your Tailwind `content` config so its classes aren't purged:
+Voeg het Escalated-pakket toe aan uw Tailwind `content`-configuratie zodat de klassen niet worden verwijderd:
 
 ```js
 // tailwind.config.js
@@ -112,7 +112,7 @@ content: [
 
 ### Pagina-resolver
 
-Add the Escalated pages to your Inertia page resolver:
+Voeg de Escalated-pagina's toe aan uw Inertia-pagina-resolver:
 
 ```javascript
 // frontend/main.js
@@ -143,7 +143,7 @@ createInertiaApp({
 
 ### Theming (Optioneel)
 
-Register the `EscalatedPlugin` to render Escalated pages inside your app's layout — no page duplication needed:
+Registreer de `EscalatedPlugin` om Escalated-pagina's in de layout van uw app te renderen — geen paginaduplicatie nodig:
 
 ```javascript
 import { EscalatedPlugin } from '@escalated-dev/escalated'
@@ -167,13 +167,13 @@ createInertiaApp({
 
 Your layout component must accept a `#header` slot and a default slot. Escalated will render its sub-navigation in the header and page content in the default slot. Without the plugin, Escalated uses its own standalone layout.
 
-See the [`@escalated-dev/escalated` README](https://github.com/escalated-dev/escalated) for full theming documentation and CSS custom properties.
+Zie de [`@escalated-dev/escalated` README](https://github.com/escalated-dev/escalated) voor volledige theming-documentatie en CSS custom properties.
 
 ## Hostingmodi
 
 ### Self-Hosted (standaard)
 
-Everything stays in your database. No external calls. Full autonomy.
+Alles blijft in uw database. Geen externe oproepen. Volledige autonomie.
 
 ```python
 ESCALATED = {
@@ -183,7 +183,7 @@ ESCALATED = {
 
 ### Gesynchroniseerd
 
-Local database + automatic sync to `cloud.escalated.dev` for unified inbox across multiple apps. If the cloud is unreachable, your app keeps working — events queue and retry.
+Lokale database + automatische synchronisatie naar `cloud.escalated.dev` voor een uniforme inbox over meerdere apps. Als de cloud onbereikbaar is, blijft uw app werken — gebeurtenissen worden in de wachtrij geplaatst en opnieuw geprobeerd.
 
 ```python
 ESCALATED = {
@@ -195,7 +195,7 @@ ESCALATED = {
 
 ### Cloud
 
-All ticket data proxied to the cloud API. Your app handles auth and renders UI, but storage lives in the cloud.
+Alle ticketgegevens worden geproxyd naar de cloud-API. Uw app handelt authenticatie af en rendert de UI, maar opslag bevindt zich in de cloud.
 
 ```python
 ESCALATED = {
@@ -205,7 +205,7 @@ ESCALATED = {
 }
 ```
 
-All three modes share the same views, UI, and business logic. The driver pattern handles the rest.
+Alle drie modi delen dezelfde views, UI en bedrijfslogica. Het driver-patroon regelt de rest.
 
 ## Configuratie
 
@@ -309,7 +309,7 @@ Available signals: `ticket_created`, `ticket_updated`, `ticket_status_changed`, 
 
 ## Plugin-SDK
 
-Escalated supports framework-agnostic plugins built with the [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk). Plugins are written once in TypeScript and work across all Escalated backends.
+Escalated ondersteunt framework-agnostische plugins gebouwd met de [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk). Plugins worden eenmaal geschreven in TypeScript en werken op alle Escalated-backends.
 
 ### Vereisten
 
@@ -356,9 +356,9 @@ export default definePlugin({
 
 ### Bronnen
 
-- [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk) — TypeScript SDK for building plugins
-- [Plugin Runtime](https://github.com/escalated-dev/escalated-plugin-runtime) — Runtime host for plugins
-- [Plugin Development Guide](https://github.com/escalated-dev/escalated-docs) — Full documentation
+- [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk) — TypeScript SDK voor het bouwen van plugins
+- [Plugin Runtime](https://github.com/escalated-dev/escalated-plugin-runtime) — Runtime-host voor plugins
+- [Plugin Development Guide](https://github.com/escalated-dev/escalated-docs) — Volledige documentatie
 
 See the detailed [SDK Plugin Bridge](#sdk-plugin-bridge) section below for the full architecture, supported `ctx.*` callbacks, hook event mapping, and resilience documentation.
 
@@ -480,14 +480,14 @@ Every ticket signal fires a corresponding SDK hook:
 
 ## Ook Beschikbaar Voor
 
-- **[Escalated for Laravel](https://github.com/escalated-dev/escalated-laravel)** — Laravel Composer package
-- **[Escalated for Rails](https://github.com/escalated-dev/escalated-rails)** — Ruby on Rails engine
-- **[Escalated for Django](https://github.com/escalated-dev/escalated-django)** — Django reusable app (you are here)
-- **[Escalated for AdonisJS](https://github.com/escalated-dev/escalated-adonis)** — AdonisJS v6 package
-- **[Escalated for Filament](https://github.com/escalated-dev/escalated-filament)** — Filament v3 admin panel plugin
-- **[Shared Frontend](https://github.com/escalated-dev/escalated)** — Vue 3 + Inertia.js UI components
+- **[Escalated for Laravel](https://github.com/escalated-dev/escalated-laravel)** — Laravel Composer-pakket
+- **[Escalated for Rails](https://github.com/escalated-dev/escalated-rails)** — Ruby on Rails-engine
+- **[Escalated for Django](https://github.com/escalated-dev/escalated-django)** — Herbruikbare Django-app (u bent hier)
+- **[Escalated for AdonisJS](https://github.com/escalated-dev/escalated-adonis)** — AdonisJS v6-pakket
+- **[Escalated for Filament](https://github.com/escalated-dev/escalated-filament)** — Filament v3 admin-paneel-plugin
+- **[Shared Frontend](https://github.com/escalated-dev/escalated)** — Vue 3 + Inertia.js UI-componenten
 
-Same architecture, same Vue UI, same three hosting modes — for every major backend framework.
+Dezelfde architectuur, dezelfde Vue-UI, dezelfde drie hostingmodi — voor elk belangrijk backend-framework.
 
 ## Ontwikkeling
 
