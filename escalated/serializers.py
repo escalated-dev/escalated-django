@@ -3,12 +3,21 @@ Dict-based serializers for converting Django model instances to plain dicts
 suitable for Inertia.js props. No DRF dependency required.
 """
 
+from django.utils.timesince import timesince
+
 
 def _format_dt(dt):
     """Format a datetime for JSON output, or return None."""
     if dt is None:
         return None
     return dt.isoformat()
+
+
+def _human_dt(dt):
+    """Return a human-readable relative time string, or None."""
+    if dt is None:
+        return None
+    return f"{timesince(dt)} ago"
 
 
 def _user_dict(user):
@@ -78,6 +87,64 @@ class TicketSerializer:
 
         if include_activities:
             data["activities"] = [ActivitySerializer.serialize(activity) for activity in ticket.activities.all()[:50]]
+
+        # Detail-only fields: chat session, requester ticket count, related tickets
+        if include_replies or include_activities:
+            # Chat session context
+            chat_session = ticket.chat_sessions.order_by("-created_at").first()
+            if chat_session:
+                data["chat_session_id"] = chat_session.pk
+                data["chat_started_at"] = _format_dt(chat_session.started_at)
+                data["chat_metadata"] = chat_session.metadata
+                # Chat messages are delivered via replies; provide an empty list
+                # so the frontend key is always present.
+                data["chat_messages"] = []
+            else:
+                data["chat_session_id"] = None
+                data["chat_started_at"] = None
+                data["chat_metadata"] = None
+                data["chat_messages"] = []
+
+            # Requester ticket count
+            requester_ct = ticket.requester_content_type
+            requester_oid = ticket.requester_object_id
+            if requester_ct and requester_oid:
+                from escalated.models import Ticket as _Ticket
+
+                data["requester_ticket_count"] = _Ticket.objects.filter(
+                    requester_content_type=requester_ct,
+                    requester_object_id=requester_oid,
+                ).count()
+            elif ticket.guest_email:
+                from escalated.models import Ticket as _Ticket
+
+                data["requester_ticket_count"] = _Ticket.objects.filter(guest_email=ticket.guest_email).count()
+            else:
+                data["requester_ticket_count"] = 0
+
+            # Related tickets (via TicketLink)
+            related = []
+            for link in ticket.links_as_parent.select_related("child_ticket"):
+                t = link.child_ticket
+                related.append(
+                    {
+                        "id": link.pk,
+                        "reference": t.reference,
+                        "subject": t.subject,
+                        "status": t.status,
+                    }
+                )
+            for link in ticket.links_as_child.select_related("parent_ticket"):
+                t = link.parent_ticket
+                related.append(
+                    {
+                        "id": link.pk,
+                        "reference": t.reference,
+                        "subject": t.subject,
+                        "status": t.status,
+                    }
+                )
+            data["related_tickets"] = related
 
         return data
 
@@ -224,6 +291,7 @@ class ActivitySerializer:
             "type_display": activity.get_type_display(),
             "properties": activity.properties,
             "created_at": _format_dt(activity.created_at),
+            "created_at_human": _human_dt(activity.created_at),
         }
         try:
             causer = activity.causer

@@ -194,6 +194,9 @@ def ticket_show(request, ticket_id):
                 "replies__attachments",
                 "activities",
                 "attachments",
+                "chat_sessions",
+                "links_as_parent__child_ticket",
+                "links_as_child__parent_ticket",
             )
             .get(pk=ticket_id)
         )
@@ -230,7 +233,7 @@ def ticket_show(request, ticket_id):
         request,
         "Escalated/Agent/Tickets/Show",
         props={
-            "ticket": TicketSerializer.serialize(ticket),
+            "ticket": TicketSerializer.serialize(ticket, include_replies=True, include_activities=True),
             "replies": ReplySerializer.serialize_list(replies),
             "activities": [ActivitySerializer.serialize(a) for a in activities],
             "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
