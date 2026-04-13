@@ -35,13 +35,13 @@ class Workflow(models.Model):
         db_table = get_table_name("workflows")
         ordering = ["position", "name"]
 
+    def __str__(self):
+        return self.name
+
     @property
     def trigger(self):
         """Alias for frontend compatibility: the frontend uses `trigger` instead of `trigger_event`."""
         return self.trigger_event
-
-    def __str__(self):
-        return self.name
 
 
 class WorkflowLog(models.Model):
