@@ -437,6 +437,24 @@ class Ticket(models.Model):
     # ----- Snooze helpers -----
 
     @property
+    def last_reply_at(self):
+        """Return the timestamp of the latest reply, or None."""
+        last = self.replies.filter(is_deleted=False).order_by("-created_at").first()
+        return last.created_at if last else None
+
+    @property
+    def last_reply_author(self):
+        """Return the name of the latest reply's author, or None."""
+        last = self.replies.filter(is_deleted=False).order_by("-created_at").first()
+        if last is None:
+            return None
+        author = last.author
+        if author is None:
+            return None
+        name = getattr(author, "get_full_name", lambda: str(author))()
+        return name or str(author)
+
+    @property
     def is_snoozed(self):
         """Check if the ticket is currently snoozed."""
         return self.snoozed_until is not None and self.snoozed_until > timezone.now()

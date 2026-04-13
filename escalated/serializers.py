@@ -61,6 +61,10 @@ class TicketSerializer:
         data["guest_email"] = ticket.guest_email
         data["requester_name"] = ticket.requester_name
         data["requester_email"] = ticket.requester_email
+        data["last_reply_at"] = _format_dt(ticket.last_reply_at)
+        data["last_reply_author"] = ticket.last_reply_author
+        data["is_live_chat"] = ticket.is_live_chat
+        data["is_snoozed"] = ticket.is_snoozed
 
         # Include requester info
         try:
