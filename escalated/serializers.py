@@ -53,9 +53,7 @@ class TicketSerializer:
         }
 
         # Ticket-level attachments
-        data["attachments"] = [
-            AttachmentSerializer.serialize(a) for a in ticket.attachments.all()
-        ]
+        data["attachments"] = [AttachmentSerializer.serialize(a) for a in ticket.attachments.all()]
 
         # Guest ticket fields
         data["is_guest"] = ticket.is_guest
