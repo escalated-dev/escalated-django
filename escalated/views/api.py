@@ -75,18 +75,19 @@ def _resolve_ticket(reference):
     Resolve a ticket by reference string or numeric ID.
     Returns (ticket, None) on success, or (None, JsonResponse) on failure.
     """
+    base_qs = Ticket.objects.select_related("assigned_to", "department", "sla_policy").prefetch_related(
+        "tags",
+        "replies__author",
+        "replies__attachments",
+        "activities",
+        "attachments",
+        "chat_sessions",
+        "links_as_parent__child_ticket",
+        "links_as_child__parent_ticket",
+    )
+
     try:
-        ticket = (
-            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
-            .prefetch_related(
-                "tags",
-                "replies__author",
-                "replies__attachments",
-                "activities",
-                "attachments",
-            )
-            .get(reference=reference)
-        )
+        ticket = base_qs.get(reference=reference)
         return ticket, None
     except Ticket.DoesNotExist:
         pass
@@ -94,17 +95,7 @@ def _resolve_ticket(reference):
     # Fall back to lookup by numeric ID
     try:
         ticket_id = int(reference)
-        ticket = (
-            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
-            .prefetch_related(
-                "tags",
-                "replies__author",
-                "replies__attachments",
-                "activities",
-                "attachments",
-            )
-            .get(pk=ticket_id)
-        )
+        ticket = base_qs.get(pk=ticket_id)
         return ticket, None
     except (ValueError, Ticket.DoesNotExist):
         return None, JsonResponse({"message": "Ticket not found."}, status=404)
