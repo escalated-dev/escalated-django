@@ -21,12 +21,32 @@ def _workflow_json(w):
         "id": w.id,
         "name": w.name,
         "trigger_event": w.trigger_event,
+        "trigger": w.trigger,
         "conditions": w.conditions,
         "actions": w.actions,
         "is_active": w.is_active,
         "position": w.position,
         "created_at": w.created_at.isoformat(),
         "updated_at": w.updated_at.isoformat(),
+    }
+
+
+def _log_json(log):
+    return {
+        "id": log.id,
+        "workflow_id": log.workflow_id,
+        "ticket_id": log.ticket_id,
+        "trigger_event": log.trigger_event,
+        "event": log.event,
+        "workflow_name": log.workflow_name,
+        "ticket_reference": log.ticket_reference,
+        "matched": log.matched,
+        "actions_executed": log.actions_executed_count,
+        "action_details": log.action_details,
+        "duration_ms": log.duration_ms,
+        "status": log.computed_status,
+        "error_message": log.error_message,
+        "created_at": log.created_at.isoformat(),
     }
 
 
@@ -128,24 +148,17 @@ def workflow_logs(request, workflow_id):
     if err := _require_admin(request):
         return err
     w = Workflow.objects.get(pk=workflow_id)
-    logs = WorkflowLog.objects.filter(workflow=w).order_by("-created_at")[:100]
+    logs = (
+        WorkflowLog.objects.filter(workflow=w)
+        .select_related("workflow", "ticket")
+        .order_by("-created_at")[:100]
+    )
     return render_page(
         request,
         "Escalated/Admin/Workflows/Logs",
         {
             "workflow": _workflow_json(w),
-            "logs": [
-                {
-                    "id": log.id,
-                    "ticket_id": log.ticket_id,
-                    "trigger_event": log.trigger_event,
-                    "status": log.status,
-                    "actions_executed": log.actions_executed,
-                    "error_message": log.error_message,
-                    "created_at": log.created_at.isoformat(),
-                }
-                for log in logs
-            ],
+            "logs": [_log_json(log) for log in logs],
         },
     )
 
