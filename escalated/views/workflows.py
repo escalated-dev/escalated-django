@@ -148,11 +148,7 @@ def workflow_logs(request, workflow_id):
     if err := _require_admin(request):
         return err
     w = Workflow.objects.get(pk=workflow_id)
-    logs = (
-        WorkflowLog.objects.filter(workflow=w)
-        .select_related("workflow", "ticket")
-        .order_by("-created_at")[:100]
-    )
+    logs = WorkflowLog.objects.filter(workflow=w).select_related("workflow", "ticket").order_by("-created_at")[:100]
     return render_page(
         request,
         "Escalated/Admin/Workflows/Logs",
