@@ -52,6 +52,9 @@ class TicketSerializer:
             "updated_at": _format_dt(ticket.updated_at),
         }
 
+        # Ticket-level attachments
+        data["attachments"] = [AttachmentSerializer.serialize(a) for a in ticket.attachments.all()]
+
         # Guest ticket fields
         data["is_guest"] = ticket.is_guest
         data["guest_name"] = ticket.guest_name
