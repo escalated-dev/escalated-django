@@ -86,6 +86,7 @@ class ApiTicketDetailSerializer:
                 "resolution_due_at": _format_dt(ticket.resolution_due_at),
                 "resolution_breached": ticket.sla_resolution_breached,
             },
+            "attachments": [ApiAttachmentSerializer.serialize(a) for a in ticket.attachments.all()],
             "resolved_at": _format_dt(ticket.resolved_at),
             "closed_at": _format_dt(ticket.closed_at),
             "created_at": _format_dt(ticket.created_at),

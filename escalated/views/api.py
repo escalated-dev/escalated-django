@@ -83,6 +83,7 @@ def _resolve_ticket(reference):
                 "replies__author",
                 "replies__attachments",
                 "activities",
+                "attachments",
             )
             .get(reference=reference)
         )
@@ -100,6 +101,7 @@ def _resolve_ticket(reference):
                 "replies__author",
                 "replies__attachments",
                 "activities",
+                "attachments",
             )
             .get(pk=ticket_id)
         )
