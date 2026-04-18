@@ -1,0 +1,35 @@
+name: escalated-django-demo
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: host_app.settings
+      DJANGO_SECRET_KEY: demo-only-secret-not-production
+      DATABASE_URL: "postgresql://escalated:escalated@db:5432/escalated"
+      EMAIL_HOST: mailpit
+      EMAIL_PORT: 1025
+      APP_ENV: demo
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: escalated
+      POSTGRES_USER: escalated
+      POSTGRES_PASSWORD: escalated
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U escalated -d escalated"]
+      interval: 2s
+      retries: 15
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
