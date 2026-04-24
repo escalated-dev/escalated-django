@@ -3504,24 +3504,18 @@ def settings_public_tickets(request):
         if mode not in valid_modes:
             mode = "unassigned"
 
-        EscalatedSetting.objects.update_or_create(
-            key="guest_policy_mode", defaults={"value": mode}
-        )
+        EscalatedSetting.objects.update_or_create(key="guest_policy_mode", defaults={"value": mode})
 
         user_id_value = ""
         if mode == "guest_user":
             raw = request.POST.get("guest_policy_user_id", "").strip()
             if raw.isdigit() and int(raw) > 0:
                 user_id_value = raw
-        EscalatedSetting.objects.update_or_create(
-            key="guest_policy_user_id", defaults={"value": user_id_value}
-        )
+        EscalatedSetting.objects.update_or_create(key="guest_policy_user_id", defaults={"value": user_id_value})
 
         signup_url_value = ""
         if mode == "prompt_signup":
-            signup_url_value = request.POST.get(
-                "guest_policy_signup_url_template", ""
-            ).strip()[:500]
+            signup_url_value = request.POST.get("guest_policy_signup_url_template", "").strip()[:500]
         EscalatedSetting.objects.update_or_create(
             key="guest_policy_signup_url_template",
             defaults={"value": signup_url_value},
@@ -3543,9 +3537,7 @@ def settings_public_tickets(request):
             "settings": {
                 "guest_policy_mode": _get("guest_policy_mode", "unassigned"),
                 "guest_policy_user_id": int(user_id_raw) if user_id_raw.isdigit() else None,
-                "guest_policy_signup_url_template": _get(
-                    "guest_policy_signup_url_template", ""
-                ),
+                "guest_policy_signup_url_template": _get("guest_policy_signup_url_template", ""),
             }
         },
     )
