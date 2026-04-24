@@ -317,13 +317,20 @@ class NotificationService:
 
     @staticmethod
     def _send_email(subject, template, context, recipient, extra_headers=None):
-        """Send an HTML email using Django's mail system with optional headers."""
+        """Send an HTML email using Django's mail system with optional headers.
+
+        When ``context["ticket"]`` is present AND
+        ``ESCALATED_EMAIL_INBOUND_SECRET`` is configured, the message
+        gets a signed Reply-To so inbound provider webhooks can verify
+        ticket identity without trusting the mail client's threading
+        headers.
+        """
         if not recipient:
             return
 
         try:
             # Inject branding context for templates that use it
-            from escalated.mail.threading import get_branding_context
+            from escalated.mail.threading import get_branding_context, get_signed_reply_to
 
             context.setdefault("branding", get_branding_context())
 
@@ -332,12 +339,17 @@ class NotificationService:
 
             from django.core.mail import EmailMessage
 
+            ticket = context.get("ticket")
+            signed = get_signed_reply_to(ticket) if ticket is not None else None
+            reply_to = [signed] if signed else None
+
             msg = EmailMessage(
                 subject=subject,
                 body=html_body,
                 from_email=from_email,
                 to=[recipient],
                 headers=extra_headers or {},
+                reply_to=reply_to,
             )
             msg.content_subtype = "html"
             msg.send(fail_silently=True)
