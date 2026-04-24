@@ -75,3 +75,24 @@ class TestPromoteToUser:
             t.refresh_from_db()
             assert t.requester_object_id == user.id
             assert t.requester_content_type_id == user_ct.id
+
+
+@pytest.mark.django_db
+class TestRepeatSubmissionDedupe:
+    """Cross-checks the Pattern B convergence behavior: repeat
+    submissions (same email, different casing / whitespace) land on
+    a single Contact row; tickets related back through .tickets."""
+
+    def test_casing_and_whitespace_dedupe_to_one_contact(self):
+        c1 = Contact.find_or_create_by_email("alice@example.com", "Alice")
+        c2 = Contact.find_or_create_by_email("  ALICE@Example.COM  ", "Alice")
+        c3 = Contact.find_or_create_by_email("alice@example.com", "Different")
+        assert c1.id == c2.id == c3.id
+        assert Contact.objects.filter(email="alice@example.com").count() == 1
+
+    def test_tickets_related_back(self):
+        contact = ContactFactory()
+        t1 = TicketFactory(contact=contact)
+        t2 = TicketFactory(contact=contact)
+        TicketFactory()  # unrelated
+        assert set(contact.tickets.values_list("id", flat=True)) == {t1.id, t2.id}
