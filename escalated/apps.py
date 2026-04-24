@@ -13,6 +13,7 @@ class EscalatedConfig(AppConfig):
 
     def ready(self):
         import escalated.handlers  # noqa: F401 - connects signal handlers
+        import escalated.workflow_handlers  # noqa: F401 - connects WorkflowEngine to signals
 
         # Load active plugins on startup
         self._load_plugins()
