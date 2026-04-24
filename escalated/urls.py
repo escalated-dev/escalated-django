@@ -230,6 +230,11 @@ admin_patterns = [
     path("admin/automations/<int:automation_id>/delete/", admin.automations_delete, name="admin_automations_delete"),
     # Settings - CSAT, SSO, 2FA
     path("admin/settings/csat/", admin.settings_csat, name="admin_settings_csat"),
+    path(
+        "admin/settings/public-tickets/",
+        admin.settings_public_tickets,
+        name="admin_settings_public_tickets",
+    ),
     path("admin/settings/sso/", admin.settings_sso, name="admin_settings_sso"),
     path("admin/settings/two-factor/", admin.settings_two_factor, name="admin_settings_two_factor"),
     path("admin/settings/two-factor/setup/", admin.two_factor_setup, name="admin_two_factor_setup"),

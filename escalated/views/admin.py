@@ -3485,6 +3485,73 @@ def settings_csat(request):
 
 
 @login_required
+def settings_public_tickets(request):
+    """Public-ticket guest policy settings page (+ update handler).
+
+    Controls the identity assigned to tickets submitted via the public widget
+    or inbound email. Read at request time by the widget controller, so
+    admins can switch modes at runtime without a redeploy.
+    """
+    check = _require_admin(request)
+    if check:
+        return check
+    from escalated.models import EscalatedSetting
+
+    valid_modes = {"unassigned", "guest_user", "prompt_signup"}
+
+    if request.method == "POST":
+        mode = request.POST.get("guest_policy_mode", "unassigned")
+        if mode not in valid_modes:
+            mode = "unassigned"
+
+        EscalatedSetting.objects.update_or_create(
+            key="guest_policy_mode", defaults={"value": mode}
+        )
+
+        user_id_value = ""
+        if mode == "guest_user":
+            raw = request.POST.get("guest_policy_user_id", "").strip()
+            if raw.isdigit() and int(raw) > 0:
+                user_id_value = raw
+        EscalatedSetting.objects.update_or_create(
+            key="guest_policy_user_id", defaults={"value": user_id_value}
+        )
+
+        signup_url_value = ""
+        if mode == "prompt_signup":
+            signup_url_value = request.POST.get(
+                "guest_policy_signup_url_template", ""
+            ).strip()[:500]
+        EscalatedSetting.objects.update_or_create(
+            key="guest_policy_signup_url_template",
+            defaults={"value": signup_url_value},
+        )
+
+        return redirect("escalated:admin_settings_public_tickets")
+
+    def _get(key, default=""):
+        try:
+            return EscalatedSetting.objects.get(key=key).value
+        except EscalatedSetting.DoesNotExist:
+            return default
+
+    user_id_raw = _get("guest_policy_user_id", "")
+    return render_page(
+        request,
+        "Escalated/Admin/Settings/PublicTickets",
+        props={
+            "settings": {
+                "guest_policy_mode": _get("guest_policy_mode", "unassigned"),
+                "guest_policy_user_id": int(user_id_raw) if user_id_raw.isdigit() else None,
+                "guest_policy_signup_url_template": _get(
+                    "guest_policy_signup_url_template", ""
+                ),
+            }
+        },
+    )
+
+
+@login_required
 def settings_sso(request):
     check = _require_admin(request)
     if check:
