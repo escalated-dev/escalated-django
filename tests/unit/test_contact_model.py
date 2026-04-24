@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError
 
-from escalated.models import Contact, Ticket
+from escalated.models import Contact
 from tests.factories import ContactFactory, TicketFactory
 
 
