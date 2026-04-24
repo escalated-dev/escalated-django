@@ -363,9 +363,7 @@ class InboundEmailService:
             guest_token = secrets.token_hex(32)
             # Dedupe inbound senders into a Contact so repeat emails land
             # on one identity (Pattern B).
-            contact = Contact.find_or_create_by_email(
-                message.from_email, message.from_name
-            )
+            contact = Contact.find_or_create_by_email(message.from_email, message.from_name)
             ticket = Ticket.objects.create(
                 requester_content_type=None,
                 requester_object_id=None,
