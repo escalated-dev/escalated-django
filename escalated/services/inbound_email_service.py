@@ -230,14 +230,7 @@ class InboundEmailService:
 
         driver = get_driver()
 
-        # Try to find an existing ticket by subject reference
-        ticket = InboundEmailService._find_ticket_by_reference(message.subject)
-
-        # Also try by In-Reply-To / References headers
-        if ticket is None and message.in_reply_to:
-            ticket = InboundEmailService._find_ticket_by_message_id(message.in_reply_to)
-        if ticket is None and message.references:
-            ticket = InboundEmailService._find_ticket_by_references(message.references)
+        ticket = InboundEmailService._find_existing_ticket(message)
 
         # Resolve sender — try to find a registered user first
         User = get_user_model()
@@ -265,6 +258,75 @@ class InboundEmailService:
             InboundEmailService._handle_attachments(ticket, message.attachments)
 
             return ticket, reply
+
+    @staticmethod
+    def _find_existing_ticket(message: InboundMessage):
+        """
+        Resolve the inbound email to an existing ticket in priority order:
+
+          1. In-Reply-To parsed via ``message_id_util`` — the reply is
+             threading off a Message-ID we issued (cold-start path, no
+             DB lookup required).
+          2. References parsed via ``message_id_util``, each id in order.
+          3. Signed Reply-To on ``to_email``
+             (``reply+{id}.{hmac8}@...``) verified via
+             ``message_id_util.verify_reply_to``. Survives clients that
+             strip our threading headers; forged signatures are rejected.
+          4. Subject line reference tag (legacy).
+          5. ``InboundEmail.message_id`` lookup for any header id
+             (weakest fallback; relies on our own reply history).
+        """
+        from escalated.mail.message_id_util import (
+            parse_ticket_id_from_message_id,
+            verify_reply_to,
+        )
+        from escalated.mail.threading import get_inbound_secret
+
+        header_ids = InboundEmailService._candidate_header_message_ids(message)
+
+        # 1 + 2: parse our own Message-IDs out of In-Reply-To / References.
+        for raw in header_ids:
+            ticket_id = parse_ticket_id_from_message_id(raw)
+            if ticket_id is None:
+                continue
+            try:
+                return Ticket.objects.get(pk=ticket_id)
+            except Ticket.DoesNotExist:
+                continue
+
+        # 3. Signed Reply-To on the recipient address.
+        secret = get_inbound_secret()
+        if secret and message.to_email:
+            verified = verify_reply_to(message.to_email, secret)
+            if verified is not None:
+                try:
+                    return Ticket.objects.get(pk=verified)
+                except Ticket.DoesNotExist:
+                    pass
+
+        # 4. Subject line reference tag.
+        ticket = InboundEmailService._find_ticket_by_reference(message.subject)
+        if ticket is not None:
+            return ticket
+
+        # 5. Legacy InboundEmail lookup for any id we've seen before.
+        for raw in header_ids:
+            bare = raw.strip("<>")
+            ticket = InboundEmailService._find_ticket_by_message_id(bare)
+            if ticket is not None:
+                return ticket
+
+        return None
+
+    @staticmethod
+    def _candidate_header_message_ids(message: InboundMessage) -> list[str]:
+        """Return every candidate Message-ID from the inbound headers."""
+        ids: list[str] = []
+        if message.in_reply_to:
+            ids.append(message.in_reply_to)
+        if message.references:
+            ids.extend(reversed(message.references.strip().split()))
+        return ids
 
     @staticmethod
     def _find_ticket_by_reference(subject: str):
