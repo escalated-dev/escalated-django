@@ -188,6 +188,68 @@ class Tag(models.Model):
         return self.name
 
 
+class Contact(models.Model):
+    """First-class identity for guest requesters.
+
+    Deduped by email (unique, case-insensitively normalized on save).
+    Links to a host-app user via ``user_id`` once the guest accepts a
+    signup invite. Coexists with the inline ``guest_*`` columns on
+    Ticket for one release — the backfill migration populates
+    ``contact_id`` for existing rows. New code should write via
+    ``Contact.objects.find_or_create_by_email``.
+    """
+
+    email = models.EmailField(unique=True, max_length=320)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    user_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text=_("Linked host-app user id once the contact creates an account"),
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("contacts")
+        indexes = [models.Index(fields=["user_id"])]
+
+    def __str__(self) -> str:
+        return self.email
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def find_or_create_by_email(cls, email: str, name: str | None = None) -> "Contact":
+        normalized = (email or "").strip().lower()
+        existing = cls.objects.filter(email=normalized).first()
+        if existing:
+            if not existing.name and name:
+                existing.name = name
+                existing.save(update_fields=["name", "updated_at"])
+            return existing
+        return cls.objects.create(email=normalized, name=name)
+
+    def link_to_user(self, user_id: int) -> "Contact":
+        self.user_id = user_id
+        self.save(update_fields=["user_id", "updated_at"])
+        return self
+
+    def promote_to_user(self, user_id: int, user_type_model: str = "auth.User") -> "Contact":
+        """Link + back-stamp requester on all prior tickets owned by this Contact."""
+        self.link_to_user(user_id)
+        app_label, model_name = user_type_model.split(".", 1)
+        ct = ContentType.objects.get(app_label=app_label, model=model_name.lower())
+        Ticket.objects.filter(contact_id=self.id).update(
+            requester_content_type=ct,
+            requester_object_id=user_id,
+        )
+        return self
+
+
 class Ticket(models.Model):
     class Status(models.TextChoices):
         OPEN = "open", _("Open")
@@ -246,6 +308,8 @@ class Ticket(models.Model):
     )
 
     # Guest ticket fields (for unauthenticated users)
+    # Preserved for backwards compatibility; new code should write via
+    # the Contact FK. See `Contact.find_or_create_by_email`.
     guest_name = models.CharField(max_length=255, null=True, blank=True)
     guest_email = models.EmailField(null=True, blank=True)
     guest_token = models.CharField(
@@ -254,6 +318,15 @@ class Ticket(models.Model):
         blank=True,
         unique=True,
         help_text=_("Unique token for guest ticket access"),
+    )
+
+    # First-class Contact FK (Pattern B convergence).
+    contact = models.ForeignKey(
+        "Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tickets",
     )
 
     subject = models.CharField(max_length=500)
