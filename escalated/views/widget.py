@@ -190,18 +190,20 @@ def widget_create_ticket(request):
     # Dedupe repeat guests by email (Pattern B).
     contact = Contact.find_or_create_by_email(email, name)
 
-    ticket = Ticket.objects.create(
-        requester_content_type=None,
-        requester_object_id=None,
-        guest_name=name,
-        guest_email=email,
-        guest_token=guest_token,
-        contact=contact,
-        subject=subject,
-        description=description,
-        priority=priority,
-        channel="widget",
+    attrs = _apply_guest_policy(
+        {
+            "guest_name": name,
+            "guest_email": email,
+            "guest_token": guest_token,
+            "subject": subject,
+            "description": description,
+            "priority": priority,
+            "channel": "widget",
+            "contact": contact,
+        }
     )
+
+    ticket = Ticket.objects.create(**attrs)
 
     return JsonResponse(
         {
@@ -245,3 +247,43 @@ def widget_lookup_ticket(request):
             }
         }
     )
+
+
+def _apply_guest_policy(attrs):
+    """Layer the admin-configured guest policy onto a ticket-create attrs dict.
+
+    Persisted by the admin settings page under three EscalatedSetting keys
+    (guest_policy_mode / guest_policy_user_id / guest_policy_signup_url_template).
+    Modes:
+
+      * ``unassigned`` (default): ``requester_*`` left null, ``guest_*`` preserved.
+      * ``guest_user``: route to the configured host-app user via the generic
+        (ContentType, object_id) FK. Still records ``guest_name`` / ``guest_email``
+        so agents see who submitted. Falls through to ``unassigned`` behavior if
+        ``guest_policy_user_id`` is zero or missing.
+      * ``prompt_signup``: same ticket-create path as ``unassigned`` today;
+        signup-invite emission is a listener-level follow-up.
+
+    Returns the modified attrs dict.
+    """
+    from django.contrib.auth import get_user_model
+    from django.contrib.contenttypes.models import ContentType
+
+    mode = EscalatedSetting.get("guest_policy_mode", "unassigned") or "unassigned"
+
+    if mode == "guest_user":
+        raw_id = EscalatedSetting.get("guest_policy_user_id", "") or ""
+        try:
+            user_id = int(raw_id)
+        except (TypeError, ValueError):
+            user_id = 0
+        if user_id > 0:
+            user_model = get_user_model()
+            attrs["requester_content_type"] = ContentType.objects.get_for_model(user_model)
+            attrs["requester_object_id"] = user_id
+            return attrs
+
+    # unassigned + prompt_signup + misconfigured guest_user all land here.
+    attrs["requester_content_type"] = None
+    attrs["requester_object_id"] = None
+    return attrs
