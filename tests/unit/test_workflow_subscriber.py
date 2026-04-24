@@ -2,6 +2,7 @@
 Tests for the WorkflowEngine signal wire-up in
 escalated/workflow_handlers.py.
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
