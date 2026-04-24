@@ -359,27 +359,33 @@ class InboundEmailService:
                 },
             )
         else:
-            # Guest ticket (follows the same pattern as views/guest.py)
+            # Guest ticket — apply the admin-configured guest policy,
+            # same branching as widget.widget_create_ticket uses.
+            # See escalated.views.widget._apply_guest_policy.
+            from escalated.views.widget import _apply_guest_policy
+
             guest_token = secrets.token_hex(32)
             # Dedupe inbound senders into a Contact so repeat emails land
             # on one identity (Pattern B).
             contact = Contact.find_or_create_by_email(message.from_email, message.from_name)
-            ticket = Ticket.objects.create(
-                requester_content_type=None,
-                requester_object_id=None,
-                guest_name=message.from_name or message.from_email,
-                guest_email=message.from_email,
-                guest_token=guest_token,
-                contact=contact,
-                subject=subject,
-                description=body,
-                priority=get_setting("DEFAULT_PRIORITY"),
-                channel="email",
-                metadata={
-                    "source": "inbound_email",
-                    "message_id": message.message_id,
-                },
+
+            attrs = _apply_guest_policy(
+                {
+                    "guest_name": message.from_name or message.from_email,
+                    "guest_email": message.from_email,
+                    "guest_token": guest_token,
+                    "subject": subject,
+                    "description": body,
+                    "priority": get_setting("DEFAULT_PRIORITY"),
+                    "channel": "email",
+                    "contact": contact,
+                    "metadata": {
+                        "source": "inbound_email",
+                        "message_id": message.message_id,
+                    },
+                }
             )
+            ticket = Ticket.objects.create(**attrs)
 
             # Fire the ticket_created signal manually for guest tickets
             # (the driver.create_ticket handles this for auth users)
