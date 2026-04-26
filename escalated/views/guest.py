@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from django.utils.translation import gettext as _
 
 from escalated.conf import get_setting
-from escalated.models import Department, EscalatedSetting, SatisfactionRating, Ticket
+from escalated.models import Contact, Department, EscalatedSetting, SatisfactionRating, Ticket
 from escalated.rendering import render_page
 from escalated.serializers import (
     AttachmentSerializer,
@@ -85,6 +85,10 @@ def ticket_store(request):
     # Generate a unique guest token
     guest_token = secrets.token_hex(32)  # 64-character hex string
 
+    # Dedupe repeat guests by email (Pattern B). Inline guest_* fields
+    # remain set for the backwards-compat dual-read period.
+    contact = Contact.find_or_create_by_email(email, name)
+
     # Create ticket without requester (guest mode)
     ticket = Ticket.objects.create(
         requester_content_type=None,
@@ -92,6 +96,7 @@ def ticket_store(request):
         guest_name=name,
         guest_email=email,
         guest_token=guest_token,
+        contact=contact,
         subject=subject,
         description=description,
         priority=priority,

@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 
 from escalated.conf import get_setting
 from escalated.mail.inbound_message import InboundMessage
-from escalated.models import InboundEmail, Ticket
+from escalated.models import Contact, InboundEmail, Ticket
 
 logger = logging.getLogger("escalated")
 
@@ -361,12 +361,16 @@ class InboundEmailService:
         else:
             # Guest ticket (follows the same pattern as views/guest.py)
             guest_token = secrets.token_hex(32)
+            # Dedupe inbound senders into a Contact so repeat emails land
+            # on one identity (Pattern B).
+            contact = Contact.find_or_create_by_email(message.from_email, message.from_name)
             ticket = Ticket.objects.create(
                 requester_content_type=None,
                 requester_object_id=None,
                 guest_name=message.from_name or message.from_email,
                 guest_email=message.from_email,
                 guest_token=guest_token,
+                contact=contact,
                 subject=subject,
                 description=body,
                 priority=get_setting("DEFAULT_PRIORITY"),

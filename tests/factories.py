@@ -15,6 +15,7 @@ from escalated.models import (
     Automation,
     BusinessSchedule,
     CannedResponse,
+    Contact,
     CustomField,
     CustomFieldValue,
     CustomObject,
@@ -109,6 +110,14 @@ class TagFactory(factory.django.DjangoModelFactory):
     name = factory.Sequence(lambda n: f"Tag {n}")
     slug = factory.Sequence(lambda n: f"tag-{n}")
     color = "#6b7280"
+
+
+class ContactFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Contact
+
+    email = factory.Sequence(lambda n: f"contact{n}@example.com")
+    name = factory.Faker("name")
 
 
 class TicketFactory(factory.django.DjangoModelFactory):

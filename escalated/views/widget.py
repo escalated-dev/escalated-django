@@ -16,7 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from escalated.conf import get_setting
-from escalated.models import Article, EscalatedSetting, Ticket
+from escalated.models import Article, Contact, EscalatedSetting, Ticket
 
 # ---------------------------------------------------------------------------
 # Rate limiting helper
@@ -187,12 +187,16 @@ def widget_create_ticket(request):
     guest_token = secrets.token_hex(32)
     priority = body.get("priority", get_setting("DEFAULT_PRIORITY"))
 
+    # Dedupe repeat guests by email (Pattern B).
+    contact = Contact.find_or_create_by_email(email, name)
+
     ticket = Ticket.objects.create(
         requester_content_type=None,
         requester_object_id=None,
         guest_name=name,
         guest_email=email,
         guest_token=guest_token,
+        contact=contact,
         subject=subject,
         description=description,
         priority=priority,
