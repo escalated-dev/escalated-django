@@ -82,26 +82,33 @@ def ticket_store(request):
             },
         )
 
-    # Generate a unique guest token
+    # Generate a unique guest token — always set so the guest-view
+    # redirect below works regardless of whether the ticket also
+    # gets attributed to a host user (guest_user mode).
     guest_token = secrets.token_hex(32)  # 64-character hex string
 
     # Dedupe repeat guests by email (Pattern B). Inline guest_* fields
     # remain set for the backwards-compat dual-read period.
     contact = Contact.find_or_create_by_email(email, name)
 
-    # Create ticket without requester (guest mode)
-    ticket = Ticket.objects.create(
-        requester_content_type=None,
-        requester_object_id=None,
-        guest_name=name,
-        guest_email=email,
-        guest_token=guest_token,
-        contact=contact,
-        subject=subject,
-        description=description,
-        priority=priority,
-        department_id=department_id,
+    # Apply the admin-configured guest policy. See
+    # escalated.views.widget._apply_guest_policy for the mode reference.
+    from escalated.views.widget import _apply_guest_policy
+
+    attrs = _apply_guest_policy(
+        {
+            "guest_name": name,
+            "guest_email": email,
+            "guest_token": guest_token,
+            "subject": subject,
+            "description": description,
+            "priority": priority,
+            "department_id": department_id,
+            "contact": contact,
+        }
     )
+
+    ticket = Ticket.objects.create(**attrs)
 
     # Handle file attachments
     files = request.FILES.getlist("attachments")
