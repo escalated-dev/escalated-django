@@ -27,19 +27,21 @@ class TestEmailDomain:
 
 @pytest.mark.django_db
 class TestMessageId:
+    # Format matches the canonical NestJS reference
+    # (see escalated.mail.message_id_util): <ticket-{pk}@domain> and
+    # <ticket-{pk}-reply-{reply_pk}@domain>.
+
     def test_make_message_id_format(self):
         ticket = TicketFactory()
         msg_id = make_message_id(ticket)
-        assert msg_id.startswith("<ticket-")
-        assert ticket.reference in msg_id
+        assert msg_id.startswith(f"<ticket-{ticket.pk}@")
         assert msg_id.endswith(">")
 
     def test_make_reply_message_id_format(self):
         ticket = TicketFactory()
         reply = ReplyFactory(ticket=ticket)
         msg_id = make_reply_message_id(ticket, reply)
-        assert f"reply-{reply.pk}" in msg_id
-        assert msg_id.startswith("<ticket-")
+        assert msg_id.startswith(f"<ticket-{ticket.pk}-reply-{reply.pk}@")
         assert msg_id.endswith(">")
 
     def test_message_ids_are_unique(self):
@@ -111,7 +113,7 @@ class TestNotificationServiceThreading:
         assert len(mail.outbox) == 1
         msg = mail.outbox[0]
         assert "Message-ID" in msg.extra_headers
-        assert ticket.reference in msg.extra_headers["Message-ID"]
+        assert f"ticket-{ticket.pk}@" in msg.extra_headers["Message-ID"]
 
     def test_reply_has_threading_headers(self, settings):
         settings.ESCALATED = {"NOTIFICATION_CHANNELS": ["email"], "WEBHOOK_URL": None}
@@ -129,4 +131,72 @@ class TestNotificationServiceThreading:
         msg = mail.outbox[0]
         assert "In-Reply-To" in msg.extra_headers
         assert "References" in msg.extra_headers
-        assert ticket.reference in msg.extra_headers["In-Reply-To"]
+        assert f"ticket-{ticket.pk}@" in msg.extra_headers["In-Reply-To"]
+
+
+@pytest.mark.django_db
+class TestSignedReplyTo:
+    """Signed Reply-To wire-up: when ESCALATED_EMAIL_INBOUND_SECRET is
+    configured, every outbound ticket notification gets a signed
+    Reply-To so inbound provider webhooks can verify ticket identity."""
+
+    def test_signed_reply_to_set_when_secret_configured(self, settings):
+        from escalated.mail.threading import get_signed_reply_to
+
+        settings.ESCALATED = {
+            "NOTIFICATION_CHANNELS": ["email"],
+            "WEBHOOK_URL": None,
+            "EMAIL_DOMAIN": "support.example.com",
+            "EMAIL_INBOUND_SECRET": "test-secret",
+        }
+        ticket = TicketFactory()
+
+        address = get_signed_reply_to(ticket)
+        assert address is not None
+        assert address.startswith(f"reply+{ticket.pk}.")
+        assert address.endswith("@support.example.com")
+
+    def test_signed_reply_to_returns_none_when_secret_blank(self, settings):
+        from escalated.mail.threading import get_signed_reply_to
+
+        settings.ESCALATED = {
+            "NOTIFICATION_CHANNELS": ["email"],
+            "WEBHOOK_URL": None,
+            "EMAIL_INBOUND_SECRET": "",
+        }
+        ticket = TicketFactory()
+
+        assert get_signed_reply_to(ticket) is None
+
+    def test_email_message_has_reply_to_when_secret_configured(self, settings):
+        settings.ESCALATED = {
+            "NOTIFICATION_CHANNELS": ["email"],
+            "WEBHOOK_URL": None,
+            "EMAIL_DOMAIN": "support.example.com",
+            "EMAIL_INBOUND_SECRET": "test-secret",
+        }
+        user = UserFactory()
+        ticket = TicketFactory(requester=user)
+
+        NotificationService.notify_ticket_created(ticket)
+
+        assert len(mail.outbox) == 1
+        msg = mail.outbox[0]
+        # Reply-To is a list on Django EmailMessage
+        assert msg.reply_to
+        assert msg.reply_to[0].startswith(f"reply+{ticket.pk}.")
+
+    def test_email_message_omits_reply_to_when_secret_blank(self, settings):
+        settings.ESCALATED = {
+            "NOTIFICATION_CHANNELS": ["email"],
+            "WEBHOOK_URL": None,
+            "EMAIL_INBOUND_SECRET": "",
+        }
+        user = UserFactory()
+        ticket = TicketFactory(requester=user)
+
+        NotificationService.notify_ticket_created(ticket)
+
+        msg = mail.outbox[0]
+        # Either empty list or no Reply-To — both are acceptable.
+        assert not msg.reply_to

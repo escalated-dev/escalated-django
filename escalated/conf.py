@@ -28,6 +28,9 @@ DEFAULTS = {
     },
     "NOTIFICATION_CHANNELS": ["email"],
     "WEBHOOK_URL": None,
+    # Email threading — domain for Message-IDs, secret for signed Reply-To
+    "EMAIL_DOMAIN": None,  # falls back to DEFAULT_FROM_EMAIL host
+    "EMAIL_INBOUND_SECRET": "",  # empty → Reply-To skipped
     # Inbound email settings
     "INBOUND_EMAIL_ENABLED": False,
     "INBOUND_EMAIL_ADAPTER": "mailgun",
