@@ -24,14 +24,13 @@ from __future__ import annotations
 
 import os
 from importlib import import_module
-from typing import List, Optional
 
 # Plugin-local override directory shipped with this package. Translators
 # can drop overrides in here to win over the central catalogues.
 PLUGIN_LOCALE_DIR: str = os.path.join(os.path.dirname(__file__), "locale")
 
 
-def get_central_locale_path() -> Optional[str]:
+def get_central_locale_path() -> str | None:
     """Return the absolute path to `escalated_locale/locale`, or None.
 
     Resolves the path lazily so a missing/unpublished `escalated-locale`
@@ -51,7 +50,7 @@ def get_central_locale_path() -> Optional[str]:
     return candidate if os.path.isdir(candidate) else None
 
 
-def get_locale_paths(*extra: str) -> List[str]:
+def get_locale_paths(*extra: str) -> list[str]:
     """Compose a Django-compatible `LOCALE_PATHS` tuple.
 
     Order (highest priority first):
@@ -62,7 +61,7 @@ def get_locale_paths(*extra: str) -> List[str]:
     The plugin-local directory is always included so existing overrides
     keep working even if the central package is not yet installed.
     """
-    paths: List[str] = [p for p in extra if p]
+    paths: list[str] = [p for p in extra if p]
     paths.append(PLUGIN_LOCALE_DIR)
 
     central = get_central_locale_path()
