@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Central translations sourced from the `escalated-locale` PyPI package
+  via `escalated.locale_paths.get_locale_paths()`; the plugin-local
+  `escalated/locale/` directory remains as the override layer that wins
+  over the central catalogue
 - Missing admin views for automations, articles, and side-conversations
 - Inertia UI optional with `UI_ENABLED` setting
 - Plugin system with service layer and admin views

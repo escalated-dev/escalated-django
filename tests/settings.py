@@ -1,5 +1,12 @@
+from escalated.locale_paths import get_locale_paths
+
 DEBUG = True
 USE_TZ = True
+
+# Compose LOCALE_PATHS with the plugin-local override first (winning
+# priority) and the central `escalated-locale` package second. This
+# mirrors the wiring host projects are documented to use in the README.
+LOCALE_PATHS = get_locale_paths()
 
 DATABASES = {
     "default": {
