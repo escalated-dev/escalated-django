@@ -31,14 +31,14 @@ def test_get_locale_paths_extras_take_priority():
 
 def test_get_central_locale_path_handles_missing_package(monkeypatch):
     """If `escalated_locale` cannot be imported, return None gracefully."""
-    import builtins
+    import importlib
 
-    real_import = builtins.__import__
+    real_import_module = importlib.import_module
 
-    def fake_import(name, *args, **kwargs):
+    def fake_import_module(name, *args, **kwargs):
         if name == "escalated_locale":
             raise ImportError("simulated missing package")
-        return real_import(name, *args, **kwargs)
+        return real_import_module(name, *args, **kwargs)
 
-    monkeypatch.setattr(builtins, "__import__", fake_import)
+    monkeypatch.setattr(locale_paths, "import_module", fake_import_module)
     assert locale_paths.get_central_locale_path() is None

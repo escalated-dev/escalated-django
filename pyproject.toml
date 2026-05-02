@@ -19,7 +19,7 @@ dependencies = [
     # `escalated_locale/locale/{lang}/LC_MESSAGES/django.{po,mo}`, which we
     # surface via `escalated.locale.get_central_locale_path()` so host
     # projects can wire it into Django's LOCALE_PATHS.
-    "escalated-locale ~= 0.1",
+    "escalated-locale @ git+https://github.com/escalated-dev/escalated-locale.git@v0.1.1#subdirectory=packages/pypi",
 ]
 
 [project.optional-dependencies]
