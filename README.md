@@ -170,6 +170,40 @@ Your layout component must accept a `#header` slot and a default slot. Escalated
 
 See the [`@escalated-dev/escalated` README](https://github.com/escalated-dev/escalated) for full theming documentation and CSS custom properties.
 
+## Translations (i18n)
+
+Escalated for Django consumes translations from the central
+[`escalated-locale`](https://github.com/escalated-dev/escalated-locale)
+PyPI package. The package ships canonical JSON catalogues alongside
+pre-compiled gettext artifacts at
+`escalated_locale/locale/<lang>/LC_MESSAGES/django.{po,mo}`, which
+plug directly into Django's translation system via `LOCALE_PATHS`.
+
+The package is installed automatically as a dependency of
+`escalated-django`. Wire it into your project's `settings.py`:
+
+```python
+# settings.py
+from escalated.locale_paths import get_locale_paths
+
+LOCALE_PATHS = get_locale_paths(
+    # Optional: your project's own override directory (highest priority)
+    BASE_DIR / "locale",
+)
+```
+
+`LOCALE_PATHS` is searched in order, so the layering becomes:
+
+1. Your project's `locale/` (if you passed one to `get_locale_paths`)
+2. The plugin-local `escalated/locale/` override directory
+3. The central `escalated_locale/locale/` baseline
+
+Translation contributions should be sent to
+[`escalated-locale`](https://github.com/escalated-dev/escalated-locale).
+The plugin-local `escalated/locale/` directory is reserved for
+Django-specific overrides that shouldn't ship to other framework
+plugins.
+
 ## Hosting Modes
 
 ### Self-Hosted (default)
