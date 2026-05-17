@@ -6,8 +6,10 @@ from django.db import migrations, models
 
 from escalated.conf import get_table_name
 
+# Django 5.1 renamed `check=` to `condition=` on CheckConstraint.
+# Both 4.2 and 5.0 still use the old `check=` kwarg.
 _check_kwargs = {"condition": models.Q(proficiency__gte=1, proficiency__lte=5)}
-if django.VERSION < (5, 0):
+if django.VERSION < (5, 1):
     _check_kwargs = {"check": models.Q(proficiency__gte=1, proficiency__lte=5)}
 
 
