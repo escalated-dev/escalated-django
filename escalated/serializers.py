@@ -674,11 +674,45 @@ class AgentProfileSerializer:
 
 class SkillSerializer:
     @staticmethod
+    def serialize_index_row(skill):
+        return {
+            "id": skill.pk,
+            "name": skill.name,
+            "agents_count": getattr(skill, "agents_count", skill.agents.count()),
+            "routing_tags_count": getattr(skill, "routing_tags_count", skill.routing_tags.count()),
+            "routing_departments_count": getattr(
+                skill,
+                "routing_departments_count",
+                skill.routing_departments.count(),
+            ),
+            "updated_at": _format_dt(skill.updated_at),
+        }
+
+    @staticmethod
+    def serialize_index_list(skills):
+        return [SkillSerializer.serialize_index_row(s) for s in skills]
+
+    @staticmethod
+    def serialize_for_form(skill):
+        return {
+            "id": skill.pk,
+            "name": skill.name,
+            "description": skill.description,
+            "routing_tag_ids": list(skill.routing_tags.order_by("pk").values_list("pk", flat=True)),
+            "routing_department_ids": list(skill.routing_departments.order_by("pk").values_list("pk", flat=True)),
+            "agents": [
+                {"user_id": row.user_id, "proficiency": row.proficiency}
+                for row in skill.agent_skills.order_by("user_id", "pk")
+            ],
+        }
+
+    @staticmethod
     def serialize(skill):
         data = {
             "id": skill.pk,
             "name": skill.name,
             "slug": skill.slug,
+            "description": getattr(skill, "description", None),
             "created_at": _format_dt(skill.created_at),
             "updated_at": _format_dt(skill.updated_at),
         }

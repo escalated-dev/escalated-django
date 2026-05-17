@@ -8,7 +8,9 @@ from escalated.models import (
     Automation,
     CustomObject,
     CustomObjectRecord,
+    Department,
     Skill,
+    Tag,
     TwoFactor,
     Webhook,
 )
@@ -36,6 +38,8 @@ def _make_admin_request(rf, method, path, data=None, user=None, content_type=Non
         user = UserFactory(username="admin_p35", is_staff=True, is_superuser=True)
     if method == "GET":
         request = rf.get(path)
+    elif method == "DELETE":
+        request = rf.delete(path)
     elif content_type == "application/json":
         request = rf.post(
             path,
@@ -71,36 +75,77 @@ class TestSkillsAdminViews:
         assert args[0][1] == "Escalated/Admin/Skills/Index"
         props = args[1]["props"] if "props" in args[1] else args[0][2]
         assert "skills" in props
+        assert "routing_tags_count" in props["skills"][0]
 
-    def test_create_post(self, rf):
+    @patch("escalated.views.admin.render_page")
+    def test_create_get_includes_form_context(self, mock_render, rf):
+        mock_render.return_value = MagicMock(status_code=200)
+        request = _make_admin_request(rf, "GET", "/admin/skills/create/")
+        admin.skills_create(request)
+        _args, kwargs = mock_render.call_args
+        props = kwargs.get("props")
+        if props is None and len(_args) > 2:
+            props = _args[2]
+        assert props["skill"] is None
+        assert "availableAgents" in props
+        assert "availableTags" in props
+        assert "availableDepartments" in props
+
+    def test_store_post_json(self, rf):
+        tag = Tag.objects.create(name="route-tag", slug="route-tag", color="#000")
+        dept = Department.objects.create(name="Dept A", slug="dept-a")
+        agent = UserFactory(username="skill_agent")
+        payload = {
+            "name": "Routing Skill",
+            "description": "desc",
+            "routing_tag_ids": [tag.pk],
+            "routing_department_ids": [dept.pk],
+            "agents": [{"user_id": agent.pk, "proficiency": 4}],
+        }
         request = _make_admin_request(
             rf,
             "POST",
-            "/admin/skills/create/",
-            data={
-                "name": "Networking",
-            },
+            "/admin/skills/store/",
+            data=payload,
+            content_type="application/json",
         )
-        response = admin.skills_create(request)
+        response = admin.skills_store(request)
         assert response.status_code == 302
-        assert Skill.objects.filter(name="Networking").exists()
+        skill = Skill.objects.get(name="Routing Skill")
+        assert skill.description == "desc"
+        assert list(skill.routing_tags.values_list("pk", flat=True)) == [tag.pk]
+        assert list(skill.routing_departments.values_list("pk", flat=True)) == [dept.pk]
+        assert skill.agent_skills.filter(user=agent, proficiency=4).exists()
 
-    def test_edit_post(self, rf):
-        skill = SkillFactory(name="Old Skill", slug="old-skill")
+    def test_update_post_json(self, rf):
+        skill = SkillFactory(name="Updatable", slug="updatable")
+        tag = Tag.objects.create(name="t2", slug="t2", color="#000")
         request = _make_admin_request(
             rf,
             "POST",
-            f"/admin/skills/{skill.pk}/edit/",
+            f"/admin/skills/{skill.pk}/update/",
             data={
-                "name": "New Skill",
+                "name": "Updated Name",
+                "routing_tag_ids": [tag.pk],
+                "routing_department_ids": [],
+                "agents": [],
             },
+            content_type="application/json",
         )
-        response = admin.skills_edit(request, skill.pk)
+        response = admin.skills_update(request, skill.pk)
         assert response.status_code == 302
         skill.refresh_from_db()
-        assert skill.name == "New Skill"
+        assert skill.name == "Updated Name"
+        assert list(skill.routing_tags.values_list("pk", flat=True)) == [tag.pk]
 
-    def test_delete(self, rf):
+    def test_destroy_delete(self, rf):
+        skill = SkillFactory(slug="skill-del-destroy")
+        request = _make_admin_request(rf, "DELETE", f"/admin/skills/{skill.pk}/")
+        response = admin.skills_destroy(request, skill.pk)
+        assert response.status_code == 302
+        assert not Skill.objects.filter(pk=skill.pk).exists()
+
+    def test_delete_post_legacy(self, rf):
         skill = SkillFactory(slug="skill-to-del")
         request = _make_admin_request(rf, "POST", f"/admin/skills/{skill.pk}/delete/")
         response = admin.skills_delete(request, skill.pk)

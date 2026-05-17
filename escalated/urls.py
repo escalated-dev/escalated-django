@@ -211,8 +211,11 @@ admin_patterns = [
     # Skills
     path("admin/skills/", admin.skills_index, name="admin_skills_index"),
     path("admin/skills/create/", admin.skills_create, name="admin_skills_create"),
+    path("admin/skills/store/", admin.skills_store, name="admin_skills_store"),
     path("admin/skills/<int:skill_id>/edit/", admin.skills_edit, name="admin_skills_edit"),
+    path("admin/skills/<int:skill_id>/update/", admin.skills_update, name="admin_skills_update"),
     path("admin/skills/<int:skill_id>/delete/", admin.skills_delete, name="admin_skills_delete"),
+    path("admin/skills/<int:skill_id>/", admin.skills_destroy, name="admin_skills_destroy"),
     # Capacity
     path("admin/capacity/", admin.capacity_index, name="admin_capacity_index"),
     path("admin/capacity/<int:capacity_id>/update/", admin.capacity_update, name="admin_capacity_update"),
