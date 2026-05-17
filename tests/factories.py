@@ -8,6 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from escalated.models import (
     AgentCapacity,
     AgentProfile,
+    AgentSkill,
     ApiToken,
     Article,
     ArticleCategory,
@@ -395,6 +396,15 @@ class SkillFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: f"Skill {n}")
     slug = factory.Sequence(lambda n: f"skill-{n}")
+
+
+class AgentSkillFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = AgentSkill
+
+    user = factory.SubFactory(UserFactory)
+    skill = factory.SubFactory(SkillFactory)
+    proficiency = 3
 
 
 class AgentCapacityFactory(factory.django.DjangoModelFactory):
