@@ -4123,3 +4123,179 @@ def reports_dashboard(request):
             "agent_performance": service.get_agent_performance(start, end),
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Users management (admin-only)
+# ---------------------------------------------------------------------------
+#
+# Surfaces host User rows so an admin can grant or revoke agent / admin
+# access from the panel. Django has no first-class is_admin/is_agent
+# columns, so we map:
+#   is_admin <-> User.is_staff (the host gate the rest of the package uses)
+#   is_agent <-> membership in any active Department
+# Hosts that model roles differently (django-guardian, custom AUTH_USER_MODEL,
+# etc.) can override these views in their own urls.py.
+
+
+def _user_is_admin_flag(user) -> bool:
+    return bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
+
+
+def _user_is_agent_flag(user, agent_user_ids: set[int]) -> bool:
+    return user.pk in agent_user_ids
+
+
+def _grant_agent(user) -> None:
+    """Attach the user to an active department so they count as an agent."""
+    department = Department.objects.filter(is_active=True).order_by("pk").first()
+    if department is None:
+        department = Department.objects.create(
+            name="Support",
+            slug="support",
+            description="Default support department.",
+            is_active=True,
+        )
+    department.agents.add(user)
+
+
+def _revoke_agent(user) -> None:
+    """Remove the user from every department they belong to."""
+    for department in Department.objects.filter(agents=user):
+        department.agents.remove(user)
+
+
+@login_required
+def users_index(request):
+    """List host users with their admin/agent flags for an admin to manage."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    search = (request.GET.get("search") or "").strip()
+    qs = User.objects.all()
+    if search:
+        qs = qs.filter(
+            Q(email__icontains=search)
+            | Q(first_name__icontains=search)
+            | Q(last_name__icontains=search)
+            | Q(username__icontains=search)
+        )
+
+    # Compute is_admin / is_agent columns. Active department membership is
+    # the canonical agent signal in this package (see escalated.permissions).
+    qs = qs.order_by("-is_staff", "pk")
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get("page", 1))
+
+    page_user_ids = [u.pk for u in page.object_list]
+    agent_user_ids = set(
+        User.objects.filter(escalated_departments__is_active=True, pk__in=page_user_ids)
+        .values_list("pk", flat=True)
+        .distinct()
+    )
+
+    # Frontend sort order: is_admin desc, is_agent desc, id asc. is_staff is
+    # already DB-sorted; tiebreak by is_agent here in Python.
+    rows = [
+        {
+            "id": u.pk,
+            "name": (u.get_full_name() or u.username) if hasattr(u, "get_full_name") else (u.username or None),
+            "email": u.email,
+            "is_admin": _user_is_admin_flag(u),
+            "is_agent": _user_is_agent_flag(u, agent_user_ids),
+        }
+        for u in page.object_list
+    ]
+    rows.sort(key=lambda r: (not r["is_admin"], not r["is_agent"], r["id"]))
+
+    return render_page(
+        request,
+        "Escalated/Admin/Users/Index",
+        props={
+            "users": {
+                "data": rows,
+                "current_page": page.number,
+                "last_page": paginator.num_pages,
+                "per_page": paginator.per_page,
+                "total": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
+            "filters": {"search": search},
+            "currentUserId": request.user.pk if request.user.is_authenticated else None,
+        },
+    )
+
+
+@login_required
+def users_role(request, user_id):
+    """Toggle the admin or agent flag for a user."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method not in ("POST", "PATCH"):
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    # Parse body — support form-encoded and JSON.
+    if request.content_type and "json" in request.content_type:
+        try:
+            data = json.loads(request.body or b"{}")
+        except (json.JSONDecodeError, ValueError):
+            data = {}
+    else:
+        data = request.POST
+
+    role = data.get("role") if isinstance(data, dict) else data.get("role", "")
+    raw_value = data.get("value") if isinstance(data, dict) else data.get("value", "")
+
+    if role not in ("admin", "agent"):
+        return JsonResponse(
+            {"message": _("Validation failed."), "errors": {"role": _("Role must be admin or agent.")}},
+            status=422,
+        )
+
+    if isinstance(raw_value, bool):
+        value = raw_value
+    elif isinstance(raw_value, str):
+        value = raw_value.lower() in ("1", "true", "on", "yes")
+    elif isinstance(raw_value, (int, float)):
+        value = bool(raw_value)
+    else:
+        return JsonResponse(
+            {"message": _("Validation failed."), "errors": {"value": _("Value must be boolean.")}},
+            status=422,
+        )
+
+    try:
+        target = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return HttpResponseNotFound(_("User not found"))
+
+    # Safety: an admin must not be able to demote themselves and lock
+    # themselves out of the admin panel they're using.
+    if role == "admin" and not value and str(request.user.pk) == str(target.pk):
+        return redirect("escalated:admin_users_index")
+
+    if role == "admin":
+        target.is_staff = value
+        if value:
+            # Admins are agents (mirrors Laravel reference).
+            target.save()
+            _grant_agent(target)
+            return redirect("escalated:admin_users_index")
+        target.save()
+    else:
+        # role == "agent"
+        if value:
+            _grant_agent(target)
+        else:
+            _revoke_agent(target)
+            # Revoking agent from an admin would leave the admin gate on but
+            # the agent gate off — confusing. Demote them fully.
+            if _user_is_admin_flag(target):
+                target.is_staff = False
+                target.save()
+
+    return redirect("escalated:admin_users_index")

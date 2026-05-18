@@ -270,6 +270,9 @@ admin_patterns = [
     ),
     # Reports
     path("admin/reports/dashboard/", admin.reports_dashboard, name="admin_reports_dashboard"),
+    # Users management
+    path("admin/users/", admin.users_index, name="admin_users_index"),
+    path("admin/users/<int:user_id>/role/", admin.users_role, name="admin_users_role"),
     # Workflows
     path("admin/workflows/", workflows.workflow_list, name="admin_workflows"),
     path("admin/workflows/create/", workflows.workflow_create, name="admin_workflow_create"),
