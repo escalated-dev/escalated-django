@@ -5,8 +5,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Avg, Count, Max, Q
-from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
+from django.http import HttpResponseForbidden, HttpResponseNotAllowed, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.text import slugify
@@ -15,6 +16,7 @@ from django.utils.translation import gettext as _
 from escalated.kb_guards import require_kb_enabled
 from escalated.models import (
     AgentCapacity,
+    AgentSkill,
     Article,
     ArticleCategory,
     AuditLog,
@@ -3076,14 +3078,252 @@ def kb_categories_delete(request, category_id):
 # ---------------------------------------------------------------------------
 
 
+def _skill_form_user_filter_q():
+    """ORM Q for users with is_agent or is_admin when those fields exist on the user model."""
+    field_names = {f.name for f in User._meta.get_fields()}
+    parts = []
+    if "is_agent" in field_names:
+        parts.append(Q(is_agent=True))
+    if "is_admin" in field_names:
+        parts.append(Q(is_admin=True))
+    if not parts:
+        return None
+    combined = parts[0]
+    for p in parts[1:]:
+        combined |= p
+    return combined
+
+
+def _skills_eligible_user_queryset():
+    """Users shown in the skill form agent picker (is_agent or is_admin when present)."""
+    qs = User.objects.filter(is_active=True)
+    q_or = _skill_form_user_filter_q()
+    if q_or is not None:
+        qs = qs.filter(q_or)
+    return qs.order_by("first_name", "last_name", "username")
+
+
+def _skills_serialize_available_agents(qs):
+    return [{"id": u.pk, "name": u.get_full_name() or u.username, "email": getattr(u, "email", "") or ""} for u in qs]
+
+
+def _skills_form_shared_props():
+    return {
+        "availableAgents": _skills_serialize_available_agents(_skills_eligible_user_queryset()),
+        "availableTags": TagSerializer.serialize_list(Tag.objects.order_by("name")),
+        "availableDepartments": [
+            {"id": d.pk, "name": d.name} for d in Department.objects.filter(is_active=True).order_by("name")
+        ],
+    }
+
+
+def _normalize_skills_payload_dict(payload):
+    name = (payload.get("name") or "").strip()
+    description = payload.get("description")
+    if description is not None and str(description).strip() != "":
+        description = str(description).strip()
+    else:
+        description = None
+
+    def collect_int_ids(key):
+        out = []
+        val = payload.get(key)
+        if val is None:
+            return out
+        if isinstance(val, (list, tuple)):
+            for item in val:
+                try:
+                    if item is None or item == "":
+                        continue
+                    out.append(int(item))
+                except (TypeError, ValueError):
+                    continue
+        else:
+            try:
+                if val == "":
+                    return out
+                out.append(int(val))
+            except (TypeError, ValueError):
+                pass
+        return list(dict.fromkeys(out))
+
+    routing_tag_ids = collect_int_ids("routing_tag_ids")
+    routing_department_ids = collect_int_ids("routing_department_ids")
+
+    agents_out = []
+    for row in payload.get("agents") or []:
+        if not isinstance(row, dict):
+            continue
+        uid = row.get("user_id")
+        if uid is None:
+            continue
+        try:
+            uid = int(uid)
+        except (TypeError, ValueError):
+            continue
+        prof = row.get("proficiency", 3)
+        try:
+            prof = int(prof)
+        except (TypeError, ValueError):
+            prof = 3
+        prof = max(1, min(5, prof))
+        agents_out.append({"user_id": uid, "proficiency": prof})
+
+    return {
+        "name": name,
+        "description": description,
+        "routing_tag_ids": routing_tag_ids,
+        "routing_department_ids": routing_department_ids,
+        "agents": agents_out,
+    }
+
+
+def _skills_parse_agents_bracket_notation(data):
+    agents = []
+    idx = 0
+    while True:
+        uid = data.get(f"agents[{idx}][user_id]")
+        if uid is None or str(uid).strip() == "":
+            break
+        prof = data.get(f"agents[{idx}][proficiency]", "3")
+        try:
+            agents.append({"user_id": int(uid), "proficiency": int(prof)})
+        except (TypeError, ValueError):
+            break
+        idx += 1
+    return agents
+
+
+def _skills_post_to_payload_dict(data):
+    """Build a normalised payload dict from a QueryDict (Inertia form posts)."""
+    name = (data.get("name") or "").strip()
+    description = data.get("description")
+    if description is not None:
+        description = str(description).strip() or None
+
+    tag_ids = []
+    for key in ("routing_tag_ids[]", "routing_tag_ids"):
+        tag_ids.extend(data.getlist(key))
+
+    dept_ids = []
+    for key in ("routing_department_ids[]", "routing_department_ids"):
+        dept_ids.extend(data.getlist(key))
+
+    agents = []
+    agents_raw = data.get("agents")
+    if agents_raw:
+        try:
+            parsed = json.loads(agents_raw)
+            if isinstance(parsed, list):
+                agents = parsed
+        except (json.JSONDecodeError, TypeError):
+            pass
+    if not agents:
+        agents = _skills_parse_agents_bracket_notation(data)
+
+    tag_ids_clean = []
+    seen = set()
+    for x in tag_ids:
+        try:
+            i = int(x)
+            if i not in seen:
+                seen.add(i)
+                tag_ids_clean.append(i)
+        except (TypeError, ValueError):
+            continue
+
+    dept_ids_clean = []
+    seen_d = set()
+    for x in dept_ids:
+        try:
+            i = int(x)
+            if i not in seen_d:
+                seen_d.add(i)
+                dept_ids_clean.append(i)
+        except (TypeError, ValueError):
+            continue
+
+    return _normalize_skills_payload_dict(
+        {
+            "name": name,
+            "description": description,
+            "routing_tag_ids": tag_ids_clean,
+            "routing_department_ids": dept_ids_clean,
+            "agents": agents,
+        }
+    )
+
+
+def _skills_parse_request(request):
+    if request.body:
+        try:
+            raw = json.loads(request.body)
+            if isinstance(raw, dict) and raw:
+                return _normalize_skills_payload_dict(raw)
+        except (json.JSONDecodeError, TypeError, UnicodeDecodeError):
+            pass
+    return _skills_post_to_payload_dict(request.POST)
+
+
+def _skills_apply_payload(skill, payload):
+    name = payload["name"]
+    if not name:
+        raise ValueError("name_required")
+
+    tag_ids = set(Tag.objects.filter(pk__in=payload["routing_tag_ids"]).values_list("pk", flat=True))
+    dept_ids = set(Department.objects.filter(pk__in=payload["routing_department_ids"]).values_list("pk", flat=True))
+    allowed_users = _skills_eligible_user_queryset().filter(pk__in=[a["user_id"] for a in payload["agents"]])
+    valid_user_ids = set(allowed_users.values_list("pk", flat=True))
+
+    with transaction.atomic():
+        skill.name = name
+        skill.description = payload.get("description")
+        skill.save()
+        skill.routing_tags.set(sorted(tag_ids))
+        skill.routing_departments.set(sorted(dept_ids))
+        AgentSkill.objects.filter(skill=skill).delete()
+        bulk = []
+        seen_user = set()
+        for row in payload["agents"]:
+            uid = row["user_id"]
+            if uid not in valid_user_ids or uid in seen_user:
+                continue
+            seen_user.add(uid)
+            bulk.append(
+                AgentSkill(
+                    user_id=uid,
+                    skill=skill,
+                    proficiency=row["proficiency"],
+                )
+            )
+        if bulk:
+            AgentSkill.objects.bulk_create(bulk)
+
+
+def _skills_method_is_update(request):
+    if request.method in ("PUT", "PATCH"):
+        return True
+    if request.method == "POST":
+        spoofed = request.POST.get("_method", "").upper()
+        if spoofed in ("PUT", "PATCH", ""):
+            return True
+    return False
+
+
 @login_required
 def skills_index(request):
     check = _require_admin(request)
     if check:
         return check
-    skills = Skill.objects.annotate(agents_count=Count("agents")).order_by("name")
+    skills = Skill.objects.annotate(
+        agents_count=Count("agents", distinct=True),
+        routing_tags_count=Count("routing_tags", distinct=True),
+        routing_departments_count=Count("routing_departments", distinct=True),
+    ).order_by("name")
     return render_page(
-        request, "Escalated/Admin/Skills/Index", props={"skills": SkillSerializer.serialize_list(skills)}
+        request,
+        "Escalated/Admin/Skills/Index",
+        props={"skills": SkillSerializer.serialize_index_list(skills)},
     )
 
 
@@ -3092,15 +3332,30 @@ def skills_create(request):
     check = _require_admin(request)
     if check:
         return check
-    if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        if not name:
-            return render_page(
-                request, "Escalated/Admin/Skills/Form", props={"errors": {"name": _("Name is required.")}}
-            )
-        Skill.objects.create(name=name)
-        return redirect("escalated:admin_skills_index")
-    return render_page(request, "Escalated/Admin/Skills/Form", props={})
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    props = {"skill": None, **_skills_form_shared_props()}
+    return render_page(request, "Escalated/Admin/Skills/Form", props=props)
+
+
+@login_required
+def skills_store(request):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    payload = _skills_parse_request(request)
+    if not payload["name"]:
+        props = {**_skills_form_shared_props(), "skill": None, "errors": {"name": _("Name is required.")}}
+        return render_page(request, "Escalated/Admin/Skills/Form", props=props)
+    skill = Skill()
+    try:
+        _skills_apply_payload(skill, payload)
+    except ValueError:
+        props = {**_skills_form_shared_props(), "skill": None, "errors": {"name": _("Name is required.")}}
+        return render_page(request, "Escalated/Admin/Skills/Form", props=props)
+    return redirect("escalated:admin_skills_index")
 
 
 @login_required
@@ -3112,11 +3367,44 @@ def skills_edit(request, skill_id):
         skill = Skill.objects.get(pk=skill_id)
     except Skill.DoesNotExist:
         return HttpResponseNotFound(_("Skill not found"))
-    if request.method == "POST":
-        skill.name = request.POST.get("name", skill.name)
-        skill.save()
-        return redirect("escalated:admin_skills_index")
-    return render_page(request, "Escalated/Admin/Skills/Form", props={"skill": SkillSerializer.serialize(skill)})
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    props = {
+        "skill": SkillSerializer.serialize_for_form(skill),
+        **_skills_form_shared_props(),
+    }
+    return render_page(request, "Escalated/Admin/Skills/Form", props=props)
+
+
+@login_required
+def skills_update(request, skill_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if not _skills_method_is_update(request):
+        return HttpResponseNotAllowed(["PUT", "PATCH", "POST"])
+    try:
+        skill = Skill.objects.get(pk=skill_id)
+    except Skill.DoesNotExist:
+        return HttpResponseNotFound(_("Skill not found"))
+    payload = _skills_parse_request(request)
+    if not payload["name"]:
+        props = {
+            "skill": SkillSerializer.serialize_for_form(skill),
+            **_skills_form_shared_props(),
+            "errors": {"name": _("Name is required.")},
+        }
+        return render_page(request, "Escalated/Admin/Skills/Form", props=props)
+    try:
+        _skills_apply_payload(skill, payload)
+    except ValueError:
+        props = {
+            "skill": SkillSerializer.serialize_for_form(skill),
+            **_skills_form_shared_props(),
+            "errors": {"name": _("Name is required.")},
+        }
+        return render_page(request, "Escalated/Admin/Skills/Form", props=props)
+    return redirect("escalated:admin_skills_index")
 
 
 @login_required
@@ -3126,6 +3414,20 @@ def skills_delete(request, skill_id):
         return check
     if request.method != "POST":
         return HttpResponseForbidden(_("Method not allowed"))
+    try:
+        Skill.objects.get(pk=skill_id).delete()
+    except Skill.DoesNotExist:
+        pass
+    return redirect("escalated:admin_skills_index")
+
+
+@login_required
+def skills_destroy(request, skill_id):
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method != "DELETE":
+        return HttpResponseNotAllowed(["DELETE"])
     try:
         Skill.objects.get(pk=skill_id).delete()
     except Skill.DoesNotExist:
@@ -3821,3 +4123,179 @@ def reports_dashboard(request):
             "agent_performance": service.get_agent_performance(start, end),
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Users management (admin-only)
+# ---------------------------------------------------------------------------
+#
+# Surfaces host User rows so an admin can grant or revoke agent / admin
+# access from the panel. Django has no first-class is_admin/is_agent
+# columns, so we map:
+#   is_admin <-> User.is_staff (the host gate the rest of the package uses)
+#   is_agent <-> membership in any active Department
+# Hosts that model roles differently (django-guardian, custom AUTH_USER_MODEL,
+# etc.) can override these views in their own urls.py.
+
+
+def _user_is_admin_flag(user) -> bool:
+    return bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
+
+
+def _user_is_agent_flag(user, agent_user_ids: set[int]) -> bool:
+    return user.pk in agent_user_ids
+
+
+def _grant_agent(user) -> None:
+    """Attach the user to an active department so they count as an agent."""
+    department = Department.objects.filter(is_active=True).order_by("pk").first()
+    if department is None:
+        department = Department.objects.create(
+            name="Support",
+            slug="support",
+            description="Default support department.",
+            is_active=True,
+        )
+    department.agents.add(user)
+
+
+def _revoke_agent(user) -> None:
+    """Remove the user from every department they belong to."""
+    for department in Department.objects.filter(agents=user):
+        department.agents.remove(user)
+
+
+@login_required
+def users_index(request):
+    """List host users with their admin/agent flags for an admin to manage."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    search = (request.GET.get("search") or "").strip()
+    qs = User.objects.all()
+    if search:
+        qs = qs.filter(
+            Q(email__icontains=search)
+            | Q(first_name__icontains=search)
+            | Q(last_name__icontains=search)
+            | Q(username__icontains=search)
+        )
+
+    # Compute is_admin / is_agent columns. Active department membership is
+    # the canonical agent signal in this package (see escalated.permissions).
+    qs = qs.order_by("-is_staff", "pk")
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get("page", 1))
+
+    page_user_ids = [u.pk for u in page.object_list]
+    agent_user_ids = set(
+        User.objects.filter(escalated_departments__is_active=True, pk__in=page_user_ids)
+        .values_list("pk", flat=True)
+        .distinct()
+    )
+
+    # Frontend sort order: is_admin desc, is_agent desc, id asc. is_staff is
+    # already DB-sorted; tiebreak by is_agent here in Python.
+    rows = [
+        {
+            "id": u.pk,
+            "name": (u.get_full_name() or u.username) if hasattr(u, "get_full_name") else (u.username or None),
+            "email": u.email,
+            "is_admin": _user_is_admin_flag(u),
+            "is_agent": _user_is_agent_flag(u, agent_user_ids),
+        }
+        for u in page.object_list
+    ]
+    rows.sort(key=lambda r: (not r["is_admin"], not r["is_agent"], r["id"]))
+
+    return render_page(
+        request,
+        "Escalated/Admin/Users/Index",
+        props={
+            "users": {
+                "data": rows,
+                "current_page": page.number,
+                "last_page": paginator.num_pages,
+                "per_page": paginator.per_page,
+                "total": paginator.count,
+                "has_next": page.has_next(),
+                "has_previous": page.has_previous(),
+            },
+            "filters": {"search": search},
+            "currentUserId": request.user.pk if request.user.is_authenticated else None,
+        },
+    )
+
+
+@login_required
+def users_role(request, user_id):
+    """Toggle the admin or agent flag for a user."""
+    check = _require_admin(request)
+    if check:
+        return check
+
+    if request.method not in ("POST", "PATCH"):
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    # Parse body — support form-encoded and JSON.
+    if request.content_type and "json" in request.content_type:
+        try:
+            data = json.loads(request.body or b"{}")
+        except (json.JSONDecodeError, ValueError):
+            data = {}
+    else:
+        data = request.POST
+
+    role = data.get("role") if isinstance(data, dict) else data.get("role", "")
+    raw_value = data.get("value") if isinstance(data, dict) else data.get("value", "")
+
+    if role not in ("admin", "agent"):
+        return JsonResponse(
+            {"message": _("Validation failed."), "errors": {"role": _("Role must be admin or agent.")}},
+            status=422,
+        )
+
+    if isinstance(raw_value, bool):
+        value = raw_value
+    elif isinstance(raw_value, str):
+        value = raw_value.lower() in ("1", "true", "on", "yes")
+    elif isinstance(raw_value, (int, float)):
+        value = bool(raw_value)
+    else:
+        return JsonResponse(
+            {"message": _("Validation failed."), "errors": {"value": _("Value must be boolean.")}},
+            status=422,
+        )
+
+    try:
+        target = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return HttpResponseNotFound(_("User not found"))
+
+    # Safety: an admin must not be able to demote themselves and lock
+    # themselves out of the admin panel they're using.
+    if role == "admin" and not value and str(request.user.pk) == str(target.pk):
+        return redirect("escalated:admin_users_index")
+
+    if role == "admin":
+        target.is_staff = value
+        if value:
+            # Admins are agents (mirrors Laravel reference).
+            target.save()
+            _grant_agent(target)
+            return redirect("escalated:admin_users_index")
+        target.save()
+    else:
+        # role == "agent"
+        if value:
+            _grant_agent(target)
+        else:
+            _revoke_agent(target)
+            # Revoking agent from an admin would leave the admin gate on but
+            # the agent gate off — confusing. Demote them fully.
+            if _user_is_admin_flag(target):
+                target.is_staff = False
+                target.save()
+
+    return redirect("escalated:admin_users_index")

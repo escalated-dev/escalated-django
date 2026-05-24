@@ -5,6 +5,7 @@ import uuid
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -1642,7 +1643,10 @@ class AgentSkill(models.Model):
         on_delete=models.CASCADE,
         related_name="agent_skills",
     )
-    proficiency = models.PositiveIntegerField(default=1)
+    proficiency = models.PositiveIntegerField(
+        default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
 
     class Meta:
         db_table = get_table_name("agent_skill")
@@ -1655,6 +1659,19 @@ class AgentSkill(models.Model):
 class Skill(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
+    description = models.TextField(null=True, blank=True)
+    routing_tags = models.ManyToManyField(
+        "Tag",
+        through="SkillRoutingTag",
+        related_name="skill_routing_tags",
+        blank=True,
+    )
+    routing_departments = models.ManyToManyField(
+        "Department",
+        through="SkillRoutingDepartment",
+        related_name="skill_routing_departments",
+        blank=True,
+    )
     agents = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through="AgentSkill",
@@ -1676,6 +1693,53 @@ class Skill(models.Model):
 
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+
+
+class SkillRoutingTag(models.Model):
+    skill = models.ForeignKey(
+        "Skill",
+        on_delete=models.CASCADE,
+        related_name="skill_routing_tag_links",
+    )
+    tag = models.ForeignKey(
+        "Tag",
+        on_delete=models.CASCADE,
+        related_name="skill_routing_tag_links",
+    )
+
+    class Meta:
+        db_table = get_table_name("skill_routing_tags")
+        constraints = [
+            models.UniqueConstraint(fields=["skill", "tag"], name="escalated_skill_routing_tag_skill_tag_uniq"),
+        ]
+
+    def __str__(self):
+        return f"SkillRoutingTag({self.skill_id}, tag={self.tag_id})"
+
+
+class SkillRoutingDepartment(models.Model):
+    skill = models.ForeignKey(
+        "Skill",
+        on_delete=models.CASCADE,
+        related_name="skill_routing_department_links",
+    )
+    department = models.ForeignKey(
+        "Department",
+        on_delete=models.CASCADE,
+        related_name="skill_routing_department_links",
+    )
+
+    class Meta:
+        db_table = get_table_name("skill_routing_departments")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["skill", "department"],
+                name="escalated_skill_routing_dept_skill_dept_uniq",
+            ),
+        ]
+
+    def __str__(self):
+        return f"SkillRoutingDepartment({self.skill_id}, dept={self.department_id})"
 
 
 class AgentCapacity(models.Model):
