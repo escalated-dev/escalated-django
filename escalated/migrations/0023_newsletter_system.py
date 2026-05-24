@@ -11,7 +11,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("escalated", "0021_backfill_contact_id_on_tickets"),
+        ("escalated", "0022_skills_management_routing"),
     ]
 
     operations = [

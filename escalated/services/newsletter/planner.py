@@ -5,8 +5,6 @@ from __future__ import annotations
 
 import secrets
 
-from django.utils import timezone
-
 from escalated.models import Contact, Newsletter, NewsletterDelivery, NewsletterList
 
 from .bounce_suppression_store import BounceSuppressionStore

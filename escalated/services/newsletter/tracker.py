@@ -9,7 +9,6 @@ from escalated.models import Newsletter, NewsletterDelivery
 
 from .bounce_suppression_store import BounceSuppressionStore
 
-
 TERMINAL = ("bounced", "complained", "failed")
 
 

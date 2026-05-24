@@ -8,7 +8,7 @@ from datetime import timedelta
 from urllib.parse import urlparse
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives, get_connection
+from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
@@ -16,7 +16,6 @@ from django.utils import timezone
 from escalated.models import Newsletter, NewsletterDelivery
 
 from .renderer import NewsletterRenderer
-
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +57,8 @@ class NewsletterDispatcher:
 
     def _dispatch_one(self, delivery: NewsletterDelivery) -> None:
         # Reload with related rows
-        from escalated.models import Contact, Newsletter as NL, NewsletterTemplate
+        from escalated.models import Contact, NewsletterTemplate
+        from escalated.models import Newsletter as NL
 
         delivery_full = NewsletterDelivery.objects.get(id=delivery.id)
         nl = NL.objects.get(id=delivery_full.newsletter_id)

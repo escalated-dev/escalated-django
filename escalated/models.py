@@ -2376,6 +2376,9 @@ class NewsletterList(models.Model):
     class Meta:
         db_table = "escalated_newsletter_lists"
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class NewsletterListMember(models.Model):
     list_id = models.PositiveIntegerField()
@@ -2386,6 +2389,9 @@ class NewsletterListMember(models.Model):
     class Meta:
         db_table = "escalated_newsletter_list_members"
         unique_together = (("list_id", "contact_id"),)
+
+    def __str__(self) -> str:
+        return f"list={self.list_id} contact={self.contact_id}"
 
 
 class NewsletterTemplate(models.Model):
@@ -2400,6 +2406,9 @@ class NewsletterTemplate(models.Model):
 
     class Meta:
         db_table = "escalated_newsletter_templates"
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class Newsletter(models.Model):
@@ -2438,6 +2447,9 @@ class Newsletter(models.Model):
         db_table = "escalated_newsletters"
         indexes = [models.Index(fields=["status", "scheduled_at"], name="esc_nl_status_sched_idx")]
 
+    def __str__(self) -> str:
+        return self.subject
+
 
 class NewsletterDelivery(models.Model):
     STATUS_CHOICES = (
@@ -2473,3 +2485,6 @@ class NewsletterDelivery(models.Model):
             models.Index(fields=["newsletter_id", "status"], name="esc_nl_d_nl_status_idx"),
             models.Index(fields=["status", "claimed_at"], name="esc_nl_d_status_cl_idx"),
         ]
+
+    def __str__(self) -> str:
+        return f"delivery={self.id} newsletter={self.newsletter_id} status={self.status}"

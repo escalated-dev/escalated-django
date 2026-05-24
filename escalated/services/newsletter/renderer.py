@@ -11,12 +11,11 @@ from __future__ import annotations
 import base64
 import html
 import re
-from typing import Callable
+from collections.abc import Callable
 from urllib.parse import urlparse
 
 from django.conf import settings
 from django.template.loader import get_template
-
 
 ALLOWED_SCHEMES = {"http", "https", "mailto", "tel"}
 
@@ -79,7 +78,7 @@ class NewsletterRenderer:
         return "<p>" + "</p><p>".join(paragraphs) + "</p>"
 
     def _resolve_merge_fields(self, body: str, contact, delivery) -> str:
-        def repl(match: "re.Match[str]") -> str:
+        def repl(match: re.Match[str]) -> str:
             path = match.group(1).strip()
             return html.escape(self._resolve_path(path, contact, delivery))
 
@@ -112,7 +111,7 @@ class NewsletterRenderer:
         unsub = self.unsubscribe_url(delivery)
         view = self.view_in_browser_url(delivery)
 
-        def repl(match: "re.Match[str]") -> str:
+        def repl(match: re.Match[str]) -> str:
             attr_prefix, quote, href = match.group(1), match.group(2), match.group(3)
             if not href or href.startswith("#"):
                 return match.group(0)
