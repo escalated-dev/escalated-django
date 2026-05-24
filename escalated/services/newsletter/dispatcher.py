@@ -43,9 +43,7 @@ class NewsletterDispatcher:
                 .values_list("id", flat=True)[:batch_size]
             )
             if ids:
-                NewsletterDelivery.objects.filter(id__in=ids).update(
-                    status="queued", claimed_at=timezone.now()
-                )
+                NewsletterDelivery.objects.filter(id__in=ids).update(status="queued", claimed_at=timezone.now())
 
         for delivery_id in ids:
             d = NewsletterDelivery.objects.filter(id=delivery_id).first()
@@ -63,9 +61,7 @@ class NewsletterDispatcher:
         delivery_full = NewsletterDelivery.objects.get(id=delivery.id)
         nl = NL.objects.get(id=delivery_full.newsletter_id)
         delivery_full.newsletter = nl
-        nl.template = (
-            NewsletterTemplate.objects.filter(id=nl.template_id).first() if nl.template_id else None
-        )
+        nl.template = NewsletterTemplate.objects.filter(id=nl.template_id).first() if nl.template_id else None
         delivery_full.contact = Contact.objects.get(id=delivery_full.contact_id)
 
         try:
@@ -74,9 +70,7 @@ class NewsletterDispatcher:
             base = _conf("app_url", "http://localhost") or "http://localhost"
             host = urlparse(base).hostname or "localhost"
 
-            from_addr = (
-                f'"{nl.from_name}" <{nl.from_email}>' if nl.from_name else nl.from_email
-            )
+            from_addr = f'"{nl.from_name}" <{nl.from_email}>' if nl.from_name else nl.from_email
             msg = EmailMultiAlternatives(
                 subject=nl.subject,
                 body=html_body,
@@ -109,9 +103,7 @@ class NewsletterDispatcher:
                 delivery_full.status = "pending"
             delivery_full.attempt_count = attempts
             delivery_full.claimed_at = None
-            delivery_full.save(
-                update_fields=["status", "attempt_count", "claimed_at", "failure_reason"]
-            )
+            delivery_full.save(update_fields=["status", "attempt_count", "claimed_at", "failure_reason"])
 
     def _reclaim_stuck_rows(self) -> None:
         minutes = int(_conf("newsletter_claim_timeout_minutes", 10))

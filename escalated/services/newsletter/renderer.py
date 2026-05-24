@@ -29,20 +29,25 @@ class NewsletterRenderer:
         n = delivery.newsletter
         contact = delivery.contact
         body_md = n.body_markdown or (n.template.body_markdown if n.template_id and n.template else "")
-        theme_slug = n.theme or (n.template.theme if n.template_id and n.template else None) or _conf(
-            "newsletter_default_theme", "default"
+        theme_slug = (
+            n.theme
+            or (n.template.theme if n.template_id and n.template else None)
+            or _conf("newsletter_default_theme", "default")
         )
 
         body = self._markdown_to_html(body_md or "")
         body = self._resolve_merge_fields(body, contact, delivery)
 
-        themed = self._render_theme(theme_slug, {
-            "subject": n.subject,
-            "body": body,
-            "unsubscribe_url": self.unsubscribe_url(delivery),
-            "view_in_browser_url": self.view_in_browser_url(delivery),
-            "brand": self._brand(),
-        })
+        themed = self._render_theme(
+            theme_slug,
+            {
+                "subject": n.subject,
+                "body": body,
+                "unsubscribe_url": self.unsubscribe_url(delivery),
+                "view_in_browser_url": self.view_in_browser_url(delivery),
+                "brand": self._brand(),
+            },
+        )
 
         if not _conf("newsletter_tracking_enabled", True):
             return themed
