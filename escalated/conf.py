@@ -16,6 +16,11 @@ DEFAULTS = {
     "MAX_ATTACHMENTS": 5,
     "MAX_ATTACHMENT_SIZE_KB": 10240,
     "DEFAULT_PRIORITY": "medium",
+    # Host-defined custom ticket actions. A list of action config dicts:
+    #   {"key", "label", "variant", "visible", "enabled", "confirmation", "metadata"}
+    # where visible/enabled/confirmation/metadata may be values or callables
+    # taking (ticket, user).
+    "TICKET_ACTIONS": [],
     "SLA": {
         "ENABLED": True,
         "BUSINESS_HOURS_ONLY": False,

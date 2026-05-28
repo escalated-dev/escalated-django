@@ -234,6 +234,7 @@ def ticket_show(request, ticket_id):
         "Escalated/Agent/Tickets/Show",
         props={
             "ticket": TicketSerializer.serialize(ticket, include_replies=True, include_activities=True),
+            "customActions": _custom_actions_for(request, ticket),
             "replies": ReplySerializer.serialize_list(replies),
             "activities": [ActivitySerializer.serialize(a) for a in activities],
             "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
@@ -584,6 +585,67 @@ def ticket_apply_macro(request, ticket_id):
 
     macro_service = MacroService()
     macro_service.apply(macro, ticket, request.user)
+
+    return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
+
+
+def _custom_actions_for(request, ticket):
+    """Serialize the visible custom actions for a ticket, adding url + method."""
+    from django.urls import reverse
+
+    from escalated.action_registry import registry
+
+    result = []
+    for action in registry.visible_for(ticket, request.user):
+        result.append(
+            {
+                **action,
+                "url": reverse("escalated:agent_ticket_custom_action", args=[ticket.pk, action["key"]]),
+                "method": "post",
+            }
+        )
+    return result
+
+
+@login_required
+def ticket_custom_action(request, ticket_id, action):
+    """Trigger a host-defined custom ticket action."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    from escalated.action_registry import registry
+    from escalated.signals import custom_action_triggered
+
+    config = registry.find(action)
+    if config is None or not registry.is_visible(config, ticket, request.user):
+        return HttpResponseNotFound(_("Custom action not found"))
+    if not registry.is_enabled(config, ticket, request.user):
+        return HttpResponseForbidden(_("Custom action is not enabled"))
+
+    try:
+        payload = (json.loads(request.body or "{}") or {}).get("payload") or {}
+    except (ValueError, TypeError):
+        payload = {}
+    if not payload:
+        payload = request.POST.get("payload") or {}
+
+    custom_action_triggered.send(
+        sender=Ticket,
+        ticket=ticket,
+        user=request.user,
+        action_key=action,
+        payload=payload,
+        metadata=registry.metadata(config, ticket, request.user),
+    )
 
     return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
 

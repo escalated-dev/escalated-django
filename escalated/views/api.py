@@ -12,6 +12,7 @@ from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -321,11 +322,10 @@ def ticket_show(request, reference):
     if error:
         return error
 
-    return JsonResponse(
-        {
-            "data": ApiTicketDetailSerializer.serialize(ticket),
-        }
-    )
+    data = ApiTicketDetailSerializer.serialize(ticket)
+    data["custom_actions"] = _custom_actions_for(request, ticket)
+
+    return JsonResponse({"data": data})
 
 
 @csrf_exempt
@@ -552,6 +552,58 @@ def ticket_apply_macro(request, reference):
     macro_service.apply(macro, ticket, request.user)
 
     return JsonResponse({"message": f'Macro "{macro.name}" applied.'})
+
+
+def _custom_actions_for(request, ticket):
+    """Serialize the visible custom actions for a ticket, adding url + method."""
+    from escalated.action_registry import registry
+
+    result = []
+    for action in registry.visible_for(ticket, getattr(request, "user", None)):
+        try:
+            url = reverse("escalated_api:ticket_custom_action", args=[ticket.reference, action["key"]])
+        except NoReverseMatch:
+            url = f"tickets/{ticket.reference}/actions/{action['key']}/"
+        result.append({**action, "url": url, "method": "post"})
+    return result
+
+
+@csrf_exempt
+@require_POST
+def ticket_custom_action(request, reference, action):
+    """
+    POST /tickets/<reference>/actions/<action>
+
+    Trigger a host-defined custom ticket action. 404 if the action is unknown
+    or not visible, 403 if it is disabled, otherwise sends the
+    ``custom_action_triggered`` signal.
+    """
+    from escalated.action_registry import registry
+    from escalated.signals import custom_action_triggered
+
+    ticket, error = _resolve_ticket(reference)
+    if error:
+        return error
+
+    config = registry.find(action)
+    if config is None or not registry.is_visible(config, ticket, request.user):
+        return JsonResponse({"message": "Custom action not found."}, status=404)
+    if not registry.is_enabled(config, ticket, request.user):
+        return JsonResponse({"message": "Custom action is not enabled."}, status=403)
+
+    payload = _json_body(request).get("payload") or {}
+    metadata = registry.metadata(config, ticket, request.user)
+
+    custom_action_triggered.send(
+        sender=Ticket,
+        ticket=ticket,
+        user=request.user,
+        action_key=action,
+        payload=payload,
+        metadata=metadata,
+    )
+
+    return JsonResponse({"message": "Custom action dispatched.", "action": action})
 
 
 @csrf_exempt

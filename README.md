@@ -299,6 +299,49 @@ python manage.py purge_activities --days 90
 
 Schedule these with cron, Celery Beat, or django-crontab for automated enforcement.
 
+## Custom Ticket Actions
+
+Host projects can add custom buttons to the agent ticket screen and handle clicks
+with a normal Django signal receiver. Register actions in settings:
+
+```python
+# settings.py
+ESCALATED = {
+    # ...
+    "TICKET_ACTIONS": [
+        {
+            "key": "sync-crm",
+            "label": "Sync CRM",
+            "variant": "primary",                # primary | secondary | danger
+            "confirmation": "Sync this ticket to the CRM?",
+            "metadata": {"icon": "refresh-cw"},
+            # visible / enabled may be a bool or a callable(ticket, user)
+            "enabled": lambda ticket, user: not ticket.metadata.get("crm_synced"),
+        },
+    ],
+}
+```
+
+Visible actions are exposed on the agent ticket page as `customActions` and on the
+API ticket detail response as `custom_actions` (each with a `url` and `method`).
+Triggering one (`POST /support/agent/tickets/<id>/actions/<key>/` or the API route
+`/<prefix>/tickets/<reference>/actions/<key>/`) validates the action is visible
+(404) and enabled (403), then sends the `custom_action_triggered` signal:
+
+```python
+from django.dispatch import receiver
+from escalated.signals import custom_action_triggered
+
+@receiver(custom_action_triggered)
+def on_custom_action(sender, ticket, user, action_key, payload, metadata, **kwargs):
+    if action_key != "sync-crm":
+        return
+    # your handler
+```
+
+Escalated also records an internal note on the ticket whenever an action fires,
+for auditability.
+
 ## Routes
 
 All routes use the configurable prefix (default: `support`).

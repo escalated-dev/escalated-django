@@ -46,6 +46,11 @@ agent_patterns = [
     path("agent/tickets/<int:ticket_id>/tags/", agent.ticket_tags, name="agent_ticket_tags"),
     path("agent/tickets/<int:ticket_id>/department/", agent.ticket_department, name="agent_ticket_department"),
     path("agent/tickets/<int:ticket_id>/macro/", agent.ticket_apply_macro, name="agent_ticket_macro"),
+    path(
+        "agent/tickets/<int:ticket_id>/actions/<str:action>/",
+        agent.ticket_custom_action,
+        name="agent_ticket_custom_action",
+    ),
     path("agent/tickets/<int:ticket_id>/follow/", agent.ticket_follow, name="agent_ticket_follow"),
     path("agent/tickets/<int:ticket_id>/presence/", agent.ticket_presence, name="agent_ticket_presence"),
     path("agent/tickets/<int:ticket_id>/<int:reply_id>/pin/", agent.ticket_pin_reply, name="agent_ticket_pin"),

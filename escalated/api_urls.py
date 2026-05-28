@@ -28,6 +28,11 @@ api_patterns = [
     path("tickets/<str:reference>/assign/", api.ticket_assign, name="ticket_assign"),
     path("tickets/<str:reference>/follow/", api.ticket_follow, name="ticket_follow"),
     path("tickets/<str:reference>/macro/", api.ticket_apply_macro, name="ticket_macro"),
+    path(
+        "tickets/<str:reference>/actions/<str:action>/",
+        api.ticket_custom_action,
+        name="ticket_custom_action",
+    ),
     path("tickets/<str:reference>/tags/", api.ticket_tags, name="ticket_tags"),
     path("tickets/<str:reference>/delete/", api.ticket_destroy, name="ticket_destroy"),
     # Resources
