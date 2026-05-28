@@ -15,8 +15,20 @@ class EscalatedConfig(AppConfig):
         import escalated.handlers  # noqa: F401 - connects signal handlers
         import escalated.workflow_handlers  # noqa: F401 - connects WorkflowEngine to signals
 
+        # Populate the custom ticket action registry from settings.
+        self._load_ticket_actions()
+
         # Load active plugins on startup
         self._load_plugins()
+
+    def _load_ticket_actions(self):
+        """Populate the custom ticket action registry from ESCALATED settings."""
+        try:
+            from escalated.action_registry import registry
+
+            registry.load_from_settings()
+        except Exception as exc:
+            logger.debug("Could not load custom ticket actions on startup: %s", exc)
 
         # Boot the SDK plugin bridge (Node.js runtime) if enabled
         self._boot_bridge()

@@ -4,6 +4,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from escalated.signals import (
+    custom_action_triggered,
     reply_created,
     sla_breached,
     ticket_assigned,
@@ -349,5 +350,35 @@ def on_ticket_priority_changed(sender, ticket, user, old_priority, new_priority,
             "old_priority": old_priority,
             "new_priority": new_priority,
             "user_id": getattr(user, "pk", None),
+        },
+    )
+
+
+@receiver(custom_action_triggered)
+def on_custom_action_triggered(sender, ticket, user, action_key, payload=None, metadata=None, **kwargs):
+    """Record an internal note whenever a custom ticket action is triggered.
+
+    Gives an audit trail of who ran which action. The note is authored by the
+    triggering agent, so the body need not repeat their name.
+    """
+    if ImportContext.is_importing():
+        return
+
+    from escalated.services.ticket_service import TicketService
+
+    TicketService().add_note(ticket, user, f'Custom action "{action_key}" was triggered.')
+
+    logger.info(f"Custom action '{action_key}' triggered on ticket {ticket.reference} by {user}")
+
+    # Dual dispatch to SDK plugin bridge
+    _bridge_dispatch(
+        "ticket.custom_action_triggered",
+        {
+            "ticket_id": ticket.pk,
+            "reference": ticket.reference,
+            "action": action_key,
+            "user_id": getattr(user, "pk", None),
+            "payload": payload or {},
+            "metadata": metadata or {},
         },
     )

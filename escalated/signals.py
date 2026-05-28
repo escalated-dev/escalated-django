@@ -27,6 +27,9 @@ tag_removed = django.dispatch.Signal()  # sender=Tag, tag, ticket, user
 # Department signals
 department_changed = django.dispatch.Signal()  # sender=Ticket, ticket, user, old_department, new_department
 
+# Custom ticket action signals
+custom_action_triggered = django.dispatch.Signal()  # sender=Ticket, ticket, user, action_key, payload, metadata
+
 # Live Chat signals
 chat_started = django.dispatch.Signal()  # sender=ChatSession, session, ticket
 chat_message_sent = django.dispatch.Signal()  # sender=ChatSession, session, ticket, message, sender_type
