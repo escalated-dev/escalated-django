@@ -55,7 +55,7 @@ class TestLinkToUser:
         c = ContactFactory(user_id=None)
         c.link_to_user(555)
         c.refresh_from_db()
-        assert c.user_id == 555
+        assert c.user_id == "555"
 
 
 @pytest.mark.django_db
@@ -70,10 +70,10 @@ class TestPromoteToUser:
         contact.promote_to_user(user.id, "auth.User")
 
         contact.refresh_from_db()
-        assert contact.user_id == user.id
+        assert contact.user_id == str(user.id)
         for t in (t1, t2):
             t.refresh_from_db()
-            assert t.requester_object_id == user.id
+            assert t.requester_object_id == str(user.id)
             assert t.requester_content_type_id == user_ct.id
 
 

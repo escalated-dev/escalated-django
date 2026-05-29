@@ -103,7 +103,7 @@ def api_tokens_create(request):
         )
 
     try:
-        user = User.objects.get(pk=int(user_id))
+        user = User.objects.get(pk=user_id)
     except (User.DoesNotExist, ValueError, TypeError):
         return JsonResponse({"message": "User not found."}, status=404)
 

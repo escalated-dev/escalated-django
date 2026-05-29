@@ -199,7 +199,7 @@ class LocalDriver:
         # Update ticket status based on who is replying
         if not is_internal and user is not None:
             ct = ContentType.objects.get_for_model(user)
-            is_requester = ticket.requester_content_type == ct and ticket.requester_object_id == user.pk
+            is_requester = ticket.requester_content_type == ct and str(ticket.requester_object_id) == str(user.pk)
 
             if is_requester:
                 if ticket.status == Ticket.Status.WAITING_ON_CUSTOMER:

@@ -202,7 +202,8 @@ class Contact(models.Model):
 
     email = models.EmailField(unique=True, max_length=320)
     name = models.CharField(max_length=255, null=True, blank=True)
-    user_id = models.PositiveIntegerField(
+    user_id = models.CharField(
+        max_length=255,
         null=True,
         blank=True,
         help_text=_("Linked host-app user id once the contact creates an account"),
@@ -234,12 +235,12 @@ class Contact(models.Model):
             return existing
         return cls.objects.create(email=normalized, name=name)
 
-    def link_to_user(self, user_id: int) -> "Contact":
+    def link_to_user(self, user_id: str | int) -> "Contact":
         self.user_id = user_id
         self.save(update_fields=["user_id", "updated_at"])
         return self
 
-    def promote_to_user(self, user_id: int, user_type_model: str = "auth.User") -> "Contact":
+    def promote_to_user(self, user_id: str | int, user_type_model: str = "auth.User") -> "Contact":
         """Link + back-stamp requester on all prior tickets owned by this Contact."""
         self.link_to_user(user_id)
         app_label, model_name = user_type_model.split(".", 1)
@@ -283,7 +284,7 @@ class Ticket(models.Model):
         blank=True,
         related_name="escalated_requester_tickets",
     )
-    requester_object_id = models.PositiveIntegerField(null=True, blank=True)
+    requester_object_id = models.CharField(max_length=255, null=True, blank=True)
     requester = GenericForeignKey("requester_content_type", "requester_object_id")
 
     assigned_to = models.ForeignKey(
@@ -709,7 +710,7 @@ class TicketActivity(models.Model):
         blank=True,
         related_name="escalated_activities",
     )
-    causer_object_id = models.PositiveIntegerField(null=True, blank=True)
+    causer_object_id = models.CharField(max_length=255, null=True, blank=True)
     causer = GenericForeignKey("causer_content_type", "causer_object_id")
 
     type = models.CharField(max_length=30, choices=ActivityType.choices)
@@ -857,7 +858,7 @@ class SatisfactionRating(models.Model):
         blank=True,
         related_name="escalated_satisfaction_ratings",
     )
-    rated_by_object_id = models.PositiveIntegerField(null=True, blank=True)
+    rated_by_object_id = models.CharField(max_length=255, null=True, blank=True)
     rated_by = GenericForeignKey("rated_by_content_type", "rated_by_object_id")
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -991,7 +992,7 @@ class ApiToken(models.Model):
         blank=True,
         related_name="escalated_api_tokens",
     )
-    tokenable_object_id = models.PositiveIntegerField(null=True, blank=True)
+    tokenable_object_id = models.CharField(max_length=255, null=True, blank=True)
     tokenable = GenericForeignKey("tokenable_content_type", "tokenable_object_id")
 
     name = models.CharField(max_length=255)

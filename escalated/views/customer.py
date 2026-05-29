@@ -231,7 +231,7 @@ def ticket_reopen(request, ticket_id):
         return HttpResponseNotFound(_("Ticket not found"))
 
     ct = ContentType.objects.get_for_model(request.user)
-    is_requester = ticket.requester_content_type == ct and ticket.requester_object_id == request.user.pk
+    is_requester = ticket.requester_content_type == ct and str(ticket.requester_object_id) == str(request.user.pk)
     if not is_requester:
         return HttpResponseForbidden(_("You cannot reopen this ticket."))
 
