@@ -3838,7 +3838,7 @@ def settings_public_tickets(request):
         props={
             "settings": {
                 "guest_policy_mode": _get("guest_policy_mode", "unassigned"),
-                "guest_policy_user_id": int(user_id_raw) if user_id_raw.isdigit() else None,
+                "guest_policy_user_id": user_id_raw or None,
                 "guest_policy_signup_url_template": _get("guest_policy_signup_url_template", ""),
             }
         },

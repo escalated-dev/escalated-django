@@ -222,7 +222,7 @@ class TestWidgetCreateTicket:
         )
         assert response.status_code == 200
         ticket = Ticket.objects.get(reference=response.json()["ticket"]["reference"])
-        assert ticket.requester_object_id == shared.pk
+        assert ticket.requester_object_id == str(shared.pk)
         assert ticket.requester_content_type_id == ContentType.objects.get_for_model(User).id
         # Agents still see who actually submitted via guest_email:
         assert ticket.guest_email == "bob@example.com"

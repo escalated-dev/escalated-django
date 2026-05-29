@@ -39,7 +39,7 @@ def can_view_ticket(user, ticket):
 
     # Check if user is the requester
     ct = ContentType.objects.get_for_model(user)
-    if ticket.requester_content_type == ct and ticket.requester_object_id == user.pk:
+    if ticket.requester_content_type == ct and str(ticket.requester_object_id) == str(user.pk):
         return True
 
     # Check if user is the assigned agent
@@ -90,7 +90,7 @@ def can_reply_ticket(user, ticket):
 
     # Requester can reply
     ct = ContentType.objects.get_for_model(user)
-    if ticket.requester_content_type == ct and ticket.requester_object_id == user.pk:
+    if ticket.requester_content_type == ct and str(ticket.requester_object_id) == str(user.pk):
         return True
 
     if is_agent(user):
@@ -124,7 +124,7 @@ def can_close_ticket(user, ticket):
 
     if get_setting("ALLOW_CUSTOMER_CLOSE"):
         ct = ContentType.objects.get_for_model(user)
-        if ticket.requester_content_type == ct and ticket.requester_object_id == user.pk:
+        if ticket.requester_content_type == ct and str(ticket.requester_object_id) == str(user.pk):
             return True
 
     return False
