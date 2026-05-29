@@ -281,6 +281,17 @@ ESCALATED = {
 }
 ```
 
+### UUID / string user keys
+
+Escalated works with any `AUTH_USER_MODEL` primary key type — integer, UUID, or
+string. References to your users via `ForeignKey(AUTH_USER_MODEL)` (assignee,
+follower, author, etc.) already match your user PK automatically. The remaining
+host-user references — `Contact.user_id` and the generic-relation `object_id`
+columns for ticket requester, activity causer, satisfaction `rated_by`, and API
+token owner — are stored as `CharField`, so they hold an integer id (as its
+string form) or a UUID/string id transparently. No configuration is required;
+just run migrations.
+
 ## Management Commands
 
 ```bash
