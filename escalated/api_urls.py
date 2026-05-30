@@ -34,6 +34,12 @@ api_patterns = [
         name="ticket_custom_action",
     ),
     path("tickets/<str:reference>/tags/", api.ticket_tags, name="ticket_tags"),
+    path("tickets/<str:reference>/subjects/", api.ticket_subjects_store, name="ticket_subjects_store"),
+    path(
+        "tickets/<str:reference>/subjects/<int:subject_id>/",
+        api.ticket_subjects_destroy,
+        name="ticket_subjects_destroy",
+    ),
     path("tickets/<str:reference>/delete/", api.ticket_destroy, name="ticket_destroy"),
     # Resources
     path("agents/", api.resource_agents, name="agents"),

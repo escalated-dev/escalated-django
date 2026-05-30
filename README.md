@@ -292,6 +292,62 @@ token owner — are stored as `CharField`, so they hold an integer id (as its
 string form) or a UUID/string id transparently. No configuration is required;
 just run migrations.
 
+### Ticket subjects
+
+A ticket has a **requester** (who raised it) and a **subject line** (free text).
+You can also attach host-app entities the ticket is *about* — a project, customer,
+or asset — so agents see context and can jump back into your app.
+
+Implement the presentation contract on any model (or use the mixin for defaults):
+
+```python
+from django.db import models
+
+from escalated.contracts import TicketSubjectMixin
+
+
+class Project(models.Model, TicketSubjectMixin):
+    name = models.CharField(max_length=255)
+
+    def ticket_subject_subtitle(self):
+        return f"Project · {self.customer.name}"
+
+    def ticket_subject_url(self):
+        return reverse("projects:detail", args=[self.pk])
+```
+
+Attach, detach, or replace subjects on a ticket:
+
+```python
+ticket.attach_subject(project, role="project")
+ticket.attach_subject(customer, role="account")
+ticket.sync_subjects([project, (customer, "account")])
+ticket.detach_subject(project)
+```
+
+Each link is serialized on the ticket as
+`{ type, id, role, title, subtitle, url, color, icon, missing }`.
+`object_id` is stored as a string so integer, UUID, and string primary keys all work.
+
+To allow attaching via the agent or REST API (and block arbitrary model resolution),
+list permitted models in settings:
+
+```python
+ESCALATED = {
+    # ...
+    "TICKET_SUBJECT_TYPES": [
+        "myapp.Project",
+        "myapp.Customer",
+    ],
+},
+```
+
+Leave `TICKET_SUBJECT_TYPES` empty to disable API attach; programmatic
+`attach_subject()` still works for any model when the allowlist is empty.
+
+Agent/admin routes: `POST /…/tickets/<id>/subjects`, `DELETE /…/tickets/<id>/subjects/<link_id>`.
+REST API: `POST /tickets/<reference>/subjects`, `DELETE /tickets/<reference>/subjects/<link_id>`.
+
 ## Management Commands
 
 ```bash

@@ -53,6 +53,13 @@ class ApiTicketDetailSerializer:
     """Full ticket serializer for detail endpoints."""
 
     @staticmethod
+    def _serialize_subjects(ticket):
+        from escalated.ticket_subjects import serialize_ticket_subject_link
+
+        links = ticket.subjects.select_related("content_type").all()
+        return [serialize_ticket_subject_link(link) for link in links]
+
+    @staticmethod
     def serialize(ticket, include_replies=True, include_activities=True):
         assignee = ticket.assigned_to
         department = ticket.department
@@ -83,6 +90,7 @@ class ApiTicketDetailSerializer:
             ),
             "department": ({"id": department.pk, "name": department.name} if department else None),
             "tags": [{"id": tag.pk, "name": tag.name, "color": tag.color} for tag in ticket.tags.all()],
+            "subjects": ApiTicketDetailSerializer._serialize_subjects(ticket),
             "sla": {
                 "first_response_due_at": _format_dt(ticket.first_response_due_at),
                 "first_response_at": _format_dt(ticket.first_response_at),

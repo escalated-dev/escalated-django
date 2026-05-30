@@ -85,6 +85,7 @@ def _resolve_ticket(reference):
         "chat_sessions",
         "links_as_parent__child_ticket",
         "links_as_child__parent_ticket",
+        "subjects__content_type",
     )
 
     try:
@@ -639,6 +640,49 @@ def ticket_tags(request, reference):
         service.remove_tags(ticket, request.user, to_remove)
 
     return JsonResponse({"message": "Tags updated."})
+
+
+@csrf_exempt
+@require_POST
+def ticket_subjects_store(request, reference):
+    """
+    POST /tickets/<reference>/subjects
+
+    Attach a host-app entity the ticket is about.
+
+    JSON body:
+        type (required) — allowlisted model label, e.g. ``myapp.Project``
+        id (required) — primary key of the host record
+        role (optional) — label such as ``project`` or ``account``
+    """
+    denied = _require_ability(request, "tickets:update")
+    if denied:
+        return denied
+
+    ticket, resolve_error = _resolve_ticket(reference)
+    if resolve_error:
+        return resolve_error
+
+    from escalated.views.ticket_subjects import attach_ticket_subject
+
+    return attach_ticket_subject(request, ticket)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def ticket_subjects_destroy(request, reference, subject_id):
+    """DELETE /tickets/<reference>/subjects/<subject_id> — detach a subject link."""
+    denied = _require_ability(request, "tickets:update")
+    if denied:
+        return denied
+
+    ticket, resolve_error = _resolve_ticket(reference)
+    if resolve_error:
+        return resolve_error
+
+    from escalated.views.ticket_subjects import detach_ticket_subject
+
+    return detach_ticket_subject(request, ticket, subject_id)
 
 
 @csrf_exempt

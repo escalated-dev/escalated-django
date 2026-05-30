@@ -497,6 +497,55 @@ class Ticket(models.Model):
         """Return the number of followers on this ticket."""
         return self.ticket_followers.count()
 
+    def attach_subject(self, subject, role=None, position=None):
+        """
+        Attach a host model as a subject of this ticket (idempotent on ticket+type+id).
+
+        When ``ESCALATED['TICKET_SUBJECT_TYPES']`` is non-empty, rejects types outside
+        that allowlist.
+        """
+        from escalated.ticket_subjects import assert_subject_type_allowed
+
+        assert_subject_type_allowed(subject)
+
+        content_type = ContentType.objects.get_for_model(subject)
+        object_id = str(subject.pk)
+        if position is None:
+            max_position = self.subjects.aggregate(models.Max("position"))["position__max"]
+            position = (max_position if max_position is not None else -1) + 1
+
+        link, _created = TicketSubject.objects.update_or_create(
+            ticket=self,
+            content_type=content_type,
+            object_id=object_id,
+            defaults={"role": role, "position": position},
+        )
+        return link
+
+    def detach_subject(self, subject) -> int:
+        """Detach a host model from this ticket's subjects (0 or 1 rows removed)."""
+        content_type = ContentType.objects.get_for_model(subject)
+        deleted, _ = TicketSubject.objects.filter(
+            ticket=self,
+            content_type=content_type,
+            object_id=str(subject.pk),
+        ).delete()
+        return deleted
+
+    def sync_subjects(self, subjects):
+        """
+        Replace this ticket's subjects, preserving order.
+
+        Each entry is a model instance or ``(model, role)`` tuple.
+        """
+        self.subjects.all().delete()
+        for position, entry in enumerate(subjects):
+            if isinstance(entry, (list, tuple)):
+                subject, role = entry[0], entry[1] if len(entry) > 1 else None
+            else:
+                subject, role = entry, None
+            self.attach_subject(subject, role=role, position=position)
+
     @property
     def sla_first_response_remaining(self):
         if not self.first_response_due_at or self.first_response_at:
@@ -556,6 +605,40 @@ class Ticket(models.Model):
         self.snoozed_by = None
         self.status_before_snooze = None
         self.save(update_fields=["status", "snoozed_until", "snoozed_by", "status_before_snooze", "updated_at"])
+
+
+class TicketSubject(models.Model):
+    """
+    Join row linking a ticket to one host-app entity it is *about*.
+
+    Distinct from the ticket subject *line* (``Ticket.subject``) and the
+    requester. ``object_id`` is a string so integer, UUID, and string PKs work.
+    """
+
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="subjects")
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.CharField(max_length=255)
+    subject = GenericForeignKey("content_type", "object_id")
+    role = models.CharField(max_length=255, null=True, blank=True)
+    position = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("ticket_subjects")
+        ordering = ["position", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["ticket", "content_type", "object_id"],
+                name="escalated_ticket_subject_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["content_type", "object_id"]),
+        ]
+
+    def __str__(self):
+        return f"TicketSubject #{self.pk} on {self.ticket_id}"
 
 
 class Reply(models.Model):
