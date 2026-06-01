@@ -1,8 +1,8 @@
 import json
 import logging
 import re
-import urllib.request
 
+import requests
 from django.utils import timezone
 
 from escalated.outbound_security import validate_outbound_webhook_url
@@ -231,9 +231,7 @@ class WorkflowEngine:
                 "payload": self._interpolate(str(action.get("payload", "")), ticket),
             }
         ).encode()
-        req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
-        req.method = "POST"
-        urllib.request.urlopen(req, timeout=10)
+        requests.post(url, data=body, headers={"Content-Type": "application/json"}, timeout=10, allow_redirects=False)
 
     def _interpolate(self, text, ticket):
         def replacer(match):

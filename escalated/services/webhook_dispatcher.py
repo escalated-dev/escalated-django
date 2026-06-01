@@ -53,7 +53,7 @@ class WebhookDispatcher:
 
         try:
             validate_outbound_webhook_url(webhook.url)
-            response = requests.post(webhook.url, data=body, headers=headers, timeout=10)
+            response = requests.post(webhook.url, data=body, headers=headers, timeout=10, allow_redirects=False)
             delivery.response_code = response.status_code
             delivery.response_body = response.text[:2000]
             delivery.delivered_at = datetime.now(timezone.utc)

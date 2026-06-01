@@ -30,3 +30,4 @@ class TestNotificationWebhookSecurity:
             NotificationService._fire_webhook("ticket.created", {"ticket_id": 1})
 
         mock_post.assert_called_once()
+        assert mock_post.call_args.kwargs["allow_redirects"] is False

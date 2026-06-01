@@ -1,8 +1,12 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 from django.utils import timezone
 
 from escalated.outbound_security import UnsafeOutboundUrl
 from escalated.services.workflow_engine import WorkflowEngine
+
+PUBLIC_ADDRINFO = [(2, 1, 6, "", ("93.184.216.34", 443))]
 
 
 @pytest.mark.django_db
@@ -123,3 +127,15 @@ class TestWorkflowEngine:
                 {"type": "send_webhook", "url": "http://169.254.169.254/latest/meta-data/"},
                 ticket,
             )
+
+    def test_send_webhook_does_not_follow_redirects_after_validation(self):
+        ticket = self._create_ticket(status="open")
+
+        with (
+            patch("escalated.outbound_security.socket.getaddrinfo", return_value=PUBLIC_ADDRINFO),
+            patch("escalated.services.workflow_engine.requests.post") as mock_post,
+        ):
+            mock_post.return_value = MagicMock(status_code=302, text="redirect")
+            self.engine._send_webhook({"type": "send_webhook", "url": "https://example.com/hook"}, ticket)
+
+        assert mock_post.call_args.kwargs["allow_redirects"] is False

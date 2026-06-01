@@ -389,6 +389,7 @@ class NotificationService:
                 json=body,
                 timeout=10,
                 headers=headers,
+                allow_redirects=False,
             )
         except UnsafeOutboundUrl as e:
             logger.warning(f"Blocked unsafe webhook URL for {event}: {e}")

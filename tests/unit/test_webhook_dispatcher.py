@@ -58,6 +58,19 @@ class TestWebhookDispatcher:
             call_kwargs = mock_post.call_args
             assert "X-Escalated-Signature" in call_kwargs.kwargs.get("headers", call_kwargs[1].get("headers", {}))
 
+    def test_does_not_follow_redirects_after_validation(self):
+        WebhookFactory(events=["ticket.created"], active=True, url="https://example.com/hook")
+        dispatcher = WebhookDispatcher()
+
+        with (
+            patch("escalated.outbound_security.socket.getaddrinfo", return_value=PUBLIC_ADDRINFO),
+            patch("escalated.services.webhook_dispatcher.requests.post") as mock_post,
+        ):
+            mock_post.return_value = MagicMock(status_code=302, text="redirect")
+            dispatcher.dispatch("ticket.created", {"ticket_id": 1})
+
+        assert mock_post.call_args.kwargs["allow_redirects"] is False
+
     def test_blocks_private_webhook_target(self):
         webhook = WebhookFactory(events=["ticket.created"], active=True, url="http://127.0.0.1:8000/hook")
         dispatcher = WebhookDispatcher()
