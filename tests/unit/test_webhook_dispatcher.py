@@ -6,6 +6,8 @@ from escalated.models import WebhookDelivery
 from escalated.services.webhook_dispatcher import WebhookDispatcher
 from tests.factories import WebhookFactory
 
+PUBLIC_ADDRINFO = [(2, 1, 6, "", ("93.184.216.34", 443))]
+
 
 @pytest.mark.django_db
 class TestWebhookDispatcher:
@@ -13,7 +15,10 @@ class TestWebhookDispatcher:
         webhook = WebhookFactory(events=["ticket.created"], active=True)
         dispatcher = WebhookDispatcher()
 
-        with patch("escalated.services.webhook_dispatcher.requests.post") as mock_post:
+        with (
+            patch("escalated.outbound_security.socket.getaddrinfo", return_value=PUBLIC_ADDRINFO),
+            patch("escalated.services.webhook_dispatcher.requests.post") as mock_post,
+        ):
             mock_post.return_value = MagicMock(status_code=200, text="OK")
             dispatcher.dispatch("ticket.created", {"ticket_id": 1})
 
@@ -43,9 +48,24 @@ class TestWebhookDispatcher:
         WebhookFactory(events=["ticket.created"], active=True, secret="my-secret")
         dispatcher = WebhookDispatcher()
 
-        with patch("escalated.services.webhook_dispatcher.requests.post") as mock_post:
+        with (
+            patch("escalated.outbound_security.socket.getaddrinfo", return_value=PUBLIC_ADDRINFO),
+            patch("escalated.services.webhook_dispatcher.requests.post") as mock_post,
+        ):
             mock_post.return_value = MagicMock(status_code=200, text="OK")
             dispatcher.dispatch("ticket.created", {"ticket_id": 1})
 
             call_kwargs = mock_post.call_args
             assert "X-Escalated-Signature" in call_kwargs.kwargs.get("headers", call_kwargs[1].get("headers", {}))
+
+    def test_blocks_private_webhook_target(self):
+        webhook = WebhookFactory(events=["ticket.created"], active=True, url="http://127.0.0.1:8000/hook")
+        dispatcher = WebhookDispatcher()
+
+        with patch("escalated.services.webhook_dispatcher.requests.post") as mock_post:
+            dispatcher.dispatch("ticket.created", {"ticket_id": 1})
+
+        mock_post.assert_not_called()
+        delivery = WebhookDelivery.objects.get(webhook=webhook)
+        assert delivery.response_code == 0
+        assert "non-public address" in delivery.response_body

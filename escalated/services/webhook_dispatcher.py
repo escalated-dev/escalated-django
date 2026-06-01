@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 
 import requests
 
+from escalated.outbound_security import UnsafeOutboundUrl, validate_outbound_webhook_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,6 +52,7 @@ class WebhookDispatcher:
         )
 
         try:
+            validate_outbound_webhook_url(webhook.url)
             response = requests.post(webhook.url, data=body, headers=headers, timeout=10)
             delivery.response_code = response.status_code
             delivery.response_body = response.text[:2000]
@@ -59,6 +62,21 @@ class WebhookDispatcher:
 
             if not response.ok and attempt < self.MAX_ATTEMPTS:
                 self.send(webhook, event, payload, attempt + 1)
+        except UnsafeOutboundUrl as e:
+            delivery.response_code = 0
+            delivery.response_body = str(e)
+            delivery.attempts = attempt
+            delivery.save()
+
+            logger.warning(
+                "Escalated webhook delivery blocked",
+                extra={
+                    "webhook_id": webhook.pk,
+                    "event": event,
+                    "attempt": attempt,
+                    "error": str(e),
+                },
+            )
         except Exception as e:
             delivery.response_code = 0
             delivery.response_body = str(e)

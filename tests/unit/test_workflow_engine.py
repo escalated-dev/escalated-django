@@ -1,6 +1,7 @@
 import pytest
 from django.utils import timezone
 
+from escalated.outbound_security import UnsafeOutboundUrl
 from escalated.services.workflow_engine import WorkflowEngine
 
 
@@ -113,3 +114,12 @@ class TestWorkflowEngine:
         self.engine.process_delayed_actions()
         ticket.refresh_from_db()
         assert ticket.priority == "urgent"
+
+    def test_send_webhook_blocks_private_target(self):
+        ticket = self._create_ticket(status="open")
+
+        with pytest.raises(UnsafeOutboundUrl):
+            self.engine._send_webhook(
+                {"type": "send_webhook", "url": "http://169.254.169.254/latest/meta-data/"},
+                ticket,
+            )

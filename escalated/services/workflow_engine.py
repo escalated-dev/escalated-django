@@ -5,6 +5,8 @@ import urllib.request
 
 from django.utils import timezone
 
+from escalated.outbound_security import validate_outbound_webhook_url
+
 logger = logging.getLogger("escalated")
 
 OPERATORS = [
@@ -216,6 +218,7 @@ class WorkflowEngine:
 
     def _send_webhook(self, action, ticket):
         url = action.get("url") or action.get("value")
+        validate_outbound_webhook_url(url)
         body = json.dumps(
             {
                 "event": "workflow_action",
