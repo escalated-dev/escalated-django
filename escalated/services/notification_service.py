@@ -3,11 +3,13 @@ import hmac
 import json
 import logging
 
+import requests
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 
 from escalated.conf import get_setting
+from escalated.outbound_security import UnsafeOutboundUrl, validate_outbound_webhook_url
 
 logger = logging.getLogger("escalated")
 
@@ -364,8 +366,6 @@ class NotificationService:
             return
 
         try:
-            import requests
-
             body = {"event": event, "data": payload}
             headers = {
                 "Content-Type": "application/json",
@@ -383,11 +383,14 @@ class NotificationService:
                 ).hexdigest()
                 headers["X-Escalated-Signature"] = signature
 
+            validate_outbound_webhook_url(webhook_url)
             requests.post(
                 webhook_url,
                 json=body,
                 timeout=10,
                 headers=headers,
             )
+        except UnsafeOutboundUrl as e:
+            logger.warning(f"Blocked unsafe webhook URL for {event}: {e}")
         except Exception as e:
             logger.error(f"Failed to fire webhook for {event}: {e}")
