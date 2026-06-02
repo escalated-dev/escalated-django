@@ -2453,7 +2453,7 @@ class NewsletterList(models.Model):
     description = models.TextField(blank=True, null=True)
     kind = models.CharField(max_length=16, choices=KIND_CHOICES, db_index=True)
     filter_json = models.JSONField(blank=True, null=True)
-    created_by = models.PositiveIntegerField(blank=True, null=True, db_index=True)
+    created_by = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -2468,7 +2468,7 @@ class NewsletterListMember(models.Model):
     list_id = models.PositiveIntegerField()
     contact_id = models.PositiveIntegerField(db_index=True)
     added_at = models.DateTimeField(auto_now_add=True)
-    added_by = models.PositiveIntegerField(blank=True, null=True)
+    added_by = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         db_table = "escalated_newsletter_list_members"
@@ -2484,7 +2484,7 @@ class NewsletterTemplate(models.Model):
     subject_template = models.CharField(max_length=998, blank=True, null=True)
     body_markdown = models.TextField()
     merge_fields_schema = models.JSONField(blank=True, null=True)
-    created_by = models.PositiveIntegerField(blank=True, null=True, db_index=True)
+    created_by = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -2516,8 +2516,8 @@ class Newsletter(models.Model):
     status = models.CharField(max_length=16, default="draft", choices=STATUS_CHOICES, db_index=True)
     scheduled_at = models.DateTimeField(blank=True, null=True, db_index=True)
     sent_at = models.DateTimeField(blank=True, null=True)
-    created_by = models.PositiveIntegerField(blank=True, null=True, db_index=True)
-    sent_by = models.PositiveIntegerField(blank=True, null=True)
+    created_by = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    sent_by = models.CharField(max_length=255, blank=True, null=True)
     summary_total = models.PositiveIntegerField(default=0)
     summary_sent = models.PositiveIntegerField(default=0)
     summary_opened = models.PositiveIntegerField(default=0)
