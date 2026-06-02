@@ -93,6 +93,8 @@ class EscalatedInertiaShareMiddleware:
             except Exception:
                 pass
 
+            data["features"] = {"newsletters": bool(get_setting("enable_newsletters"))}
+
             share(request, "escalated", data)
         except ImportError:
             pass
