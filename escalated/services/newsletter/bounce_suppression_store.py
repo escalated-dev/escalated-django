@@ -1,11 +1,11 @@
-"""Bounce / complaint suppression store backed by EscalatedSettings JSON."""
+"""Bounce / complaint suppression store backed by EscalatedSetting JSON."""
 
 from __future__ import annotations
 
 import json
 from collections.abc import Iterable
 
-from escalated.models import EscalatedSettings
+from escalated.models import EscalatedSetting
 
 
 class BounceSuppressionStore:
@@ -30,13 +30,14 @@ class BounceSuppressionStore:
         if lower in current:
             return
         current.append(lower)
-        EscalatedSettings.objects.update_or_create(
+        # EscalatedSetting has only key/value columns (no type/group).
+        EscalatedSetting.objects.update_or_create(
             key=self.KEY,
-            defaults={"value": json.dumps(current), "type": "json", "group": "newsletter"},
+            defaults={"value": json.dumps(current)},
         )
 
     def _load(self) -> list[str]:
-        row = EscalatedSettings.objects.filter(key=self.KEY).first()
+        row = EscalatedSetting.objects.filter(key=self.KEY).first()
         if not row or not row.value:
             return []
         try:
