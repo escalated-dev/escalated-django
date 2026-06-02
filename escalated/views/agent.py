@@ -458,6 +458,46 @@ def ticket_tags(request, ticket_id):
 
 
 @login_required
+def ticket_subjects_store(request, ticket_id):
+    """Attach a host-app subject to a ticket."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    from escalated.views.ticket_subjects import attach_ticket_subject
+
+    return attach_ticket_subject(request, ticket)
+
+
+@login_required
+def ticket_subjects_destroy(request, ticket_id, subject_id):
+    """Detach a ticket subject link."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "DELETE":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    from escalated.views.ticket_subjects import detach_ticket_subject
+
+    return detach_ticket_subject(request, ticket, subject_id)
+
+
+@login_required
 def ticket_department(request, ticket_id):
     """Change ticket department."""
     check = _require_agent(request)

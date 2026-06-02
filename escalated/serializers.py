@@ -33,6 +33,13 @@ def _user_dict(user):
 
 class TicketSerializer:
     @staticmethod
+    def _serialize_subjects(ticket):
+        from escalated.ticket_subjects import serialize_ticket_subject_link
+
+        links = ticket.subjects.select_related("content_type").all()
+        return [serialize_ticket_subject_link(link) for link in links]
+
+    @staticmethod
     def serialize(ticket, include_replies=False, include_activities=False):
         data = {
             "id": ticket.pk,
@@ -48,6 +55,7 @@ class TicketSerializer:
             "department": (DepartmentSerializer.serialize(ticket.department) if ticket.department else None),
             "sla_policy": (SlaPolicySerializer.serialize_brief(ticket.sla_policy) if ticket.sla_policy else None),
             "tags": [TagSerializer.serialize(tag) for tag in ticket.tags.all()],
+            "subjects": TicketSerializer._serialize_subjects(ticket),
             "is_open": ticket.is_open,
             "first_response_at": _format_dt(ticket.first_response_at),
             "first_response_due_at": _format_dt(ticket.first_response_due_at),

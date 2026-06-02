@@ -44,6 +44,12 @@ agent_patterns = [
     path("agent/tickets/<int:ticket_id>/status/", agent.ticket_status, name="agent_ticket_status"),
     path("agent/tickets/<int:ticket_id>/priority/", agent.ticket_priority, name="agent_ticket_priority"),
     path("agent/tickets/<int:ticket_id>/tags/", agent.ticket_tags, name="agent_ticket_tags"),
+    path("agent/tickets/<int:ticket_id>/subjects/", agent.ticket_subjects_store, name="agent_ticket_subjects_store"),
+    path(
+        "agent/tickets/<int:ticket_id>/subjects/<int:subject_id>/",
+        agent.ticket_subjects_destroy,
+        name="agent_ticket_subjects_destroy",
+    ),
     path("agent/tickets/<int:ticket_id>/department/", agent.ticket_department, name="agent_ticket_department"),
     path("agent/tickets/<int:ticket_id>/macro/", agent.ticket_apply_macro, name="agent_ticket_macro"),
     path(
@@ -74,6 +80,12 @@ admin_patterns = [
     path("admin/tickets/<int:ticket_id>/status/", admin.tickets_status, name="admin_tickets_status"),
     path("admin/tickets/<int:ticket_id>/priority/", admin.tickets_priority, name="admin_tickets_priority"),
     path("admin/tickets/<int:ticket_id>/tags/", admin.tickets_tags, name="admin_tickets_tags"),
+    path("admin/tickets/<int:ticket_id>/subjects/", admin.tickets_subjects_store, name="admin_tickets_subjects_store"),
+    path(
+        "admin/tickets/<int:ticket_id>/subjects/<int:subject_id>/",
+        admin.tickets_subjects_destroy,
+        name="admin_tickets_subjects_destroy",
+    ),
     path("admin/tickets/<int:ticket_id>/department/", admin.tickets_department, name="admin_tickets_department"),
     path("admin/tickets/<int:ticket_id>/macro/", admin.tickets_apply_macro, name="admin_tickets_macro"),
     path("admin/tickets/<int:ticket_id>/follow/", admin.tickets_follow, name="admin_tickets_follow"),

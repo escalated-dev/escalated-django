@@ -21,6 +21,9 @@ DEFAULTS = {
     # where visible/enabled/confirmation/metadata may be values or callables
     # taking (ticket, user).
     "TICKET_ACTIONS": [],
+    # Host models a ticket can be *about* (Project, Customer, asset, …).
+    # Allowlist for agent/API attach; leave empty to disable API attach only.
+    "TICKET_SUBJECT_TYPES": [],
     "SLA": {
         "ENABLED": True,
         "BUSINESS_HOURS_ONLY": False,
