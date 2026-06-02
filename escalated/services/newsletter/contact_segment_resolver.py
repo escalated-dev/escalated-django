@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from django.db.models import Q
-
 from escalated.models import Contact, NewsletterList, NewsletterListMember
 
 
@@ -26,8 +24,20 @@ class ContactSegmentResolver:
     def count_matches(self, filter_dict: dict) -> int:
         return self._apply_filter(filter_dict).count()
 
+    # op -> ORM lookup suffix. "!=" is handled via .exclude() (Django has no
+    # __ne lookup — the previous mapping raised FieldError).
+    OP_SUFFIX = {
+        "=": "",
+        ">": "__gt",
+        ">=": "__gte",
+        "<": "__lt",
+        "<=": "__lte",
+        "contains": "__icontains",
+    }
+
     def _apply_filter(self, filter_dict: dict, qs=None):
         qs = qs if qs is not None else Contact.objects.all()
+        allowed_fields = {f.name for f in Contact._meta.get_fields()}
         for rule in (filter_dict or {}).get("rules", []):
             field = rule.get("field")
             op = rule.get("op") or "="
@@ -36,21 +46,15 @@ class ContactSegmentResolver:
                 continue
             if field.startswith("metadata."):
                 key = field.split(".", 1)[1]
-                qs = qs.filter(metadata__contains={key: value})
+                # JSON key lookup — metadata__contains is NOT supported on SQLite
+                # and raised NotSupportedError. The key transform works on both.
+                qs = qs.filter(**{f"metadata__{key}": value})
                 continue
-            lookup = self._django_lookup(field, op)
-            qs = qs.filter(Q(**{lookup: value}))
+            # Allowlist the field (avoid FieldError on arbitrary input) and op.
+            if field not in allowed_fields or (op != "=" and op not in self.OP_SUFFIX and op != "!="):
+                continue
+            if op == "!=":
+                qs = qs.exclude(**{field: value})
+                continue
+            qs = qs.filter(**{f"{field}{self.OP_SUFFIX.get(op, '')}": value})
         return qs
-
-    def _django_lookup(self, field: str, op: str) -> str:
-        ops = {
-            "=": "",
-            "!=": "__ne",  # Django uses .exclude — simplified for v1
-            ">": "__gt",
-            ">=": "__gte",
-            "<": "__lt",
-            "<=": "__lte",
-            "contains": "__icontains",
-        }
-        suffix = ops.get(op, "")
-        return f"{field}{suffix}"
