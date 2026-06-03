@@ -23,6 +23,22 @@ def is_admin(user):
     return user.is_staff or user.is_superuser
 
 
+def user_permissions(user):
+    """Return the permission slugs granted to the user via their roles ([] if none/unauth)."""
+    if not user or not user.is_authenticated:
+        return []
+    try:
+        from escalated.models import Permission
+
+        return list(
+            Permission.objects.filter(roles__users=user)
+            .values_list("slug", flat=True)
+            .distinct()
+        )
+    except Exception:
+        return []
+
+
 def can_view_ticket(user, ticket):
     """
     Check if a user can view a ticket. Users can view if they are:

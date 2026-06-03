@@ -388,8 +388,13 @@ inbound_patterns = [
 # Core routes (always registered)
 urlpatterns = list(inbound_patterns) + list(widget_patterns) + list(widget_chat_patterns)
 
+from escalated.newsletter_urls import admin_newsletter_patterns, public_newsletter_patterns, webhook_newsletter_patterns
+
+urlpatterns = list(public_newsletter_patterns) + list(webhook_newsletter_patterns) + urlpatterns
+
 # UI routes (only when UI is enabled)
 if get_setting("UI_ENABLED"):
+    admin_patterns = list(admin_newsletter_patterns) + list(admin_patterns)
     urlpatterns = customer_patterns + agent_patterns + chat_patterns + admin_patterns + guest_patterns + urlpatterns
 
 # Inject plugin bridge routes (pages, API endpoints, webhooks) if the SDK

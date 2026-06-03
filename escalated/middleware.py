@@ -2,7 +2,7 @@ from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from escalated.permissions import is_admin, is_agent
+from escalated.permissions import is_admin, is_agent, user_permissions
 
 
 class EnsureAgentMiddleware:
@@ -81,17 +81,21 @@ class EscalatedInertiaShareMiddleware:
                 "prefix": get_setting("ROUTE_PREFIX") or "support",
                 "is_agent": False,
                 "is_admin": False,
+                "permissions": [],
             }
 
             if request.user.is_authenticated:
                 data["is_agent"] = is_agent(request.user)
                 data["is_admin"] = is_admin(request.user)
+                data["permissions"] = user_permissions(request.user)
 
             try:
                 data["guest_tickets_enabled"] = EscalatedSetting.guest_tickets_enabled()
                 data["show_powered_by"] = EscalatedSetting.get_bool("show_powered_by", True)
             except Exception:
                 pass
+
+            data["features"] = {"newsletters": bool(get_setting("enable_newsletters"))}
 
             share(request, "escalated", data)
         except ImportError:
