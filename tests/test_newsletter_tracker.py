@@ -1,5 +1,4 @@
 import pytest
-from django.utils import timezone
 
 from escalated.models import Contact, Newsletter, NewsletterDelivery, NewsletterList
 from escalated.services.newsletter.bounce_suppression_store import BounceSuppressionStore

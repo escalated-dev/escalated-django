@@ -9,10 +9,9 @@ from time import time
 from urllib.parse import urlparse
 
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET
 
 from escalated.models import Contact, NewsletterDelivery, NewsletterTemplate
 from escalated.models import Newsletter as NL
@@ -58,16 +57,14 @@ def _unsubscribe_html(token: str, email: str | None, confirmed: bool) -> str:
     esc_token = html.escape(token)
     esc_email = html.escape(email or "")
     message = (
-        "You have been unsubscribed."
-        if confirmed
-        else "Confirm that you want to unsubscribe from marketing emails."
+        "You have been unsubscribed." if confirmed else "Confirm that you want to unsubscribe from marketing emails."
     )
     return (
-        f"<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
         f"<title>Unsubscribe</title></head><body><main><h1>Unsubscribe</h1>"
         f"<p>{message}</p><p>{esc_email}</p>"
-        f"<form method=\"post\" action=\"/escalated/n/u/{esc_token}\">"
-        f"<button type=\"submit\">Unsubscribe</button></form></main></body></html>"
+        f'<form method="post" action="/escalated/n/u/{esc_token}">'
+        f'<button type="submit">Unsubscribe</button></form></main></body></html>'
     )
 
 
@@ -122,7 +119,7 @@ def view_in_browser(request, token: str):
     delivery = NewsletterDelivery.objects.filter(tracking_token=token).first()
     if not delivery:
         body = (
-            "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+            '<!doctype html><html lang="en"><head><meta charset="utf-8">'
             "<title>Email unavailable</title></head><body>"
             "<p>This email is no longer available.</p></body></html>"
         )
@@ -130,7 +127,7 @@ def view_in_browser(request, token: str):
     nl = NL.objects.filter(id=delivery.newsletter_id).first()
     if not nl:
         return HttpResponse(
-            "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+            '<!doctype html><html lang="en"><head><meta charset="utf-8">'
             "<title>Email unavailable</title></head><body>"
             "<p>This email is no longer available.</p></body></html>",
             content_type="text/html",

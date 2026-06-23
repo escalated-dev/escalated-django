@@ -30,6 +30,7 @@ class TestNewsletterPlanner:
     def test_skips_opted_out(self):
         lst = NewsletterList.objects.create(name="L", kind="static")
         from django.utils import timezone
+
         from escalated.models import NewsletterListMember
 
         ok = Contact.objects.create(email="ok@example.com")

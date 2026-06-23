@@ -30,11 +30,7 @@ def user_permissions(user):
     try:
         from escalated.models import Permission
 
-        return list(
-            Permission.objects.filter(roles__users=user)
-            .values_list("slug", flat=True)
-            .distinct()
-        )
+        return list(Permission.objects.filter(roles__users=user).values_list("slug", flat=True).distinct())
     except Exception:
         return []
 

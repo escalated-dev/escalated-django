@@ -5,9 +5,7 @@ from __future__ import annotations
 import json
 
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.core.validators import validate_email
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_http_methods
@@ -16,11 +14,11 @@ from escalated.models import Contact, NewsletterList, NewsletterListMember
 from escalated.rendering import render_page
 from escalated.services.newsletter.contact_segment_resolver import ContactSegmentResolver
 from escalated.views.newsletter_utils import (
-    guard_manage,
     _method_is,
     _parse_body,
     _user_id,
     abort_422,
+    guard_manage,
     list_member_counts,
     lists_with_counts,
     newsletters_enabled_view,
@@ -92,10 +90,7 @@ def show(request, list_id: int):
     if denied := guard_manage(request):
         return denied
     lst = get_object_or_404(NewsletterList, pk=list_id)
-    members_qs = (
-        NewsletterListMember.objects.filter(list_id=lst.id)
-        .order_by("-id")
-    )
+    members_qs = NewsletterListMember.objects.filter(list_id=lst.id).order_by("-id")
     paginator = Paginator(members_qs, 100)
     page = paginator.get_page(request.GET.get("page", 1))
     contact_ids = [m.contact_id for m in page.object_list]

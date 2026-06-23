@@ -6,7 +6,6 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
-from django.views.decorators.http import require_http_methods
 
 from escalated.models import NewsletterTemplate
 from escalated.rendering import render_page
@@ -14,7 +13,6 @@ from escalated.views.newsletter_utils import (
     _method_is,
     _parse_body,
     _user_id,
-    abort_422,
     discover_newsletter_themes,
     guard_manage,
     newsletters_enabled_view,

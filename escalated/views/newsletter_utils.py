@@ -6,24 +6,17 @@ import csv
 import io
 import json
 import re
-import secrets
-from datetime import datetime
 
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
-from django.db.models import Count, Q
-from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
-from django.shortcuts import redirect
+from django.http import HttpResponse, HttpResponseForbidden
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.views.decorators.csrf import csrf_exempt
 
 from escalated.models import (
     Contact,
-    EscalatedSetting,
     Newsletter,
     NewsletterDelivery,
     NewsletterList,
@@ -33,7 +26,6 @@ from escalated.models import (
 from escalated.newsletter_conf import discover_newsletter_themes, newsletter_config, newsletters_enabled
 from escalated.newsletter_permissions import require_newsletter_permission
 from escalated.permissions import is_admin
-from escalated.rendering import render_page
 
 
 def newsletters_enabled_view(view_func):
@@ -210,10 +202,7 @@ def lists_with_counts() -> list[dict]:
 def compose_props() -> dict:
     return {
         "lists": lists_with_counts(),
-        "templates": [
-            {"id": t.id, "name": t.name}
-            for t in NewsletterTemplate.objects.all().order_by("name")
-        ],
+        "templates": [{"id": t.id, "name": t.name} for t in NewsletterTemplate.objects.all().order_by("name")],
         "themes": discover_newsletter_themes(),
         "mailConfigured": mail_configured(),
         "canSend": True,

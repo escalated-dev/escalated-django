@@ -388,7 +388,11 @@ inbound_patterns = [
 # Core routes (always registered)
 urlpatterns = list(inbound_patterns) + list(widget_patterns) + list(widget_chat_patterns)
 
-from escalated.newsletter_urls import admin_newsletter_patterns, public_newsletter_patterns, webhook_newsletter_patterns
+from escalated.newsletter_urls import (  # noqa: E402
+    admin_newsletter_patterns,
+    public_newsletter_patterns,
+    webhook_newsletter_patterns,
+)
 
 urlpatterns = list(public_newsletter_patterns) + list(webhook_newsletter_patterns) + urlpatterns
 

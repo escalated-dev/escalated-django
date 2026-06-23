@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_http_methods
 
-from escalated.models import Contact, Newsletter, NewsletterDelivery, NewsletterList, NewsletterTemplate
+from escalated.models import Contact, Newsletter, NewsletterDelivery, NewsletterList
 from escalated.rendering import render_page
 from escalated.services.newsletter.planner import NewsletterPlanner
 from escalated.services.newsletter.renderer import NewsletterRenderer

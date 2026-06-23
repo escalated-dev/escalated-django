@@ -67,7 +67,11 @@ def update(request):
         return render_page(
             request,
             "Escalated/Admin/Newsletters/Settings",
-            {"settings": _settings_payload(), "themes": discover_newsletter_themes(), "errors": {"default_theme": "Required."}},
+            {
+                "settings": _settings_payload(),
+                "themes": discover_newsletter_themes(),
+                "errors": {"default_theme": "Required."},
+            },
         )
     try:
         rate = int(data.get("rate_limit_per_minute"))
@@ -78,7 +82,11 @@ def update(request):
         return render_page(
             request,
             "Escalated/Admin/Newsletters/Settings",
-            {"settings": _settings_payload(), "themes": discover_newsletter_themes(), "errors": {"rate_limit_per_minute": "Invalid."}},
+            {
+                "settings": _settings_payload(),
+                "themes": discover_newsletter_themes(),
+                "errors": {"rate_limit_per_minute": "Invalid."},
+            },
         )
 
     tracking = data.get("tracking_enabled")

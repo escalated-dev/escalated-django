@@ -5,7 +5,6 @@ import pytest
 from django.http import HttpResponse
 from django.test import Client, override_settings
 
-from escalated.models import Role
 from tests.factories import UserFactory
 
 
@@ -48,7 +47,6 @@ class TestNewsletterHttp:
 
     def test_permission_enforcement(self, newsletters_on):
         user = UserFactory(username="agent_nl", is_staff=False)
-        role = Role.objects.create(name="No News", slug="no_news")
         client = Client()
         client.force_login(user)
         resp = client.get("/support/admin/newsletters/")
