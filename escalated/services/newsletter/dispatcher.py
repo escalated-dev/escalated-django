@@ -8,16 +8,20 @@ from datetime import timedelta
 from urllib.parse import urlparse
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from escalated.models import Newsletter, NewsletterDelivery
+from escalated.newsletter_conf import newsletter_config, newsletters_enabled
 
 from .renderer import NewsletterRenderer
 
 log = logging.getLogger(__name__)
+
+BACKOFF_MINUTES = (1, 5, 30)
 
 
 def _conf(key: str, default=None):
@@ -29,32 +33,46 @@ class NewsletterDispatcher:
         self.renderer = renderer or NewsletterRenderer()
 
     def dispatch_batch(self) -> None:
-        if not _conf("enable_newsletters", False):
+        if not newsletters_enabled():
             return
 
         self._reclaim_stuck_rows()
-        batch_size = int(_conf("newsletter_batch_size", 50))
+
+        batch_size = int(newsletter_config("batch_size", _conf("newsletter_batch_size", 50)))
+        rate_limit = int(newsletter_config("rate_limit_per_minute", _conf("newsletter_rate_limit_per_minute", 60)))
+        allowance = max(0, rate_limit - self._sent_this_minute())
+
+        if allowance <= 0:
+            self._check_auto_pause()
+            self._finalize_completed_newsletters()
+            return
+
+        now = timezone.now()
+        claim_count = min(batch_size, allowance)
 
         with transaction.atomic():
             ids = list(
                 NewsletterDelivery.objects.select_for_update(skip_locked=True)
                 .filter(status="pending")
+                .filter(Q(next_attempt_at__isnull=True) | Q(next_attempt_at__lte=now))
                 .order_by("id")
-                .values_list("id", flat=True)[:batch_size]
+                .values_list("id", flat=True)[:claim_count]
             )
             if ids:
-                NewsletterDelivery.objects.filter(id__in=ids).update(status="queued", claimed_at=timezone.now())
+                NewsletterDelivery.objects.filter(id__in=ids).update(status="queued", claimed_at=now)
+
+        if ids:
+            self._increment_sent_this_minute(len(ids))
 
         for delivery_id in ids:
-            d = NewsletterDelivery.objects.filter(id=delivery_id).first()
-            if d:
-                self._dispatch_one(d)
+            delivery = NewsletterDelivery.objects.filter(id=delivery_id).first()
+            if delivery:
+                self._dispatch_one(delivery)
 
-        self._finalize_completed_newsletters()
         self._check_auto_pause()
+        self._finalize_completed_newsletters()
 
     def _dispatch_one(self, delivery: NewsletterDelivery) -> None:
-        # Reload with related rows
         from escalated.models import Contact, NewsletterTemplate
         from escalated.models import Newsletter as NL
 
@@ -91,7 +109,8 @@ class NewsletterDispatcher:
             delivery_full.status = "sent"
             delivery_full.sent_at = timezone.now()
             delivery_full.claimed_at = None
-            delivery_full.save(update_fields=["status", "sent_at", "claimed_at"])
+            delivery_full.next_attempt_at = None
+            delivery_full.save(update_fields=["status", "sent_at", "claimed_at", "next_attempt_at"])
             NL.objects.filter(id=nl.id).update(summary_sent=F("summary_sent") + 1)
         except Exception as e:
             log.warning("Newsletter delivery %s failed: %s", delivery_full.id, e)
@@ -99,11 +118,28 @@ class NewsletterDispatcher:
             if attempts >= 3:
                 delivery_full.status = "failed"
                 delivery_full.failure_reason = str(e)
+                delivery_full.next_attempt_at = None
             else:
                 delivery_full.status = "pending"
+                minutes = BACKOFF_MINUTES[attempts - 1]
+                delivery_full.next_attempt_at = timezone.now() + timedelta(minutes=minutes)
             delivery_full.attempt_count = attempts
             delivery_full.claimed_at = None
-            delivery_full.save(update_fields=["status", "attempt_count", "claimed_at", "failure_reason"])
+            delivery_full.save(
+                update_fields=["status", "attempt_count", "claimed_at", "failure_reason", "next_attempt_at"]
+            )
+
+    def _minute_cache_key(self) -> str:
+        now = timezone.now()
+        return f"escalated:newsletters:sent:{now.strftime('%Y%m%d%H%M')}"
+
+    def _sent_this_minute(self) -> int:
+        return int(cache.get(self._minute_cache_key(), 0) or 0)
+
+    def _increment_sent_this_minute(self, count: int) -> None:
+        key = self._minute_cache_key()
+        current = int(cache.get(key, 0) or 0)
+        cache.set(key, current + count, timeout=120)
 
     def _reclaim_stuck_rows(self) -> None:
         minutes = int(_conf("newsletter_claim_timeout_minutes", 10))
@@ -126,14 +162,17 @@ class NewsletterDispatcher:
     def _check_auto_pause(self) -> None:
         threshold = int(_conf("newsletter_auto_pause_threshold", 100))
         rate = float(_conf("newsletter_auto_pause_bounce_rate", 0.05))
+        terminal_statuses = ["sent", "bounced", "complained", "failed"]
         for n in Newsletter.objects.filter(status="sending"):
-            total = NewsletterDelivery.objects.filter(
-                newsletter_id=n.id, status__in=["sent", "bounced", "complained", "failed"]
-            ).count()
-            if total < threshold:
+            sample = list(
+                NewsletterDelivery.objects.filter(newsletter_id=n.id, status__in=terminal_statuses)
+                .order_by("id")
+                .values_list("status", flat=True)[:threshold]
+            )
+            if len(sample) < threshold:
                 continue
-            bounced = NewsletterDelivery.objects.filter(newsletter_id=n.id, status="bounced").count()
-            if total > 0 and bounced / total >= rate:
+            bounced = sum(1 for s in sample if s == "bounced")
+            if bounced / threshold >= rate:
                 n.status = "paused"
                 n.save(update_fields=["status"])
-                log.warning("Newsletter %s auto-paused: %s/%s bounced", n.id, bounced, total)
+                log.warning("Newsletter %s auto-paused: %s/%s bounced", n.id, bounced, threshold)

@@ -71,6 +71,21 @@ DEFAULTS = {
     "SDK_ENABLED": False,
     "RUNTIME_COMMAND": "node node_modules/@escalated-dev/plugin-runtime/dist/index.js",
     "RUNTIME_CWD": None,  # Defaults to settings.BASE_DIR at runtime
+    # Newsletters (opt-in; routes register only when True)
+    "enable_newsletters": False,
+    "app_url": "http://localhost",
+    "newsletter_default_from": None,
+    "newsletter_default_reply_to": None,
+    "newsletter_default_theme": "default",
+    "newsletter_rate_limit_per_minute": 60,
+    "newsletter_batch_size": 50,
+    "newsletter_tracking_enabled": True,
+    "newsletter_auto_pause_bounce_rate": 0.05,
+    "newsletter_auto_pause_threshold": 100,
+    "newsletter_claim_timeout_minutes": 10,
+    "newsletter_brand_accent": "#2563eb",
+    "newsletter_brand_logo_url": None,
+    "newsletter_brand_physical_address": None,
 }
 
 

@@ -2560,6 +2560,7 @@ class NewsletterDelivery(models.Model):
     failure_reason = models.TextField(blank=True, null=True)
     attempt_count = models.PositiveSmallIntegerField(default=0)
     claimed_at = models.DateTimeField(blank=True, null=True)
+    next_attempt_at = models.DateTimeField(blank=True, null=True)
     is_test = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
