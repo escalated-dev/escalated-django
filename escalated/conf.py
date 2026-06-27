@@ -62,6 +62,16 @@ DEFAULTS = {
     "API_RATE_LIMIT": 60,
     "API_TOKEN_EXPIRY_DAYS": None,
     "API_PREFIX": "support/api/v1",
+    # Host-app authentication callbacks for the general JSON API auth
+    # endpoints (consumed by the Flutter app). Each is a callable (or a dotted
+    # import path) the host provides; None means the endpoint responds 501.
+    # Escalated owns no credentials, so it ships no password-hashing dependency.
+    # See escalated/views/api_auth.py.
+    "API_AUTHENTICATOR": None,  # (params: dict) -> dict | None  (login)
+    "API_REGISTRAR": None,  # (params: dict) -> dict | None  (register)
+    "API_TOKEN_REFRESHER": None,  # (token: str) -> dict | None
+    "API_PROFILE_UPDATER": None,  # (user, attrs: dict) -> dict | None
+    "API_LOGOUT": None,  # (token: str) -> None
     # Plugin system settings
     "PLUGINS_ENABLED": True,
     "PLUGINS_PATH": None,  # Defaults to <BASE_DIR>/plugins/escalated at runtime

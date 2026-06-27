@@ -7,7 +7,7 @@ Authentication and rate limiting are handled by middleware.
 
 from django.urls import path
 
-from escalated.views import admin_api_tokens, api
+from escalated.views import admin_api_tokens, api, api_auth
 
 app_name = "escalated_api"
 
@@ -15,6 +15,12 @@ app_name = "escalated_api"
 api_patterns = [
     # Auth
     path("auth/validate/", api.auth_validate, name="auth_validate"),
+    path("auth/login/", api_auth.api_auth_login, name="auth_login"),
+    path("auth/register/", api_auth.api_auth_register, name="auth_register"),
+    path("auth/logout/", api_auth.api_auth_logout, name="auth_logout"),
+    path("auth/refresh/", api_auth.api_auth_refresh, name="auth_refresh"),
+    path("auth/me/", api_auth.api_auth_me, name="auth_me"),
+    path("auth/profile/", api_auth.api_auth_profile, name="auth_profile"),
     # Dashboard
     path("dashboard/", api.dashboard, name="dashboard"),
     # Tickets - list & create

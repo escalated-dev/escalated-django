@@ -22,6 +22,11 @@ class AuthenticateApiToken:
         return self.get_response(request)
 
     def process_view(self, request, view_func, view_args, view_kwargs):
+        # Public auth endpoints (login/register/refresh/logout) carry no token
+        # yet, so they opt out of token authentication.
+        if getattr(view_func, "_escalated_api_public", False):
+            return None
+
         # Extract Bearer token from Authorization header
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth_header.startswith("Bearer "):
