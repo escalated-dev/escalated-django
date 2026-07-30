@@ -27,8 +27,10 @@ Every plugin requires two files:
 ```python
 from escalated.hooks import add_action
 
+
 def on_ticket_created(ticket):
     print(f"New ticket created: {ticket.reference}")
+
 
 add_action("ticket_created", on_ticket_created)
 ```
@@ -78,17 +80,17 @@ Actions allow you to execute code when specific events occur.
 from escalated.hooks import add_action, do_action, has_action, remove_action
 
 # Register an action
-add_action('ticket_created', callback, priority=10)
+add_action("ticket_created", callback, priority=10)
 
 # Trigger an action
-do_action('ticket_created', ticket, user)
+do_action("ticket_created", ticket, user)
 
 # Check if action exists
-if has_action('ticket_created'):
+if has_action("ticket_created"):
     pass
 
 # Remove an action
-remove_action('ticket_created', callback)
+remove_action("ticket_created", callback)
 ```
 
 **Using the decorator:**
@@ -96,7 +98,8 @@ remove_action('ticket_created', callback)
 ```python
 from escalated.hooks import on_action
 
-@on_action('ticket_created', priority=10)
+
+@on_action("ticket_created", priority=10)
 def handle_ticket_created(ticket, user):
     # Your logic here
     pass
@@ -110,17 +113,17 @@ Filters allow you to modify data as it passes through the system.
 from escalated.hooks import add_filter, apply_filters, has_filter, remove_filter
 
 # Register a filter
-add_filter('ticket_data', callback, priority=10)
+add_filter("ticket_data", callback, priority=10)
 
 # Apply filters
-data = apply_filters('ticket_data', data, ticket)
+data = apply_filters("ticket_data", data, ticket)
 
 # Check if filter exists
-if has_filter('ticket_data'):
+if has_filter("ticket_data"):
     pass
 
 # Remove a filter
-remove_filter('ticket_data', callback)
+remove_filter("ticket_data", callback)
 ```
 
 **Using the decorator:**
@@ -128,9 +131,10 @@ remove_filter('ticket_data', callback)
 ```python
 from escalated.hooks import on_filter
 
-@on_filter('ticket_data', priority=10)
+
+@on_filter("ticket_data", priority=10)
 def modify_ticket_data(data, ticket):
-    data['custom_field'] = 'value'
+    data["custom_field"] = "value"
     return data
 ```
 
@@ -139,8 +143,8 @@ def modify_ticket_data(data, ticket):
 Both actions and filters support priority ordering (default: 10). Lower numbers run first.
 
 ```python
-add_action('ticket_created', early_handler, priority=5)
-add_action('ticket_created', late_handler, priority=20)
+add_action("ticket_created", early_handler, priority=5)
+add_action("ticket_created", late_handler, priority=20)
 ```
 
 ## Available Hooks
@@ -197,13 +201,15 @@ Plugins can extend the UI by registering menu items, dashboard widgets, and page
 ```python
 from escalated.plugin_ui_service import register_menu_item
 
-register_menu_item({
-    "label": "Billing",
-    "url": "/support/admin/billing",
-    "icon": "credit-card",
-    "section": "admin",  # 'admin', 'agent', or 'customer'
-    "priority": 50
-})
+register_menu_item(
+    {
+        "label": "Billing",
+        "url": "/support/admin/billing",
+        "icon": "credit-card",
+        "section": "admin",  # 'admin', 'agent', or 'customer'
+        "priority": 50,
+    }
+)
 ```
 
 ### Dashboard Widgets
@@ -211,13 +217,15 @@ register_menu_item({
 ```python
 from escalated.plugin_ui_service import register_dashboard_widget
 
-register_dashboard_widget({
-    "id": "billing-summary",
-    "label": "Billing Summary",
-    "component": "BillingSummaryWidget",
-    "section": "agent",  # 'admin', 'agent', or 'customer'
-    "priority": 10
-})
+register_dashboard_widget(
+    {
+        "id": "billing-summary",
+        "label": "Billing Summary",
+        "component": "BillingSummaryWidget",
+        "section": "agent",  # 'admin', 'agent', or 'customer'
+        "priority": 10,
+    }
+)
 ```
 
 ### Page Components
@@ -225,13 +233,9 @@ register_dashboard_widget({
 ```python
 from escalated.plugin_ui_service import add_page_component
 
-add_page_component("ticket-detail", "sidebar", {
-    "component": "BillingInfo",
-    "props": {
-        "show_total": True
-    },
-    "priority": 10
-})
+add_page_component(
+    "ticket-detail", "sidebar", {"component": "BillingInfo", "props": {"show_total": True}, "priority": 10}
+)
 ```
 
 **Available pages:**
@@ -274,9 +278,11 @@ from escalated.hooks import add_action
 
 logger = logging.getLogger(__name__)
 
+
 def on_activate():
     """Called when plugin is activated"""
     logger.info("Slack Notifier plugin activated")
+
 
 def on_ticket_created(ticket):
     """Send Slack notification when a ticket is created"""
@@ -286,24 +292,32 @@ def on_ticket_created(ticket):
         return
 
     try:
-        response = requests.post(webhook_url, json={
-            "text": f"New ticket *{ticket.reference}*: {ticket.subject}",
-            "attachments": [{
-                "color": "good",
-                "fields": [
-                    {"title": "Priority", "value": ticket.priority, "short": True},
-                    {"title": "Status", "value": ticket.status, "short": True}
-                ]
-            }]
-        }, timeout=5)
+        response = requests.post(
+            webhook_url,
+            json={
+                "text": f"New ticket *{ticket.reference}*: {ticket.subject}",
+                "attachments": [
+                    {
+                        "color": "good",
+                        "fields": [
+                            {"title": "Priority", "value": ticket.priority, "short": True},
+                            {"title": "Status", "value": ticket.status, "short": True},
+                        ],
+                    }
+                ],
+            },
+            timeout=5,
+        )
         response.raise_for_status()
         logger.info(f"Slack notification sent for ticket {ticket.reference}")
     except requests.RequestException as e:
         logger.error(f"Failed to send Slack notification: {e}")
 
+
 def on_uninstall():
     """Called when plugin is being uninstalled"""
     logger.info("Slack Notifier plugin uninstalled")
+
 
 # Register hooks
 add_action("plugin_activated_slack-notifier", on_activate)
@@ -400,7 +414,9 @@ The main plugin file is loaded on every request. Keep initialization fast:
 # Good: Lazy imports
 def on_ticket_created(ticket):
     from .heavy_module import process_ticket
+
     process_ticket(ticket)
+
 
 # Bad: Heavy imports at module level
 import heavy_module
@@ -415,16 +431,16 @@ Run migrations, create database tables, or register settings during activation:
 from django.core.management import call_command
 from escalated.hooks import add_action
 
+
 def on_activate():
     # Run migrations
-    call_command('migrate', 'my_plugin')
+    call_command("migrate", "my_plugin")
 
     # Initialize settings
     from .models import PluginSettings
-    PluginSettings.objects.get_or_create(
-        key='default_config',
-        defaults={'value': '{}'}
-    )
+
+    PluginSettings.objects.get_or_create(key="default_config", defaults={"value": "{}"})
+
 
 add_action("plugin_activated_my-plugin", on_activate)
 ```
@@ -437,11 +453,14 @@ Clean up resources when the plugin is uninstalled:
 def on_uninstall():
     # Remove plugin data
     from .models import PluginData
+
     PluginData.objects.all().delete()
 
     # Cancel scheduled tasks
     from django_celery_beat.models import PeriodicTask
-    PeriodicTask.objects.filter(name__startswith='my-plugin').delete()
+
+    PeriodicTask.objects.filter(name__startswith="my-plugin").delete()
+
 
 add_action("plugin_uninstalling_my-plugin", on_uninstall)
 ```
@@ -452,11 +471,11 @@ Prefix custom hooks with your plugin slug to avoid conflicts:
 
 ```python
 # Good
-do_action('billing_invoice_created', invoice)
-add_filter('billing_tax_rate', tax_rate, invoice)
+do_action("billing_invoice_created", invoice)
+add_filter("billing_tax_rate", tax_rate, invoice)
 
 # Bad
-do_action('invoice_created', invoice)  # Too generic
+do_action("invoice_created", invoice)  # Too generic
 ```
 
 ### Handle Errors Gracefully
@@ -467,6 +486,7 @@ Don't let plugin errors break core functionality:
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def on_ticket_created(ticket):
     try:
@@ -531,17 +551,17 @@ Enable debug logging to troubleshoot plugin issues:
 **settings.py:**
 ```python
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
         },
     },
-    'loggers': {
-        'escalated.plugins': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
+    "loggers": {
+        "escalated.plugins": {
+            "handlers": ["console"],
+            "level": "DEBUG",
         },
     },
 }
