@@ -70,9 +70,9 @@ npm install @escalated-dev/escalated
 ```python
 INSTALLED_APPS = [
     # ...
-    'django.contrib.contenttypes',
-    'inertia',
-    'escalated',
+    "django.contrib.contenttypes",
+    "inertia",
+    "escalated",
 ]
 ```
 
@@ -214,17 +214,15 @@ Add to your `settings.py`:
 
 ```python
 ESCALATED = {
-    "MODE": "self_hosted",              # self_hosted | synced | cloud
+    "MODE": "self_hosted",  # self_hosted | synced | cloud
     "TABLE_PREFIX": "escalated_",
     "ROUTE_PREFIX": "support",
     "DEFAULT_PRIORITY": "medium",
-
     # Tickets
     "ALLOW_CUSTOMER_CLOSE": True,
     "AUTO_CLOSE_RESOLVED_AFTER_DAYS": 7,
     "MAX_ATTACHMENTS": 5,
     "MAX_ATTACHMENT_SIZE_KB": 10240,
-
     # SLA
     "SLA": {
         "ENABLED": True,
@@ -236,11 +234,9 @@ ESCALATED = {
             "DAYS": [1, 2, 3, 4, 5],
         },
     },
-
     # Notifications
     "NOTIFICATION_CHANNELS": ["email"],
     "WEBHOOK_URL": None,
-
     # Cloud/Synced mode
     "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
     "HOSTED_API_KEY": None,
@@ -297,9 +293,11 @@ Connect to ticket lifecycle events:
 ```python
 from escalated.signals import ticket_created, ticket_resolved
 
+
 @receiver(ticket_created)
 def on_ticket_created(sender, ticket, user, **kwargs):
     print(f"New ticket: {ticket.reference}")
+
 
 @receiver(ticket_resolved)
 def on_ticket_resolved(sender, ticket, user, **kwargs):
@@ -405,10 +403,8 @@ npm install @escalated-dev/plugin-runtime
 ```python
 ESCALATED = {
     # ... existing config ...
-
     # SDK plugin bridge
     "SDK_ENABLED": True,
-
     # Optional overrides (defaults shown):
     # "RUNTIME_COMMAND": "node node_modules/@escalated-dev/plugin-runtime/dist/index.js",
     # "RUNTIME_CWD": BASE_DIR,  # working directory for the Node subprocess

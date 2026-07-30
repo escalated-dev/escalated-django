@@ -68,9 +68,9 @@ npm install @escalated-dev/escalated
 ```python
 INSTALLED_APPS = [
     # ...
-    'django.contrib.contenttypes',
-    'inertia',
-    'escalated',
+    "django.contrib.contenttypes",
+    "inertia",
+    "escalated",
 ]
 ```
 
@@ -246,17 +246,15 @@ Add to your `settings.py`:
 
 ```python
 ESCALATED = {
-    "MODE": "self_hosted",              # self_hosted | synced | cloud
+    "MODE": "self_hosted",  # self_hosted | synced | cloud
     "TABLE_PREFIX": "escalated_",
     "ROUTE_PREFIX": "support",
     "DEFAULT_PRIORITY": "medium",
-
     # Tickets
     "ALLOW_CUSTOMER_CLOSE": True,
     "AUTO_CLOSE_RESOLVED_AFTER_DAYS": 7,
     "MAX_ATTACHMENTS": 5,
     "MAX_ATTACHMENT_SIZE_KB": 10240,
-
     # SLA
     "SLA": {
         "ENABLED": True,
@@ -268,11 +266,9 @@ ESCALATED = {
             "DAYS": [1, 2, 3, 4, 5],
         },
     },
-
     # Notifications
     "NOTIFICATION_CHANNELS": ["email"],
     "WEBHOOK_URL": None,
-
     # Cloud/Synced mode
     "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
     "HOSTED_API_KEY": None,
@@ -331,13 +327,15 @@ To allow attaching via the agent or REST API (and block arbitrary model resoluti
 list permitted models in settings:
 
 ```python
-ESCALATED = {
-    # ...
-    "TICKET_SUBJECT_TYPES": [
-        "myapp.Project",
-        "myapp.Customer",
-    ],
-},
+ESCALATED = (
+    {
+        # ...
+        "TICKET_SUBJECT_TYPES": [
+            "myapp.Project",
+            "myapp.Customer",
+        ],
+    },
+)
 ```
 
 Leave `TICKET_SUBJECT_TYPES` empty to disable API attach; programmatic
@@ -377,7 +375,7 @@ ESCALATED = {
         {
             "key": "sync-crm",
             "label": "Sync CRM",
-            "variant": "primary",                # primary | secondary | danger
+            "variant": "primary",  # primary | secondary | danger
             "confirmation": "Sync this ticket to the CRM?",
             "metadata": {"icon": "refresh-cw"},
             # visible / enabled may be a bool or a callable(ticket, user)
@@ -396,6 +394,7 @@ Triggering one (`POST /support/agent/tickets/<id>/actions/<key>/` or the API rou
 ```python
 from django.dispatch import receiver
 from escalated.signals import custom_action_triggered
+
 
 @receiver(custom_action_triggered)
 def on_custom_action(sender, ticket, user, action_key, payload, metadata, **kwargs):
@@ -439,9 +438,11 @@ Connect to ticket lifecycle events:
 ```python
 from escalated.signals import ticket_created, ticket_resolved
 
+
 @receiver(ticket_created)
 def on_ticket_created(sender, ticket, user, **kwargs):
     print(f"New ticket: {ticket.reference}")
+
 
 @receiver(ticket_resolved)
 def on_ticket_resolved(sender, ticket, user, **kwargs):
@@ -547,10 +548,8 @@ npm install @escalated-dev/plugin-runtime
 ```python
 ESCALATED = {
     # ... existing config ...
-
     # SDK plugin bridge
     "SDK_ENABLED": True,
-
     # Optional overrides (defaults shown):
     # "RUNTIME_COMMAND": "node node_modules/@escalated-dev/plugin-runtime/dist/index.js",
     # "RUNTIME_CWD": BASE_DIR,  # working directory for the Node subprocess
@@ -652,7 +651,6 @@ ESCALATED = {
     "newsletter_default_theme": "default",
     "newsletter_brand_accent": "#2563eb",
     "newsletter_brand_physical_address": "Acme Inc. · 123 Main St · Springfield USA",
-
     # Plug in a Markdown converter (markdown package, mistune, etc.)
     "newsletter_markdown_renderer": lambda md: __import__("markdown").markdown(md),
 }
@@ -662,6 +660,7 @@ Schedule the dispatcher every minute (Celery beat, django-q, cron, etc.):
 
 ```python
 from escalated.services.newsletter import NewsletterDispatcher
+
 NewsletterDispatcher().dispatch_batch()
 ```
 
