@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-12
+
 ### Added
 - **Configurable database connection.** `ESCALATED["DATABASE"]` names the database alias Escalated's own tables live on, wired through the new `escalated.routers.EscalatedRouter`. `None` uses the project's `default` database, which is the historical behaviour; the router returns "no opinion" for everything when nothing is configured, so adding it to a project that has not set `DATABASE` changes nothing.
 
