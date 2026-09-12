@@ -6,6 +6,18 @@ DEFAULTS = {
     "MODE": "self_hosted",
     "USER_MODEL": None,  # Falls back to settings.AUTH_USER_MODEL
     "TABLE_PREFIX": "escalated_",
+    # The database alias Escalated's own tables live on, as named in
+    # settings.DATABASES. None means the project's "default" database, which is
+    # the historical behaviour and what almost every host wants.
+    #
+    # Setting this also requires adding escalated.routers.EscalatedRouter to
+    # DATABASE_ROUTERS -- Django has no per-model connection setting, so routing
+    # is the mechanism.
+    #
+    # This does NOT move your user table. That belongs to the project, and
+    # Escalated's foreign keys to it are declared db_constraint=False precisely
+    # so the two can live on different databases.
+    "DATABASE": None,
     "ROUTE_PREFIX": "support",
     "UI_ENABLED": True,
     "UI_RENDERER": None,

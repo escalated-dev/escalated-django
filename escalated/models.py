@@ -128,6 +128,8 @@ class Department(models.Model):
     is_active = models.BooleanField(default=True)
     agents = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         related_name="escalated_departments",
         blank=True,
     )
@@ -290,6 +292,8 @@ class Ticket(models.Model):
 
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -355,6 +359,8 @@ class Ticket(models.Model):
     snoozed_until = models.DateTimeField(null=True, blank=True)
     snoozed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -651,6 +657,8 @@ class Reply(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="replies")
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -750,6 +758,8 @@ class CannedResponse(models.Model):
     category = models.CharField(max_length=100, blank=True, default="")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -876,6 +886,8 @@ class Macro(models.Model):
     order = models.PositiveIntegerField(default=0)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -902,6 +914,8 @@ class TicketFollower(models.Model):
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.CASCADE,
         related_name="escalated_followed_tickets",
     )
@@ -1153,6 +1167,8 @@ class ApiToken(models.Model):
 class AuditLog(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1299,6 +1315,8 @@ class Role(models.Model):
     )
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         related_name="escalated_roles",
         blank=True,
         db_table=get_table_name("role_user"),
@@ -1408,6 +1426,8 @@ class SavedView(models.Model):
     filters = models.JSONField(default=dict)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.CASCADE,
         null=True,
         blank=True,
@@ -1499,6 +1519,8 @@ class SideConversation(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1525,6 +1547,8 @@ class SideConversationReply(models.Model):
     body = models.TextField()
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1632,6 +1656,8 @@ class Article(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1677,6 +1703,8 @@ class Article(models.Model):
 class AgentProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.CASCADE,
         related_name="escalated_agent_profile",
     )
@@ -1720,6 +1748,8 @@ class AgentProfile(models.Model):
 class AgentSkill(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.CASCADE,
     )
     skill = models.ForeignKey(
@@ -1829,6 +1859,8 @@ class SkillRoutingDepartment(models.Model):
 class AgentCapacity(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.CASCADE,
         related_name="escalated_agent_capacities",
     )
@@ -1960,6 +1992,8 @@ class Automation(models.Model):
 class TwoFactor(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.CASCADE,
         related_name="escalated_two_factor",
     )
@@ -2339,6 +2373,8 @@ class ChatSession(models.Model):
     customer_session_id = models.CharField(max_length=255, db_index=True)
     agent = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
