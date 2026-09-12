@@ -79,7 +79,7 @@ def workflow_create(request):
         return JsonResponse(_workflow_json(w), status=201)
     return render_page(
         request,
-        "Escalated/Admin/Workflows/New",
+        "Escalated/Admin/Workflows/Form",
         {
             "trigger_events": [e[0] for e in Workflow.TRIGGER_EVENTS],
             "operators": OPERATORS,
@@ -102,7 +102,7 @@ def workflow_update(request, workflow_id):
         return JsonResponse(_workflow_json(w))
     return render_page(
         request,
-        "Escalated/Admin/Workflows/Edit",
+        "Escalated/Admin/Workflows/Form",
         {
             "workflow": _workflow_json(w),
             "trigger_events": [e[0] for e in Workflow.TRIGGER_EVENTS],

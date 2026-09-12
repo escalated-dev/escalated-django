@@ -48,7 +48,7 @@ from escalated.models import (
     WebhookDelivery,
 )
 from escalated.permissions import is_admin, is_agent
-from escalated.rendering import render_page
+from escalated.rendering import paginated, render_page
 from escalated.serializers import (
     ActivitySerializer,
     AgentCapacitySerializer,
@@ -261,14 +261,7 @@ def tickets_index(request):
         request,
         "Escalated/Admin/Tickets/Index",
         props={
-            "tickets": TicketSerializer.serialize_list(page.object_list),
-            "pagination": {
-                "current_page": page.number,
-                "total_pages": paginator.num_pages,
-                "total_count": paginator.count,
-                "has_next": page.has_next(),
-                "has_previous": page.has_previous(),
-            },
+            "tickets": paginated(request, page, TicketSerializer.serialize_list(page.object_list)),
             "filters": {
                 "status": status,
                 "priority": priority,
@@ -634,7 +627,7 @@ def departments_create(request):
         if not name:
             return render_page(
                 request,
-                "Escalated/Admin/Departments/Create",
+                "Escalated/Admin/Departments/Form",
                 props={
                     "errors": {"name": _("Name is required.")},
                 },
@@ -643,7 +636,7 @@ def departments_create(request):
         Department.objects.create(name=name, slug=slug, description=description, is_active=is_active)
         return redirect("escalated:admin_departments_index")
 
-    return render_page(request, "Escalated/Admin/Departments/Create", props={})
+    return render_page(request, "Escalated/Admin/Departments/Form", props={})
 
 
 @login_required
@@ -677,7 +670,7 @@ def departments_edit(request, department_id):
 
     return render_page(
         request,
-        "Escalated/Admin/Departments/Edit",
+        "Escalated/Admin/Departments/Form",
         props={
             "department": DepartmentSerializer.serialize(department),
             "all_agents": [
@@ -741,7 +734,7 @@ def sla_policies_create(request):
         if not name:
             return render_page(
                 request,
-                "Escalated/Admin/SlaPolicies/Create",
+                "Escalated/Admin/SlaPolicies/Form",
                 props={
                     "errors": {"name": _("Name is required.")},
                 },
@@ -776,7 +769,7 @@ def sla_policies_create(request):
 
     return render_page(
         request,
-        "Escalated/Admin/SlaPolicies/Create",
+        "Escalated/Admin/SlaPolicies/Form",
         props={
             "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
         },
@@ -822,7 +815,7 @@ def sla_policies_edit(request, policy_id):
 
     return render_page(
         request,
-        "Escalated/Admin/SlaPolicies/Edit",
+        "Escalated/Admin/SlaPolicies/Form",
         props={
             "policy": SlaPolicySerializer.serialize(policy),
             "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
@@ -882,7 +875,7 @@ def escalation_rules_create(request):
         if not name:
             return render_page(
                 request,
-                "Escalated/Admin/EscalationRules/Create",
+                "Escalated/Admin/EscalationRules/Form",
                 props={
                     "errors": {"name": _("Name is required.")},
                     "trigger_types": [{"value": t.value, "label": t.label} for t in EscalationRule.TriggerType],
@@ -912,7 +905,7 @@ def escalation_rules_create(request):
 
     return render_page(
         request,
-        "Escalated/Admin/EscalationRules/Create",
+        "Escalated/Admin/EscalationRules/Form",
         props={
             "trigger_types": [{"value": t.value, "label": t.label} for t in EscalationRule.TriggerType],
         },
@@ -954,7 +947,7 @@ def escalation_rules_edit(request, rule_id):
 
     return render_page(
         request,
-        "Escalated/Admin/EscalationRules/Edit",
+        "Escalated/Admin/EscalationRules/Form",
         props={
             "rule": EscalationRuleSerializer.serialize(rule),
             "trigger_types": [{"value": t.value, "label": t.label} for t in EscalationRule.TriggerType],
@@ -991,12 +984,25 @@ def tags_index(request):
     if check:
         return check
 
+    return _tags_page(request)
+
+
+def _tags_page(request, errors=None):
+    """The tags screen, which is also the tag form.
+
+    Tags are created and edited inline on the index, so the frontend has never
+    shipped a detail component -- the separate Create and Edit page names this
+    module rendered resolved to nothing and came up blank. Inertia reads `errors`
+    off the page props into `form.errors`, so a rejected save comes back to the
+    same form with the reason attached.
+    """
     tags = Tag.objects.annotate(ticket_count=Count("tickets"))
     return render_page(
         request,
         "Escalated/Admin/Tags/Index",
         props={
             "tags": [{**TagSerializer.serialize(t), "ticket_count": t.ticket_count} for t in tags],
+            "errors": errors or {},
         },
     )
 
@@ -1010,13 +1016,7 @@ def tags_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(
-                request,
-                "Escalated/Admin/Tags/Create",
-                props={
-                    "errors": {"name": _("Name is required.")},
-                },
-            )
+            return _tags_page(request, errors={"name": _("Name is required.")})
 
         Tag.objects.create(
             name=name,
@@ -1025,7 +1025,7 @@ def tags_create(request):
         )
         return redirect("escalated:admin_tags_index")
 
-    return render_page(request, "Escalated/Admin/Tags/Create", props={})
+    return _tags_page(request)
 
 
 @login_required
@@ -1046,13 +1046,7 @@ def tags_edit(request, tag_id):
         tag.save()
         return redirect("escalated:admin_tags_index")
 
-    return render_page(
-        request,
-        "Escalated/Admin/Tags/Edit",
-        props={
-            "tag": TagSerializer.serialize(tag),
-        },
-    )
+    return _tags_page(request)
 
 
 @login_required
@@ -1084,12 +1078,21 @@ def canned_responses_index(request):
     if check:
         return check
 
+    return _canned_responses_page(request)
+
+
+def _canned_responses_page(request, errors=None):
+    """The canned responses screen, which is also the form.
+
+    Created and edited inline on the index; see _tags_page.
+    """
     responses = CannedResponse.objects.select_related("created_by")
     return render_page(
         request,
         "Escalated/Admin/CannedResponses/Index",
         props={
             "canned_responses": CannedResponseSerializer.serialize_list(responses),
+            "errors": errors or {},
         },
     )
 
@@ -1103,13 +1106,7 @@ def canned_responses_create(request):
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
         if not title:
-            return render_page(
-                request,
-                "Escalated/Admin/CannedResponses/Create",
-                props={
-                    "errors": {"title": _("Title is required.")},
-                },
-            )
+            return _canned_responses_page(request, errors={"title": _("Title is required.")})
 
         CannedResponse.objects.create(
             title=title,
@@ -1120,7 +1117,7 @@ def canned_responses_create(request):
         )
         return redirect("escalated:admin_canned_responses_index")
 
-    return render_page(request, "Escalated/Admin/CannedResponses/Create", props={})
+    return _canned_responses_page(request)
 
 
 @login_required
@@ -1142,13 +1139,7 @@ def canned_responses_edit(request, response_id):
         canned.save()
         return redirect("escalated:admin_canned_responses_index")
 
-    return render_page(
-        request,
-        "Escalated/Admin/CannedResponses/Edit",
-        props={
-            "canned_response": CannedResponseSerializer.serialize(canned),
-        },
-    )
+    return _canned_responses_page(request)
 
 
 @login_required
@@ -1492,12 +1483,21 @@ def macros_index(request):
     if check:
         return check
 
+    return _macros_page(request)
+
+
+def _macros_page(request, errors=None):
+    """The macros screen, which is also the macro form.
+
+    Created and edited inline on the index; see _tags_page.
+    """
     macros = Macro.objects.select_related("created_by").order_by("order")
     return render_page(
         request,
         "Escalated/Admin/Macros/Index",
         props={
             "macros": MacroSerializer.serialize_list(macros),
+            "errors": errors or {},
         },
     )
 
@@ -1512,13 +1512,7 @@ def macros_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         if not name:
-            return render_page(
-                request,
-                "Escalated/Admin/Macros/Create",
-                props={
-                    "errors": {"name": _("Name is required.")},
-                },
-            )
+            return _macros_page(request, errors={"name": _("Name is required.")})
 
         try:
             actions = json.loads(request.POST.get("actions", "[]"))
@@ -1535,7 +1529,7 @@ def macros_create(request):
         )
         return redirect("escalated:admin_macros_index")
 
-    return render_page(request, "Escalated/Admin/Macros/Create", props={})
+    return _macros_page(request)
 
 
 @login_required
@@ -1564,13 +1558,7 @@ def macros_edit(request, macro_id):
         macro.save()
         return redirect("escalated:admin_macros_index")
 
-    return render_page(
-        request,
-        "Escalated/Admin/Macros/Edit",
-        props={
-            "macro": MacroSerializer.serialize(macro),
-        },
-    )
+    return _macros_page(request)
 
 
 @login_required
@@ -1632,14 +1620,7 @@ def audit_logs_index(request):
         request,
         "Escalated/Admin/AuditLog/Index",
         props={
-            "logs": AuditLogSerializer.serialize_list(page.object_list),
-            "pagination": {
-                "current_page": page.number,
-                "total_pages": paginator.num_pages,
-                "total_count": paginator.count,
-                "has_next": page.has_next(),
-                "has_previous": page.has_previous(),
-            },
+            "logs": paginated(request, page, AuditLogSerializer.serialize_list(page.object_list)),
             "filters": {
                 "user_id": user_id,
                 "action": action,
@@ -1903,7 +1884,7 @@ def business_hours_edit(request, schedule_id):
 
     return render_page(
         request,
-        "Escalated/Admin/BusinessHours/Edit",
+        "Escalated/Admin/BusinessHours/Form",
         props={
             "schedule": BusinessScheduleSerializer.serialize(sched),
             "timezones": sorted(available_timezones()),
@@ -2073,7 +2054,7 @@ def custom_fields_create(request):
         if not name:
             return render_page(
                 request,
-                "Escalated/Admin/CustomFields/Create",
+                "Escalated/Admin/CustomFields/Form",
                 props={
                     "errors": {"name": _("Name is required.")},
                     "contexts": [{"value": c.value, "label": c.label} for c in CustomField.Context],
@@ -2113,7 +2094,7 @@ def custom_fields_create(request):
 
     return render_page(
         request,
-        "Escalated/Admin/CustomFields/Create",
+        "Escalated/Admin/CustomFields/Form",
         props={
             "contexts": [{"value": c.value, "label": c.label} for c in CustomField.Context],
         },
@@ -2163,9 +2144,9 @@ def custom_fields_edit(request, field_id):
 
     return render_page(
         request,
-        "Escalated/Admin/CustomFields/Edit",
+        "Escalated/Admin/CustomFields/Form",
         props={
-            "custom_field": CustomFieldSerializer.serialize(field),
+            "field": CustomFieldSerializer.serialize(field),
             "contexts": [{"value": c.value, "label": c.label} for c in CustomField.Context],
         },
     )
@@ -2886,16 +2867,9 @@ def articles_index(request):
 
     return render_page(
         request,
-        "Escalated/Admin/KB/Articles/Index",
+        "Escalated/Admin/KnowledgeBase/Articles/Index",
         props={
-            "articles": ArticleSerializer.serialize_list(page.object_list),
-            "pagination": {
-                "current_page": page.number,
-                "total_pages": paginator.num_pages,
-                "total_count": paginator.count,
-                "has_next": page.has_next(),
-                "has_previous": page.has_previous(),
-            },
+            "articles": paginated(request, page, ArticleSerializer.serialize_list(page.object_list)),
             "filters": {
                 "search": search,
                 "status": status_filter,
@@ -2919,7 +2893,7 @@ def articles_create(request):
         if not title:
             return render_page(
                 request,
-                "Escalated/Admin/KB/Articles/Create",
+                "Escalated/Admin/KnowledgeBase/Articles/Form",
                 props={
                     "errors": {"title": _("Title is required.")},
                     "categories": ArticleCategorySerializer.serialize_list(ArticleCategory.objects.ordered()),
@@ -2946,7 +2920,7 @@ def articles_create(request):
 
     return render_page(
         request,
-        "Escalated/Admin/KB/Articles/Create",
+        "Escalated/Admin/KnowledgeBase/Articles/Form",
         props={
             "categories": ArticleCategorySerializer.serialize_list(ArticleCategory.objects.ordered()),
         },
@@ -2984,7 +2958,7 @@ def articles_edit(request, article_id):
 
     return render_page(
         request,
-        "Escalated/Admin/KB/Articles/Edit",
+        "Escalated/Admin/KnowledgeBase/Articles/Form",
         props={
             "article": ArticleSerializer.serialize(article),
             "categories": ArticleCategorySerializer.serialize_list(ArticleCategory.objects.ordered()),
@@ -3029,7 +3003,7 @@ def kb_categories_index(request):
 
     return render_page(
         request,
-        "Escalated/Admin/KB/Categories/Index",
+        "Escalated/Admin/KnowledgeBase/Categories/Index",
         props={
             "categories": ArticleCategorySerializer.serialize_list(categories),
         },
@@ -3623,17 +3597,10 @@ def webhooks_deliveries(request, webhook_id):
     page = paginator.get_page(request.GET.get("page", 1))
     return render_page(
         request,
-        "Escalated/Admin/Webhooks/Deliveries",
+        "Escalated/Admin/Webhooks/DeliveryLog",
         props={
             "webhook": WebhookSerializer.serialize(webhook),
-            "deliveries": WebhookDeliverySerializer.serialize_list(page.object_list),
-            "pagination": {
-                "current_page": page.number,
-                "total_pages": paginator.num_pages,
-                "total_count": paginator.count,
-                "has_next": page.has_next(),
-                "has_previous": page.has_previous(),
-            },
+            "deliveries": paginated(request, page, WebhookDeliverySerializer.serialize_list(page.object_list)),
         },
     )
 
@@ -3823,7 +3790,7 @@ def settings_csat(request):
             config[key] = EscalatedSetting.objects.get(key=key).value
         except EscalatedSetting.DoesNotExist:
             config[key] = default
-    return render_page(request, "Escalated/Admin/Settings/Csat", props={"config": config})
+    return render_page(request, "Escalated/Admin/Settings/CsatSettings", props={"settings": config})
 
 
 @login_required
@@ -3896,7 +3863,7 @@ def settings_sso(request):
     if request.method == "POST":
         sso.save_config(request.POST.dict())
         return redirect("escalated:admin_settings")
-    return render_page(request, "Escalated/Admin/Settings/Sso", props={"config": sso.get_config()})
+    return render_page(request, "Escalated/Admin/Settings/SsoSettings", props={"settings": sso.get_config()})
 
 
 @login_required

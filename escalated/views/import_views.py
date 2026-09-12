@@ -123,7 +123,7 @@ def import_create(request):
 
     return render_page(
         request,
-        "Escalated/Admin/Import/Create",
+        "Escalated/Admin/Import/Index",
         props={
             "adapters": adapters,
         },
@@ -392,7 +392,7 @@ def import_show(request, job_uuid):
 
     return render_page(
         request,
-        "Escalated/Admin/Import/Show",
+        "Escalated/Admin/Import/Progress",
         props={
             "job": {
                 "id": str(job.id),

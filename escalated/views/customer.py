@@ -8,7 +8,7 @@ from django.utils.translation import gettext as _
 from escalated.conf import get_setting
 from escalated.models import Department, SatisfactionRating, Ticket
 from escalated.permissions import can_close_ticket, can_reply_ticket, can_view_ticket
-from escalated.rendering import render_page
+from escalated.rendering import paginated, render_page
 from escalated.serializers import DepartmentSerializer, TicketSerializer
 from escalated.services.ticket_service import TicketService
 
@@ -42,14 +42,7 @@ def ticket_list(request):
         request,
         "Escalated/Customer/Index",
         props={
-            "tickets": TicketSerializer.serialize_list(page.object_list),
-            "pagination": {
-                "current_page": page.number,
-                "total_pages": paginator.num_pages,
-                "total_count": paginator.count,
-                "has_next": page.has_next(),
-                "has_previous": page.has_previous(),
-            },
+            "tickets": paginated(request, page, TicketSerializer.serialize_list(page.object_list)),
             "filters": {
                 "status": status,
                 "search": search,

@@ -39,3 +39,46 @@ def get_renderer():
 def render_page(request, component, props=None):
     """Convenience function used by views."""
     return get_renderer().render(request, component, props)
+
+
+def paginated(request, page, rows):
+    """A page of records, shaped the way the frontend list components read it.
+
+    They were written against a paginator that carries its own links: they
+    iterate ``records.links`` for ``{url, label, active}``, read the rows off
+    ``records.data`` and gate the pagination control on ``records.last_page``.
+    Handed a bare list and a sibling ``pagination`` dict they find no ``data``
+    at all and render as empty -- which on a ticket queue reads as a quiet day
+    rather than as a wiring fault.
+
+    ``page`` is a Django ``Page``; ``rows`` is the already-serialised list.
+    """
+    paginator = page.paginator
+    current = page.number
+    last = paginator.num_pages
+
+    def url_for(number):
+        query = request.GET.copy()
+        query["page"] = number
+        return f"{request.path}?{query.urlencode()}"
+
+    links = []
+    if last > 1:
+        # Previous / page numbers / Next, with a null url on the ones that lead
+        # nowhere -- the component styles those as inert rather than hiding them.
+        links.append(
+            {"url": url_for(current - 1) if page.has_previous() else None, "label": "&laquo; Previous", "active": False}
+        )
+        links += [{"url": url_for(n), "label": str(n), "active": n == current} for n in paginator.page_range]
+        links.append(
+            {"url": url_for(current + 1) if page.has_next() else None, "label": "Next &raquo;", "active": False}
+        )
+
+    return {
+        "data": rows,
+        "current_page": current,
+        "last_page": last,
+        "per_page": paginator.per_page,
+        "total": paginator.count,
+        "links": links,
+    }
