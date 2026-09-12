@@ -666,6 +666,73 @@ NewsletterDispatcher().dispatch_batch()
 
 Custom themes go in `escalated/templates/escalated/newsletter_themes/<slug>.html`. The context receives `subject`, `body` (pre-rendered safe HTML), `unsubscribe_url`, `view_in_browser_url`, and `brand`.
 
+## Database connection
+
+By default Escalated's tables live on your project's `default` database. Name a
+different one to keep them somewhere else — a schema shared with a legacy
+system, a multi-tenant split, a separate reporting store, or simply out of your
+primary database.
+
+Django has no per-model connection setting; routing is the mechanism, so this
+takes two pieces of configuration:
+
+```python
+# settings.py
+DATABASES = {
+    "default": {...},
+    "support": {...},
+}
+
+DATABASE_ROUTERS = ["escalated.routers.EscalatedRouter"]
+
+ESCALATED = {
+    "DATABASE": "support",
+}
+```
+
+Leave `DATABASE` unset (or omit the router) for the `default` database — the
+historical behaviour, and what almost every project wants. The router returns
+"no opinion" for everything when nothing is configured, so adding it to a
+project that has not set `DATABASE` changes nothing.
+
+Migrate Escalated's tables onto it with:
+
+```bash
+python manage.py migrate escalated --database=support
+```
+
+### Foreign keys to your user table
+
+Escalated's relations to `AUTH_USER_MODEL` are declared `db_constraint=False`.
+**Django cannot create a foreign key across databases**, so while those
+constraints existed the setting could not work at all — `migrate` failed on the
+first user-referencing table.
+
+This does not change Django's behaviour. `on_delete` is implemented in Python by
+the deletion collector, not by a database `ON DELETE` clause, and Django never
+emits one; cascades and `SET_NULL` work exactly as before. What is given up is
+the database's own referential check against direct SQL writes that bypass the
+ORM — which is also the only way the two sides could ever live apart.
+
+Migration `0028_drop_host_user_fk_constraints` applies it. It runs on every
+install, including single-database ones.
+
+**Your user table does not move.** The router has no opinion about it, so it
+stays wherever your project keeps it.
+
+### What cannot cross the boundary
+
+Single-object traversal works: `ticket.assigned_to` is resolved with a second
+query, routed by the router, so a ticket on one database resolves its assignee
+on another.
+
+A **join** cannot span two databases — nothing can do that. So a queryset that
+filters or `select_related`s *through* the user model, like
+`Ticket.objects.select_related("assigned_to")` or
+`.filter(assigned_to__email=...)`, is not available when the two are separated.
+Filter on the key instead (`assigned_to_id=...`) and load the users in a second
+query.
+
 ## License
 
 MIT
