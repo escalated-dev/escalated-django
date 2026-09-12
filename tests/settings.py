@@ -1,3 +1,7 @@
+import os
+
+from django.core.exceptions import ImproperlyConfigured
+
 from escalated.locale_paths import get_locale_paths
 
 DEBUG = True
@@ -8,12 +12,50 @@ USE_TZ = True
 # mirrors the wiring host projects are documented to use in the README.
 LOCALE_PATHS = get_locale_paths()
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
+# The suite runs on SQLite unless ESCALATED_TEST_ENGINE says otherwise, so it
+# needs nothing installed locally. CI runs it three times -- sqlite, postgres
+# and mysql -- because the three disagree about enough to matter: PostgreSQL
+# refuses to compare a boolean to an integer and its LIKE is case-sensitive,
+# MySQL's is not, aggregates come back as Decimal from one backend and int from
+# another, and SQLite enforces no foreign keys unless asked. A suite that has
+# only ever seen SQLite has tested none of it.
+#
+# An unrecognised value raises rather than falling back: a CI leg that quietly
+# ran SQLite would report green having tested nothing the matrix exists for.
+_ENGINES = {
+    "sqlite": "django.db.backends.sqlite3",
+    "postgres": "django.db.backends.postgresql",
+    "mysql": "django.db.backends.mysql",
 }
+
+TEST_ENGINE = os.environ.get("ESCALATED_TEST_ENGINE", "sqlite")
+
+if TEST_ENGINE not in _ENGINES:
+    raise ImproperlyConfigured(
+        f"ESCALATED_TEST_ENGINE must be one of {', '.join(sorted(_ENGINES))}; got {TEST_ENGINE!r}."
+    )
+
+if TEST_ENGINE == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": _ENGINES[TEST_ENGINE],
+            "NAME": ":memory:",
+        }
+    }
+else:
+    _default_port = "5432" if TEST_ENGINE == "postgres" else "3306"
+    _default_user = "postgres" if TEST_ENGINE == "postgres" else "root"
+
+    DATABASES = {
+        "default": {
+            "ENGINE": _ENGINES[TEST_ENGINE],
+            "NAME": os.environ.get("ESCALATED_TEST_NAME", "escalated_test"),
+            "USER": os.environ.get("ESCALATED_TEST_USER", _default_user),
+            "PASSWORD": os.environ.get("ESCALATED_TEST_PASSWORD", ""),
+            "HOST": os.environ.get("ESCALATED_TEST_HOST", "127.0.0.1"),
+            "PORT": os.environ.get("ESCALATED_TEST_PORT", _default_port),
+        }
+    }
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",

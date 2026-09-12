@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- **The test suite runs on PostgreSQL and MySQL as well as SQLite.** It had only
+  ever seen SQLite, which is the one backend no host deploys on and the one that
+  enforces the least: no foreign keys unless asked, no complaint about comparing
+  a boolean to an integer, and its own answers for LIKE case sensitivity and
+  aggregate return types.
+
+  `tests/settings.py` reads `ESCALATED_TEST_ENGINE` (`sqlite`, `postgres` or
+  `mysql`), defaulting to SQLite so running the suite locally still needs
+  nothing installed. An unrecognised value raises rather than falling back,
+  because a CI leg that quietly ran SQLite would report green having tested
+  nothing the matrix exists for — and `tests/test_database_engine.py` asserts
+  the connection is on the backend that was asked for and can actually be
+  queried.
+
+  All 831 tests pass on all three. Nothing needed fixing, which is what the
+  Django ORM is for.
+
 ## [0.6.0] - 2026-09-12
 
 ### Added

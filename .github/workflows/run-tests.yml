@@ -27,7 +27,7 @@ jobs:
           - python: "3.10"
             django: "5.1"
 
-    name: Py${{ matrix.python }} - Django ${{ matrix.django }}
+    name: Py${{ matrix.python }} - Django ${{ matrix.django }} - sqlite
 
     steps:
       - name: Checkout code
@@ -44,4 +44,74 @@ jobs:
           pip install "django~=${{ matrix.django }}.0"
 
       - name: Execute tests
+        run: pytest
+
+  # The version matrix above runs on SQLite. These two legs run the same suite
+  # against the databases hosts actually deploy on. The three disagree about
+  # enough to matter -- PostgreSQL refuses to compare a boolean to an integer
+  # and its LIKE is case-sensitive where MySQL's is not, aggregates come back as
+  # Decimal from one backend and int from another, and SQLite enforces no
+  # foreign keys unless asked -- so a suite that has only ever seen SQLite has
+  # tested none of it.
+  #
+  # Both service containers start on both legs. GitHub Actions cannot make a
+  # service conditional, and an empty `image:` is an error rather than a skip;
+  # a spare container is cheaper than the confusion of working around it.
+  databases:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [postgres, mysql]
+
+    name: pytest - ${{ matrix.db }}
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: escalated_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd=pg_isready
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: escalated_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+          pip install "psycopg[binary]" mysqlclient
+
+      - name: Execute tests
+        env:
+          # Read by tests/settings.py. An unrecognised value raises rather than
+          # falling back, so a broken leg fails instead of quietly running
+          # SQLite and reporting green.
+          ESCALATED_TEST_ENGINE: ${{ matrix.db }}
+          ESCALATED_TEST_PASSWORD: ${{ matrix.db == 'postgres' && 'postgres' || '' }}
         run: pytest
