@@ -48,8 +48,8 @@ class TestCustomerViews:
         call_args = mock_render.call_args
         assert call_args[0][1] == "Escalated/Customer/Index"
         props = call_args[1]["props"] if "props" in call_args[1] else call_args[0][2]
-        assert "tickets" in props
-        assert "pagination" in props
+        assert "data" in props["tickets"]
+        assert "links" in props["tickets"]
 
     @patch("escalated.views.customer.render_page")
     def test_ticket_create_shows_form(self, mock_render, rf):

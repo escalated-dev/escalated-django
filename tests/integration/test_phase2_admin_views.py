@@ -437,10 +437,10 @@ class TestArticlesAdminViews:
 
         mock_render.assert_called_once()
         args = mock_render.call_args
-        assert args[0][1] == "Escalated/Admin/KB/Articles/Index"
+        assert args[0][1] == "Escalated/Admin/KnowledgeBase/Articles/Index"
         props = args[1]["props"] if "props" in args[1] else args[0][2]
-        assert "articles" in props
-        assert "pagination" in props
+        assert "data" in props["articles"]
+        assert "links" in props["articles"]
         assert "categories" in props
 
     def test_create_post_creates_article(self, rf):
@@ -530,7 +530,7 @@ class TestKBCategoriesAdminViews:
 
         mock_render.assert_called_once()
         args = mock_render.call_args
-        assert args[0][1] == "Escalated/Admin/KB/Categories/Index"
+        assert args[0][1] == "Escalated/Admin/KnowledgeBase/Categories/Index"
         props = args[1]["props"] if "props" in args[1] else args[0][2]
         assert "categories" in props
 

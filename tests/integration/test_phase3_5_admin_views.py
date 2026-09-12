@@ -265,8 +265,8 @@ class TestWebhooksAdminViews:
             mock_render.call_args[1]["props"] if "props" in mock_render.call_args[1] else mock_render.call_args[0][2]
         )
         assert "webhook" in props
-        assert "deliveries" in props
-        assert "pagination" in props
+        assert "data" in props["deliveries"]
+        assert "links" in props["deliveries"]
 
 
 # ---------------------------------------------------------------------------

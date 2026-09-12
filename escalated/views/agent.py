@@ -19,7 +19,7 @@ from escalated.models import (
     Ticket,
 )
 from escalated.permissions import can_update_ticket, can_view_ticket, is_admin, is_agent
-from escalated.rendering import render_page
+from escalated.rendering import paginated, render_page
 from escalated.serializers import (
     ActivitySerializer,
     AttachmentSerializer,
@@ -150,16 +150,9 @@ def ticket_list(request):
 
     return render_page(
         request,
-        "Escalated/Agent/Tickets/Index",
+        "Escalated/Agent/TicketIndex",
         props={
-            "tickets": TicketSerializer.serialize_list(page.object_list),
-            "pagination": {
-                "current_page": page.number,
-                "total_pages": paginator.num_pages,
-                "total_count": paginator.count,
-                "has_next": page.has_next(),
-                "has_previous": page.has_previous(),
-            },
+            "tickets": paginated(request, page, TicketSerializer.serialize_list(page.object_list)),
             "filters": {
                 "status": status,
                 "priority": priority,
@@ -231,7 +224,7 @@ def ticket_show(request, ticket_id):
 
     return render_page(
         request,
-        "Escalated/Agent/Tickets/Show",
+        "Escalated/Agent/TicketShow",
         props={
             "ticket": TicketSerializer.serialize(ticket, include_replies=True, include_activities=True),
             "customActions": _custom_actions_for(request, ticket),

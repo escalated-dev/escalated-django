@@ -371,8 +371,8 @@ class TestAuditLogsAdminViews:
         args = mock_render.call_args
         assert args[0][1] == "Escalated/Admin/AuditLog/Index"
         props = args[1]["props"] if "props" in args[1] else args[0][2]
-        assert "logs" in props
-        assert "pagination" in props
+        assert "data" in props["logs"]
+        assert "links" in props["logs"]
         assert "filters" in props
         assert "actions" in props
         assert "resource_types" in props
