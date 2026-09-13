@@ -4,6 +4,50 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-13
+
+### Fixed
+- **Thirty-four screens rendered blank, and six lists were always empty.** The
+  views rendered page names with no component behind them in
+  `@escalated-dev/escalated`, and Inertia resolves such a name to nothing rather
+  than to an error, so each returned 200 and an empty panel. Twenty-two are
+  renamed to the component the frontend ships, mostly `Create`/`Edit` pairs
+  collapsing into one `Form` and `Admin/KB/...` becoming
+  `Admin/KnowledgeBase/...`. `CustomFields/Form` now gets `field`, and the CSAT
+  and SSO settings screens get `settings`, which is what they read. Tags, macros
+  and canned responses are edited inline on their index screens, so a rejected
+  save there landed on a blank page; each now re-renders its index with the
+  errors attached. The six advanced reports stay blank: their views pass
+  `{data, filters}` where the components take flat props.
+
+  Separately, the admin, agent and customer ticket queues, the audit log, the
+  knowledge-base article list and the webhook delivery log handed their
+  components a bare list and a sibling `pagination` dict. The components read
+  `records.data` and page through `records.links`, so all six rendered
+  permanently empty, and an empty ticket queue reads as a quiet day rather than
+  a fault. `paginated()` in `escalated/rendering.py` now builds the shape they
+  were written against.
+
+- **The shared workflow builder could not save a workflow, and reply workflows
+  never ran.** `POST admin/workflows/` re-rendered the index and saved nothing,
+  `create/` answered with a JSON 201 an Inertia form cannot consume, `PUT` and
+  `DELETE` were ignored, and a workflow with no name, trigger or actions was
+  saved anyway. The reply handler fired `ticket.replied`, so a `reply.created`
+  workflow saved from the builder never ran.
+
+  The views now follow escalated-developer-context
+  `domain-model/workflow-admin-contract.md`. `POST` creates, and `PUT` and
+  `DELETE` update and delete with a `303`; toggle, reorder (`workflow_ids`) and
+  delete redirect to the index; `name`, `trigger_event` and at least one action
+  are required, and errors come back as the Form's `errors` prop. The Form gets
+  `workflow`, `trigger_events`, `action_types` and `operators`, and
+  `trigger_events` is exactly what the handlers fire. The reply handler fires
+  `reply.created`, and workflows stored under `ticket.replied` still run. The
+  engine executes `insert_canned_reply`, `add_tag` gives a new tag a slug (the
+  second new tag used to fail on the unique `slug`), and empty or omitted
+  conditions match every ticket. The old `create/`, update and `delete/` URLs
+  keep working.
+
 ### Changed
 - **The test suite runs on PostgreSQL and MySQL as well as SQLite.** It had only
   ever seen SQLite, which is the one backend no host deploys on and the one that
@@ -21,6 +65,13 @@ All notable changes to this project will be documented in this file.
 
   All 831 tests pass on all three. Nothing needed fixing, which is what the
   Django ORM is for.
+
+### Added
+- **`tests/test_page_name_parity.py`**, asserting every page name this package
+  renders resolves to a component. It diffs them against the manifest the
+  frontend publishes, vendored at `tests/fixtures/escalated-pages.json`, and
+  fails if its list of known-blank names still excuses one that has since been
+  fixed, so that list can only shrink.
 
 ## [0.6.0] - 2026-09-12
 
