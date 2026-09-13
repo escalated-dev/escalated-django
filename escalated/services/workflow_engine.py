@@ -4,6 +4,7 @@ import re
 
 import requests
 from django.utils import timezone
+from django.utils.text import slugify
 
 from escalated.outbound_security import validate_outbound_webhook_url
 
@@ -32,6 +33,7 @@ ACTION_TYPES = [
     "remove_tag",
     "set_department",
     "add_note",
+    "insert_canned_reply",
     "send_webhook",
     "set_type",
     "delay",
@@ -44,7 +46,8 @@ class WorkflowEngine:
     def process_event(self, event_name, ticket, context=None):
         from escalated.workflow_models import Workflow
 
-        workflows = Workflow.objects.filter(trigger_event=event_name, is_active=True).order_by("position")
+        names = [event_name] + [old for old, new in Workflow.LEGACY_TRIGGER_EVENTS.items() if new == event_name]
+        workflows = Workflow.objects.filter(trigger_event__in=names, is_active=True).order_by("position")
         for workflow in workflows:
             self._process_workflow(workflow, ticket, event_name, context or {})
 
@@ -72,11 +75,16 @@ class WorkflowEngine:
                 logger.error(f"Escalated delayed action failed: {e}")
 
     def evaluate_conditions(self, conditions, ticket):
+        # Omitted conditions and an empty group match every ticket. any() of an
+        # empty list is False, which made {"any": []} match nothing.
+        if not conditions:
+            return True
         if isinstance(conditions, dict):
             if "all" in conditions:
-                return all(self._eval_single(c, ticket) for c in conditions["all"])
+                return all(self._eval_single(c, ticket) for c in conditions["all"] or [])
             if "any" in conditions:
-                return any(self._eval_single(c, ticket) for c in conditions["any"])
+                group = conditions["any"] or []
+                return not group or any(self._eval_single(c, ticket) for c in group)
             return self._eval_single(conditions, ticket)
         if isinstance(conditions, list):
             return all(self._eval_single(c, ticket) for c in conditions)
@@ -172,7 +180,11 @@ class WorkflowEngine:
                 ticket.priority = value
                 ticket.save()
             elif action_type == "add_tag":
-                tag, _ = Tag.objects.get_or_create(name=value)
+                tag = Tag.objects.filter(name=value).first()
+                if tag is None:
+                    # slug is unique, and creating by name alone left it blank,
+                    # so only the first new tag a workflow added ever saved.
+                    tag, _ = Tag.objects.get_or_create(slug=slugify(value), defaults={"name": value})
                 ticket.tags.add(tag)
             elif action_type == "remove_tag":
                 tag = Tag.objects.filter(name=value).first()
@@ -187,6 +199,14 @@ class WorkflowEngine:
                     body=self._interpolate(str(value), ticket),
                     is_internal_note=True,
                 )
+            elif action_type == "insert_canned_reply":
+                if value:
+                    Reply.objects.create(
+                        ticket=ticket,
+                        body=self._interpolate(str(value), ticket),
+                        is_internal_note=False,
+                        type=Reply.Type.REPLY,
+                    )
             elif action_type == "send_webhook":
                 self._send_webhook(action, ticket)
             elif action_type == "set_type":
