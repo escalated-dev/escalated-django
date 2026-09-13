@@ -48,7 +48,7 @@ class TestWorkflowSubscriber:
         assert any(c.args[0] == "ticket.status_changed" for c in calls)
 
     @patch("escalated.services.workflow_engine.WorkflowEngine")
-    def test_reply_created_maps_to_ticket_replied(self, engine_cls, ticket):
+    def test_reply_created_maps_to_reply_created(self, engine_cls, ticket):
         """Call our handler directly so we don't trigger other subscribers
         that would try to JSON-serialize a MagicMock reply."""
         engine = MagicMock()
@@ -60,7 +60,7 @@ class TestWorkflowSubscriber:
         _workflow_reply_created(sender=type(reply), reply=reply, ticket=ticket)
 
         engine.process_event.assert_called_once()
-        assert engine.process_event.call_args[0][0] == "ticket.replied"
+        assert engine.process_event.call_args[0][0] == "reply.created"
 
     @patch("escalated.services.workflow_engine.WorkflowEngine")
     def test_missing_ticket_is_noop(self, engine_cls, ticket):

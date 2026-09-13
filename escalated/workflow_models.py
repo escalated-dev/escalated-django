@@ -7,20 +7,24 @@ from escalated.conf import get_table_name
 
 
 class Workflow(models.Model):
+    # Exactly the events escalated/workflow_handlers.py passes to the engine.
+    # The admin form offers this list, so a trigger listed here but never fired
+    # would save a workflow that can never run.
     TRIGGER_EVENTS = [
         ("ticket.created", "Ticket Created"),
         ("ticket.updated", "Ticket Updated"),
         ("ticket.status_changed", "Status Changed"),
         ("ticket.assigned", "Ticket Assigned"),
         ("ticket.priority_changed", "Priority Changed"),
-        ("ticket.tagged", "Ticket Tagged"),
-        ("ticket.department_changed", "Department Changed"),
+        ("ticket.escalated", "Ticket Escalated"),
         ("reply.created", "Reply Created"),
-        ("reply.agent_reply", "Agent Reply"),
         ("sla.warning", "SLA Warning"),
         ("sla.breached", "SLA Breached"),
-        ("ticket.reopened", "Ticket Reopened"),
     ]
+
+    # Trigger names earlier releases fired, mapped to the event that fires in
+    # their place. Workflows already stored under them keep running.
+    LEGACY_TRIGGER_EVENTS = {"ticket.replied": "reply.created"}
 
     name = models.CharField(max_length=255)
     trigger_event = models.CharField(max_length=100, choices=TRIGGER_EVENTS)

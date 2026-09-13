@@ -97,7 +97,7 @@ def _workflow_ticket_escalated(sender, ticket, reason=None, **kwargs):
 
 @receiver(reply_created)
 def _workflow_reply_created(sender, reply=None, ticket=None, **kwargs):
-    _process("ticket.replied", ticket, reply=reply)
+    _process("reply.created", ticket, reply=reply)
 
 
 @receiver(sla_breached)

@@ -139,3 +139,76 @@ class TestWorkflowEngine:
             self.engine._send_webhook({"type": "send_webhook", "url": "https://example.com/hook"}, ticket)
 
         assert mock_post.call_args.kwargs["allow_redirects"] is False
+
+    # --- workflow-admin-contract: conditions ---------------------------------
+
+    @pytest.mark.parametrize("conditions", [{"all": []}, {"any": []}, [], {}, None])
+    def test_empty_or_omitted_conditions_match_every_ticket(self, conditions):
+        ticket = self._create_ticket(status="closed")
+        assert self.engine.evaluate_conditions(conditions, ticket) is True
+
+    # --- workflow-admin-contract: core action catalog ------------------------
+
+    def test_insert_canned_reply_adds_a_public_reply(self):
+        from escalated.models import Reply
+
+        ticket = self._create_ticket(status="open")
+        workflow = self._create_workflow(
+            conditions={"all": []},
+            actions=[{"type": "insert_canned_reply", "value": "Thanks, we are looking at {{reference}}."}],
+        )
+
+        self.engine.process_event("ticket.created", ticket)
+
+        reply = Reply.objects.get(ticket=ticket)
+        assert reply.is_internal_note is False
+        assert reply.body == f"Thanks, we are looking at {ticket.reference}."
+        assert workflow.logs.get().actions_executed == [{"type": "insert_canned_reply", "result": "executed"}]
+
+    def test_add_tag_creates_distinct_new_tags(self):
+        ticket = self._create_ticket(status="open")
+        self._create_workflow(
+            conditions={"all": []},
+            actions=[{"type": "add_tag", "value": "billing"}, {"type": "add_tag", "value": "refund"}],
+        )
+
+        self.engine.process_event("ticket.created", ticket)
+
+        assert sorted(ticket.tags.values_list("name", flat=True)) == ["billing", "refund"]
+
+    def test_remove_tag_detaches_the_named_tag(self):
+        from tests.factories import TagFactory
+
+        ticket = self._create_ticket(status="open")
+        ticket.tags.add(TagFactory(name="billing", slug="billing"))
+        self._create_workflow(conditions={"all": []}, actions=[{"type": "remove_tag", "value": "billing"}])
+
+        self.engine.process_event("ticket.created", ticket)
+
+        assert not ticket.tags.exists()
+
+    def test_core_actions_are_offered(self):
+        from escalated.services.workflow_engine import ACTION_TYPES
+
+        offered = {a["value"] if isinstance(a, dict) else a for a in ACTION_TYPES}
+        assert {
+            "change_status",
+            "change_priority",
+            "add_tag",
+            "remove_tag",
+            "set_department",
+            "assign_agent",
+            "add_note",
+            "insert_canned_reply",
+        } <= offered
+
+    # --- shapes the engine must keep reading ---------------------------------
+
+    def test_stored_ticket_replied_workflow_still_runs_on_reply_created(self):
+        ticket = self._create_ticket(status="open")
+        self._create_workflow(trigger_event="ticket.replied", conditions={"all": []})
+
+        self.engine.process_event("reply.created", ticket)
+
+        ticket.refresh_from_db()
+        assert ticket.priority == "high"
