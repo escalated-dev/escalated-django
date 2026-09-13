@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from escalated.models import EscalationRule, Ticket, TicketActivity
-from escalated.signals import ticket_escalated
+from escalated.signals import department_changed, ticket_assigned, ticket_escalated, ticket_priority_changed
 
 logger = logging.getLogger("escalated")
 
@@ -112,7 +112,9 @@ class EscalationService:
         Returns True if any action was taken.
         """
         actions = rule.actions or {}
-        acted = False
+        # Signals for each change, sent once the ticket is saved. The driver saves
+        # before it signals too, so receivers read the ticket as it is stored.
+        pending_signals = []
 
         # Change priority
         if "set_priority" in actions:
@@ -120,7 +122,9 @@ class EscalationService:
             if ticket.priority != new_priority:
                 old_priority = ticket.priority
                 ticket.priority = new_priority
-                acted = True
+                pending_signals.append(
+                    (ticket_priority_changed, {"old_priority": old_priority, "new_priority": new_priority})
+                )
                 logger.info(
                     f"Escalation rule '{rule.name}' changed priority on "
                     f"{ticket.reference}: {old_priority} -> {new_priority}"
@@ -130,13 +134,7 @@ class EscalationService:
         if actions.get("escalate", False):
             if ticket.status != Ticket.Status.ESCALATED:
                 ticket.status = Ticket.Status.ESCALATED
-                acted = True
-                ticket_escalated.send(
-                    sender=Ticket,
-                    ticket=ticket,
-                    user=None,
-                    reason=f"Escalation rule: {rule.name}",
-                )
+                pending_signals.append((ticket_escalated, {"reason": f"Escalation rule: {rule.name}"}))
 
         # Assign to specific agent
         if "assign_to_id" in actions:
@@ -144,7 +142,7 @@ class EscalationService:
                 agent = User.objects.get(pk=actions["assign_to_id"])
                 if ticket.assigned_to != agent:
                     ticket.assigned_to = agent
-                    acted = True
+                    pending_signals.append((ticket_assigned, {"agent": agent}))
                     logger.info(f"Escalation rule '{rule.name}' assigned {ticket.reference} to {agent}")
             except User.DoesNotExist:
                 logger.warning(f"Escalation rule '{rule.name}' references non-existent user {actions['assign_to_id']}")
@@ -156,13 +154,17 @@ class EscalationService:
             try:
                 dept = Department.objects.get(pk=actions["department_id"])
                 if ticket.department != dept:
+                    old_department = ticket.department
                     ticket.department = dept
-                    acted = True
+                    pending_signals.append(
+                        (department_changed, {"old_department": old_department, "new_department": dept})
+                    )
             except Department.DoesNotExist:
                 logger.warning(
                     f"Escalation rule '{rule.name}' references non-existent department {actions['department_id']}"
                 )
 
+        acted = bool(pending_signals)
         if acted:
             ticket.save()
             TicketActivity.objects.create(
@@ -174,5 +176,8 @@ class EscalationService:
                     "actions": actions,
                 },
             )
+
+            for signal, kwargs in pending_signals:
+                signal.send(sender=Ticket, ticket=ticket, user=None, **kwargs)
 
         return acted
