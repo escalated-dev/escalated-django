@@ -21,6 +21,12 @@ class EscalatedConfig(AppConfig):
         # Load active plugins on startup
         self._load_plugins()
 
+        # Real-time broadcasting. The handlers are always connected and each
+        # returns at once unless ESCALATED_BROADCASTING_ENABLED is set.
+        from escalated.broadcasting import connect_signals as connect_broadcasting
+
+        connect_broadcasting()
+
     def _load_ticket_actions(self):
         """Populate the custom ticket action registry from ESCALATED settings."""
         try:

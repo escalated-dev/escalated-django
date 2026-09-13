@@ -5,8 +5,9 @@ Emits events that can be consumed by Django Channels or other real-time
 backends.  Broadcasting is opt-in via the ESCALATED_BROADCASTING_ENABLED
 setting (defaults to ``False``).
 
-When enabled, signal handlers for ticket lifecycle events will call
-``broadcast_event()`` which dispatches to the configured backend.
+``EscalatedConfig.ready()`` connects the signal handlers below at startup.
+Each returns at once unless broadcasting is enabled; when it is, they call
+``broadcast_event()``, which dispatches to the configured backend.
 The default backend writes to the Django cache for polling; when Django
 Channels is installed, it sends to a channel layer group.
 """
@@ -100,7 +101,7 @@ def get_pending_events(channel):
 
 def on_ticket_created(sender, **kwargs):
     ticket = kwargs.get("ticket")
-    if ticket is None:
+    if ticket is None or not broadcasting_enabled():
         return
     broadcast_event(
         "ticket.created",
@@ -117,7 +118,7 @@ def on_ticket_created(sender, **kwargs):
 def on_ticket_updated(sender, **kwargs):
     ticket = kwargs.get("ticket")
     changes = kwargs.get("changes", {})
-    if ticket is None:
+    if ticket is None or not broadcasting_enabled():
         return
     broadcast_event(
         "ticket.updated",
@@ -132,7 +133,7 @@ def on_ticket_updated(sender, **kwargs):
 
 def on_ticket_status_changed(sender, **kwargs):
     ticket = kwargs.get("ticket")
-    if ticket is None:
+    if ticket is None or not broadcasting_enabled():
         return
     broadcast_event(
         "ticket.status_changed",
@@ -149,7 +150,7 @@ def on_ticket_status_changed(sender, **kwargs):
 def on_ticket_assigned(sender, **kwargs):
     ticket = kwargs.get("ticket")
     agent = kwargs.get("agent")
-    if ticket is None:
+    if ticket is None or not broadcasting_enabled():
         return
     broadcast_event(
         "ticket.assigned",
@@ -165,7 +166,7 @@ def on_ticket_assigned(sender, **kwargs):
 def on_reply_created(sender, **kwargs):
     reply = kwargs.get("reply")
     ticket = kwargs.get("ticket")
-    if ticket is None:
+    if ticket is None or not broadcasting_enabled():
         return
     broadcast_event(
         "reply.created",
@@ -182,7 +183,11 @@ def connect_signals():
     """
     Connect broadcasting signal handlers.
 
-    Should be called from AppConfig.ready() when broadcasting is enabled.
+    ``EscalatedConfig.ready()`` calls this at startup, so hosts do not need to.
+    The handlers check ``ESCALATED_BROADCASTING_ENABLED`` on every event, so
+    they cost nothing while it is off. ``Signal.connect`` skips a receiver that
+    is already connected, so a host that still calls this itself does not get
+    each event twice.
     """
     from escalated.signals import (
         reply_created,
