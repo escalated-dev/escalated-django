@@ -15,6 +15,8 @@ class Mention(models.Model):
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
         on_delete=models.CASCADE,
         related_name="escalated_mentions",
     )

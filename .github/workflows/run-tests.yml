@@ -43,6 +43,11 @@ jobs:
           pip install -e ".[dev]"
           pip install "django~=${{ matrix.django }}.0"
 
+      - name: Check the migrations match the models
+        env:
+          DJANGO_SETTINGS_MODULE: tests.settings
+        run: python -m django makemigrations escalated --check --dry-run
+
       - name: Execute tests
         run: pytest
 
@@ -106,6 +111,11 @@ jobs:
         run: |
           pip install -e ".[dev]"
           pip install "psycopg[binary]" mysqlclient
+
+      - name: Check the migrations match the models
+        env:
+          DJANGO_SETTINGS_MODULE: tests.settings
+        run: python -m django makemigrations escalated --check --dry-run
 
       - name: Execute tests
         env:
