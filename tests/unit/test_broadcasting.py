@@ -1,6 +1,10 @@
+from unittest.mock import patch
+
 import pytest
 from django.core.cache import cache
+from django.test import override_settings
 
+from escalated import signals as esc_signals
 from escalated.broadcasting import (
     broadcast_event,
     broadcasting_enabled,
@@ -13,6 +17,8 @@ from escalated.broadcasting import (
     on_ticket_status_changed,
     on_ticket_updated,
 )
+from escalated.models import Reply, Ticket
+from escalated.services.ticket_service import TicketService
 from tests.factories import ReplyFactory, TicketFactory, UserFactory
 
 
@@ -149,14 +155,103 @@ class TestSignalHandlers:
         on_reply_created(sender=None, reply=None, ticket=None)
 
 
+def _broadcast_types(broadcast):
+    return [call.args[0] for call in broadcast.call_args_list]
+
+
 @pytest.mark.django_db
+class TestConnectedAtStartup:
+    """AppConfig.ready() connects the handlers. Nothing here calls connect_signals()."""
+
+    @override_settings(ESCALATED_BROADCASTING_ENABLED=True)
+    def test_creating_a_ticket_broadcasts_when_enabled(self):
+        with patch("escalated.broadcasting.broadcast_event") as broadcast:
+            ticket = TicketService().create(UserFactory(), {"subject": "Printer on fire", "description": "Help"})
+
+        assert _broadcast_types(broadcast) == ["ticket.created"]
+        assert broadcast.call_args.args[1] == f"ticket.{ticket.pk}"
+
+    @override_settings(ESCALATED_BROADCASTING_ENABLED=False)
+    def test_creating_a_ticket_broadcasts_nothing_when_disabled(self):
+        cache.clear()
+        with patch("escalated.broadcasting.broadcast_event") as broadcast:
+            ticket = TicketService().create(UserFactory(), {"subject": "Printer on fire", "description": "Help"})
+
+        broadcast.assert_not_called()
+        assert get_pending_events(f"ticket.{ticket.pk}") == []
+
+    @override_settings(ESCALATED_BROADCASTING_ENABLED=True)
+    @pytest.mark.parametrize(
+        "signal_name, event_type",
+        [
+            ("ticket_created", "ticket.created"),
+            ("ticket_updated", "ticket.updated"),
+            ("ticket_status_changed", "ticket.status_changed"),
+            ("ticket_assigned", "ticket.assigned"),
+            ("reply_created", "reply.created"),
+        ],
+    )
+    def test_each_signal_reaches_its_handler(self, signal_name, event_type):
+        ticket = TicketFactory()
+        kwargs = {
+            "ticket_created": {"sender": Ticket, "ticket": ticket, "user": None},
+            "ticket_updated": {
+                "sender": Ticket,
+                "ticket": ticket,
+                "user": None,
+                "changes": {"subject": {"old": "a", "new": "b"}},
+            },
+            "ticket_status_changed": {
+                "sender": Ticket,
+                "ticket": ticket,
+                "user": None,
+                "old_status": "open",
+                "new_status": "in_progress",
+            },
+            "ticket_assigned": {"sender": Ticket, "ticket": ticket, "user": None, "agent": UserFactory()},
+            "reply_created": {"sender": Reply, "reply": ReplyFactory(ticket=ticket), "ticket": ticket, "user": None},
+        }[signal_name]
+
+        with patch("escalated.broadcasting.broadcast_event") as broadcast:
+            getattr(esc_signals, signal_name).send(**kwargs)
+
+        assert _broadcast_types(broadcast) == [event_type]
+
+
+@pytest.fixture
+def reconnect_broadcasting():
+    """disconnect_signals() would otherwise leave the startup handlers unhooked for later tests."""
+    yield
+    connect_signals()
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("reconnect_broadcasting")
 class TestConnectDisconnect:
     def test_connect_and_disconnect(self):
         # Should not raise
         connect_signals()
         disconnect_signals()
 
+    @override_settings(ESCALATED_BROADCASTING_ENABLED=True)
     def test_connect_idempotent(self):
+        # Hosts that followed the old advice and call connect_signals() themselves
+        # must not get every event twice now that ready() connects them too.
         connect_signals()
         connect_signals()
+
+        ticket = TicketFactory()
+        with patch("escalated.broadcasting.broadcast_event") as broadcast:
+            esc_signals.ticket_created.send(sender=Ticket, ticket=ticket, user=None)
+
+        assert _broadcast_types(broadcast) == ["ticket.created"]
+
+    @override_settings(ESCALATED_BROADCASTING_ENABLED=True)
+    def test_disconnect_stops_broadcasts(self):
         disconnect_signals()
+
+        ticket = TicketFactory()
+        with patch("escalated.broadcasting.broadcast_event") as broadcast:
+            esc_signals.ticket_created.send(sender=Ticket, ticket=ticket, user=None)
+
+        broadcast.assert_not_called()
