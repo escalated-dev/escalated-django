@@ -4,6 +4,46 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-09-13
+
+### Fixed
+- **Webhooks configured in the admin never received anything.**
+  `WebhookDispatcher.dispatch()` had no caller outside the manual retry view, so
+  a webhook saved on the Webhooks page got no deliveries. A new
+  `escalated.webhook_handlers` module connects a receiver for every event the
+  webhook form offers. Delivery runs inside the signal, as the `WEBHOOK_URL`
+  delivery already did. A failure is logged and never interrupts the change
+  that raised the event, and nothing is sent during an import (#76).
+- **Some models only existed once the URL conf had been imported.**
+  `Workflow`, `WorkflowLog`, `DelayedAction`, `Mention`, `PluginStoreRecord`
+  and `EscalatedPlugin` lived in modules nothing imported at `django.setup()`.
+  In a Celery worker, a shell or a management command, deleting a ticket
+  failed on the `workflow_logs` foreign key, and `makemigrations` treated the
+  models as deleted. The models module now imports them.
+  - Migration 0029 aligns the migration state with the models. It adds the
+    `ticket_type` index the model always declared, renames
+    `escalated_automation_active_idx` to `escalated_auto_active_idx` (Django
+    rejects index names over 30 characters), and drops the database foreign key
+    from mentions to the host user table, which 0028 missed. Everything else is
+    state only.
+  - CI now fails when `makemigrations --check` finds drift (#79).
+- **Real-time broadcasting was never connected.** `connect_signals()` was
+  documented as something `AppConfig.ready()` calls, and nothing did. It is
+  called at startup now, and each handler returns at once unless
+  `ESCALATED_BROADCASTING_ENABLED` is set (#75).
+- **Python plugins never received ticket events.** The ticket actions
+  `hook_registry` documents were never fired. Every documented action with a
+  matching signal now fires through `do_action()`, and SDK plugins still get
+  each event once, through the bridge (#77).
+- **Escalation rules changed tickets silently.** A rule that set the priority,
+  assignee or department saved the ticket without sending
+  `ticket_priority_changed`, `ticket_assigned` or `department_changed`, so the
+  assigned agent got no email and workflows and webhooks never heard. The
+  signals are sent once the ticket is saved (#78).
+- **Import jobs failed on a clean install.** Import job credentials are
+  encrypted with `cryptography`, which was never declared.
+  `cryptography>=44.0.1` is now a dependency (#74).
+
 ## [0.6.1] - 2026-09-13
 
 ### Fixed
