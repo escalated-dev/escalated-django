@@ -1,6 +1,6 @@
 import logging
 
-from django.dispatch import receiver
+from django.dispatch import Signal, receiver
 from django.utils import timezone
 
 from escalated.signals import (
@@ -382,3 +382,47 @@ def on_custom_action_triggered(sender, ticket, user, action_key, payload=None, m
             "metadata": metadata or {},
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Python plugin actions
+# ---------------------------------------------------------------------------
+#
+# escalated.hook_registry documents an action for each ticket signal. Each is
+# named after its signal and receives the signal's arguments positionally, in
+# the documented order: add_action("ticket_assigned", lambda ticket, user,
+# agent: ...). The receivers below fire those actions through do_action().
+#
+# This path is for Python plugins only. SDK plugins get their events from the
+# _bridge_dispatch() calls above, and do_action() never reaches the bridge, so
+# no event is sent to an SDK plugin twice.
+
+
+def _plugin_action_receiver(action, parameters):
+    def fire_plugin_action(sender, **kwargs):
+        if ImportContext.is_importing():
+            return
+
+        from escalated.hooks import do_action
+
+        do_action(action, *(kwargs.get(name) for name in parameters))
+
+    fire_plugin_action.__name__ = f"fire_{action}_action"
+    return fire_plugin_action
+
+
+def _connect_plugin_actions():
+    import escalated.signals as signals
+    from escalated.hook_registry import HookRegistry
+
+    for action, spec in HookRegistry.get_actions().items():
+        signal = getattr(signals, action, None)
+        if isinstance(signal, Signal):
+            signal.connect(
+                _plugin_action_receiver(action, spec["parameters"]),
+                weak=False,
+                dispatch_uid=f"escalated.plugin_action.{action}",
+            )
+
+
+_connect_plugin_actions()
