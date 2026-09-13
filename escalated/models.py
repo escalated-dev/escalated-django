@@ -2,6 +2,7 @@ import hashlib
 import secrets
 import uuid
 
+from django import VERSION as DJANGO_VERSION
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
@@ -202,6 +203,10 @@ class Contact(models.Model):
     ``Contact.objects.find_or_create_by_email``.
     """
 
+    # Migration 0020 created this table with a 32-bit id, and the app's
+    # BigAutoField default would claim bigint. Declared so the model matches
+    # the table (see migration 0029).
+    id = models.AutoField(primary_key=True)
     email = models.EmailField(unique=True, max_length=320)
     name = models.CharField(max_length=255, null=True, blank=True)
     user_id = models.CharField(
@@ -217,7 +222,7 @@ class Contact(models.Model):
 
     class Meta:
         db_table = get_table_name("contacts")
-        indexes = [models.Index(fields=["user_id"])]
+        indexes = [models.Index(fields=["user_id"], name="escalated_c_user_id_idx")]
 
     def __str__(self) -> str:
         return self.email
@@ -406,12 +411,12 @@ class Ticket(models.Model):
         db_table = get_table_name("tickets")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["status"]),
-            models.Index(fields=["priority"]),
-            models.Index(fields=["reference"]),
-            models.Index(fields=["assigned_to"]),
-            models.Index(fields=["ticket_type"]),
-            models.Index(fields=["created_at"]),
+            models.Index(fields=["status"], name="escalated_t_status_idx"),
+            models.Index(fields=["priority"], name="escalated_t_priority_idx"),
+            models.Index(fields=["reference"], name="escalated_t_reference_idx"),
+            models.Index(fields=["assigned_to"], name="escalated_t_assigned_idx"),
+            models.Index(fields=["ticket_type"], name="escalated_t_type_idx"),
+            models.Index(fields=["created_at"], name="escalated_t_created_idx"),
         ]
 
     def __str__(self):
@@ -641,7 +646,7 @@ class TicketSubject(models.Model):
             ),
         ]
         indexes = [
-            models.Index(fields=["content_type", "object_id"]),
+            models.Index(fields=["content_type", "object_id"], name="escalated_ts_ct_obj_idx"),
         ]
 
     def __str__(self):
@@ -1014,9 +1019,9 @@ class InboundEmail(models.Model):
         db_table = get_table_name("inbound_emails")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["status"]),
-            models.Index(fields=["from_email"]),
-            models.Index(fields=["message_id"]),
+            models.Index(fields=["status"], name="escalated_ie_status_idx"),
+            models.Index(fields=["from_email"], name="escalated_ie_from_idx"),
+            models.Index(fields=["message_id"], name="escalated_ie_msgid_idx"),
         ]
 
     def __str__(self):
@@ -1192,10 +1197,13 @@ class AuditLog(models.Model):
         db_table = get_table_name("audit_logs")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["auditable_content_type", "auditable_object_id"]),
-            models.Index(fields=["user"]),
-            models.Index(fields=["action"]),
-            models.Index(fields=["created_at"]),
+            models.Index(
+                fields=["auditable_content_type", "auditable_object_id"],
+                name="escalated_al_auditable_idx",
+            ),
+            models.Index(fields=["user"], name="escalated_al_user_idx"),
+            models.Index(fields=["action"], name="escalated_al_action_idx"),
+            models.Index(fields=["created_at"], name="escalated_al_created_idx"),
         ]
 
     def __str__(self):
@@ -1745,6 +1753,13 @@ class AgentProfile(models.Model):
         return obj
 
 
+# Migration 0022 added this check. Django 5.1 renamed CheckConstraint's check=
+# to condition= (and 6.0 dropped check=), so pick the keyword the same way the
+# migration does.
+_PROFICIENCY_1_5 = models.Q(proficiency__gte=1, proficiency__lte=5)
+_PROFICIENCY_1_5_KWARGS = {"condition": _PROFICIENCY_1_5} if DJANGO_VERSION >= (5, 1) else {"check": _PROFICIENCY_1_5}
+
+
 class AgentSkill(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1765,6 +1780,9 @@ class AgentSkill(models.Model):
     class Meta:
         db_table = get_table_name("agent_skill")
         unique_together = [("user", "skill")]
+        constraints = [
+            models.CheckConstraint(**_PROFICIENCY_1_5_KWARGS, name="escalated_agentskill_proficiency_1_5"),
+        ]
 
     def __str__(self):
         return f"{self.user} - {self.skill} ({self.proficiency})"
@@ -1977,7 +1995,10 @@ class Automation(models.Model):
     class Meta:
         db_table = get_table_name("automations")
         indexes = [
-            models.Index(fields=["active"]),
+            # Migration 0009 created this as escalated_automation_active_idx. A model
+            # may not declare an index name longer than 30 characters (models.E034),
+            # so migration 0029 renames it.
+            models.Index(fields=["active"], name="escalated_auto_active_idx"),
         ]
 
     def __str__(self):
@@ -2485,6 +2506,10 @@ class NewsletterList(models.Model):
     KIND_DYNAMIC = "dynamic"
     KIND_CHOICES = ((KIND_STATIC, "Static"), (KIND_DYNAMIC, "Dynamic"))
 
+    # Migration 0023 created this table with a 32-bit id, and the app's
+    # BigAutoField default would claim bigint. Declared so the model matches
+    # the table (see migration 0029).
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     kind = models.CharField(max_length=16, choices=KIND_CHOICES, db_index=True)
@@ -2501,6 +2526,10 @@ class NewsletterList(models.Model):
 
 
 class NewsletterListMember(models.Model):
+    # Migration 0023 created this table with a 32-bit id, and the app's
+    # BigAutoField default would claim bigint. Declared so the model matches
+    # the table (see migration 0029).
+    id = models.AutoField(primary_key=True)
     list_id = models.PositiveIntegerField()
     contact_id = models.PositiveIntegerField(db_index=True)
     added_at = models.DateTimeField(auto_now_add=True)
@@ -2515,6 +2544,10 @@ class NewsletterListMember(models.Model):
 
 
 class NewsletterTemplate(models.Model):
+    # Migration 0023 created this table with a 32-bit id, and the app's
+    # BigAutoField default would claim bigint. Declared so the model matches
+    # the table (see migration 0029).
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     theme = models.CharField(max_length=64, default="default", db_index=True)
     subject_template = models.CharField(max_length=998, blank=True, null=True)
@@ -2541,6 +2574,10 @@ class Newsletter(models.Model):
         ("failed", "Failed"),
     )
 
+    # Migration 0023 created this table with a 32-bit id, and the app's
+    # BigAutoField default would claim bigint. Declared so the model matches
+    # the table (see migration 0029).
+    id = models.AutoField(primary_key=True)
     subject = models.CharField(max_length=998)
     from_email = models.CharField(max_length=320)
     from_name = models.CharField(max_length=255, blank=True, null=True)
@@ -2609,3 +2646,18 @@ class NewsletterDelivery(models.Model):
 
     def __str__(self) -> str:
         return f"delivery={self.id} newsletter={self.newsletter_id} status={self.status}"
+
+
+# ---------------------------------------------------------------------------
+# Models kept in their own modules
+# ---------------------------------------------------------------------------
+# Django registers a model when its module is imported, and django.setup()
+# imports only this module. Without these imports the models below existed only
+# once something else imported them (the URL conf, plugin loading). A Celery
+# worker, a shell or a management command could not see them: deleting a
+# ticket there failed on the workflow_logs foreign key, and makemigrations
+# treated them as deleted.
+from escalated.bridge.plugin_store_record import PluginStoreRecord  # noqa: E402, F401
+from escalated.mention_models import Mention  # noqa: E402, F401
+from escalated.plugin_models import EscalatedPlugin  # noqa: E402, F401
+from escalated.workflow_models import DelayedAction, Workflow, WorkflowLog  # noqa: E402, F401
