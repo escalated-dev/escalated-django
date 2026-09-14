@@ -199,6 +199,8 @@ class AdvancedReportingService:
             return self._cohort_by_department()
         elif dimension == "channel":
             return self._cohort_by_channel()
+        elif dimension == "priority":
+            return self._cohort_by_priority()
         elif dimension == "type":
             return self._cohort_by_type()
         return {"error": f"Unknown dimension: {dimension}"}
@@ -312,6 +314,10 @@ class AdvancedReportingService:
     def _cohort_by_type(self):
         types = self.tickets.values_list("ticket_type", flat=True).distinct()
         return [self._build_cohort(t, self.tickets.filter(ticket_type=t)) for t in types if t]
+
+    def _cohort_by_priority(self):
+        priorities = self.tickets.values_list("priority", flat=True).distinct()
+        return [self._build_cohort(str(p), self.tickets.filter(priority=p)) for p in priorities if p]
 
     def _build_cohort(self, name, scope):
         resolved = scope.exclude(resolved_at__isnull=True)

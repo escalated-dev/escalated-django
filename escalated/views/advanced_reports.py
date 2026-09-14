@@ -2,12 +2,14 @@ from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect
 from django.utils import timezone
 
 from escalated.permissions import is_admin
 from escalated.rendering import render_page
 from escalated.services.advanced_reporting_service import AdvancedReportingService
 from escalated.services.export_service import ExportService
+from escalated.services.report_screen_metrics import ReportScreenMetrics
 
 
 def _parse_period(request):
@@ -37,103 +39,143 @@ def _get_service(request):
     return AdvancedReportingService(start, end), start, end
 
 
+def _screen(request):
+    """The service, the screen-shaped view of it, the period, and its length.
+
+    Inertia passes props by name, and a name the component does not declare is
+    not passed at all -- it lands on the root element as an attribute. Every
+    view here used to send ``{"data": ..., "filters": ...}``, which no report
+    component reads, so all nine screens rendered their defaults: zeroes and
+    empty charts, on a 200, which is indistinguishable from a quiet period.
+    """
+    svc, start, end = _get_service(request)
+
+    return svc, ReportScreenMetrics(svc), start, end, max((end.date() - start.date()).days, 1)
+
+
+def _forbidden():
+    return JsonResponse({"error": "Forbidden"}, status=403)
+
+
 @login_required
 def sla_trends(request):
     if not is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    svc, start, end = _get_service(request)
+        return _forbidden()
+
+    svc, screen, _start, _end, days = _screen(request)
+    counts = screen.sla_breach_counts()
+    trend = svc.sla_breach_trends()
+
     return render_page(
         request,
         "Escalated/Admin/Reports/SlaTrends",
-        {"data": svc.sla_breach_trends(), "filters": {"from": start.isoformat(), "to": end.isoformat()}},
+        {
+            "period_days": days,
+            "breach_trend": screen.chart_series(trend, "date", "total_breaches"),
+            "breach_by_type_trend": [
+                {"label": row["date"], "values": [row["frt_breaches"], row["resolution_breaches"]]} for row in trend
+            ],
+            "breach_by_department": screen.sla_breach_by_department(),
+            "breach_by_priority": screen.sla_breach_by_priority(),
+            "at_risk_tickets": screen.at_risk_tickets(),
+            "total_breaches": counts["total"],
+            "breach_rate": counts["rate"],
+            "first_response_breaches": counts["first_response"],
+            "resolution_breaches": counts["resolution"],
+        },
     )
 
 
 @login_required
-def frt_distribution(request):
+def response_times(request):
     if not is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    svc, start, end = _get_service(request)
+        return _forbidden()
+
+    svc, screen, _start, _end, days = _screen(request)
+    summary = screen.frt_summary()
+
     return render_page(
         request,
-        "Escalated/Admin/Reports/FrtDistribution",
-        {"data": svc.frt_distribution(), "filters": {"from": start.isoformat(), "to": end.isoformat()}},
+        "Escalated/Admin/Reports/ResponseTimes",
+        {
+            "period_days": days,
+            "avg_frt": summary["avg"],
+            "median_frt": summary["median"],
+            "p90_frt": summary["p90"],
+            "pct_under_target": summary["pct_under_target"],
+            "target_hours": ReportScreenMetrics.FIRST_RESPONSE_TARGET_HOURS,
+            "distribution": screen.distribution_series(svc.frt_distribution()),
+            "trend": screen.chart_series(svc.frt_trends(), "date", "avg_hours"),
+            "by_agent": screen.agent_time_rows(svc.frt_by_agent()),
+            "by_department": screen.frt_by_department(),
+            "by_priority": screen.frt_by_priority(),
+        },
     )
 
 
 @login_required
-def frt_trends(request):
+def resolution_times(request):
     if not is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    svc, start, end = _get_service(request)
+        return _forbidden()
+
+    svc, screen, _start, _end, days = _screen(request)
+    summary = screen.resolution_summary()
+
     return render_page(
         request,
-        "Escalated/Admin/Reports/FrtTrends",
-        {"data": svc.frt_trends(), "filters": {"from": start.isoformat(), "to": end.isoformat()}},
-    )
-
-
-@login_required
-def frt_by_agent(request):
-    if not is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    svc, start, end = _get_service(request)
-    return render_page(
-        request,
-        "Escalated/Admin/Reports/FrtByAgent",
-        {"data": svc.frt_by_agent(), "filters": {"from": start.isoformat(), "to": end.isoformat()}},
-    )
-
-
-@login_required
-def resolution_distribution(request):
-    if not is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    svc, start, end = _get_service(request)
-    return render_page(
-        request,
-        "Escalated/Admin/Reports/ResolutionDistribution",
-        {"data": svc.resolution_time_distribution(), "filters": {"from": start.isoformat(), "to": end.isoformat()}},
-    )
-
-
-@login_required
-def resolution_trends(request):
-    if not is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    svc, start, end = _get_service(request)
-    return render_page(
-        request,
-        "Escalated/Admin/Reports/ResolutionTrends",
-        {"data": svc.resolution_time_trends(), "filters": {"from": start.isoformat(), "to": end.isoformat()}},
+        "Escalated/Admin/Reports/ResolutionTimes",
+        {
+            "period_days": days,
+            "avg_resolution": summary["avg"],
+            "median_resolution": summary["median"],
+            "p90_resolution": summary["p90"],
+            "pct_under_target": summary["pct_under_target"],
+            "target_hours": ReportScreenMetrics.RESOLUTION_TARGET_HOURS,
+            "distribution": screen.distribution_series(svc.resolution_time_distribution()),
+            "trend": screen.chart_series(svc.resolution_time_trends(), "date", "avg_hours"),
+            "by_agent": screen.agent_time_rows(screen.resolution_by_agent()),
+            "by_department": screen.resolution_by_department(),
+            "by_channel": screen.resolution_by_channel(),
+        },
     )
 
 
 @login_required
 def agent_ranking(request):
     if not is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    svc, start, end = _get_service(request)
+        return _forbidden()
+
+    svc, screen, _start, _end, days = _screen(request)
+
     return render_page(
         request,
         "Escalated/Admin/Reports/AgentRanking",
-        {"data": svc.agent_performance_ranking(), "filters": {"from": start.isoformat(), "to": end.isoformat()}},
+        {
+            "period_days": days,
+            "agents": screen.agent_ranking_rows(svc.agent_performance_ranking()),
+        },
     )
 
 
 @login_required
-def cohort(request):
+def cohorts(request):
     if not is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    dimension = request.GET.get("dimension", "department")
-    svc, start, end = _get_service(request)
+        return _forbidden()
+
+    svc, screen, _start, _end, days = _screen(request)
+
+    # The screen shows every dimension at once, in tabs. This served one at a
+    # time, chosen by a query parameter the screen does not send.
     return render_page(
         request,
-        "Escalated/Admin/Reports/Cohort",
+        "Escalated/Admin/Reports/Cohorts",
         {
-            "data": svc.cohort_analysis(dimension),
-            "dimension": dimension,
-            "filters": {"from": start.isoformat(), "to": end.isoformat()},
+            "period_days": days,
+            "by_tag": screen.cohort_rows(svc.cohort_analysis("tag")),
+            "by_department": screen.cohort_rows(svc.cohort_analysis("department")),
+            "by_channel": screen.cohort_rows(svc.cohort_analysis("channel")),
+            "by_type": screen.cohort_rows(svc.cohort_analysis("type")),
+            "by_priority": screen.cohort_rows(svc.cohort_analysis("priority")),
         },
     )
 
@@ -141,13 +183,54 @@ def cohort(request):
 @login_required
 def comparison(request):
     if not is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    svc, start, end = _get_service(request)
+        return _forbidden()
+
+    svc, screen, start, end, days = _screen(request)
+    data = svc.period_comparison()
+    duration = end - start
+
     return render_page(
         request,
         "Escalated/Admin/Reports/Comparison",
-        {"data": svc.period_comparison(), "filters": {"from": start.isoformat(), "to": end.isoformat()}},
+        {
+            "period_days": days,
+            "current": screen.comparison_side(data["current"], screen.volume_by_date(start, end)),
+            "previous": screen.comparison_side(data["previous"], screen.volume_by_date(start - duration, start)),
+        },
     )
+
+
+# The first-response screen was three paths and the resolution screen two. Both
+# are one screen in the frontend; these keep the old links working rather than
+# 404 on them.
+@login_required
+def frt_distribution(request):
+    return redirect("escalated:admin_reports_response_times")
+
+
+@login_required
+def frt_trends(request):
+    return redirect("escalated:admin_reports_response_times")
+
+
+@login_required
+def frt_by_agent(request):
+    return redirect("escalated:admin_reports_response_times")
+
+
+@login_required
+def resolution_distribution(request):
+    return redirect("escalated:admin_reports_resolution_times")
+
+
+@login_required
+def resolution_trends(request):
+    return redirect("escalated:admin_reports_resolution_times")
+
+
+@login_required
+def cohort(request):
+    return redirect("escalated:admin_reports_cohorts")
 
 
 @login_required

@@ -318,6 +318,17 @@ admin_patterns = [
         advanced_reports.resolution_trends,
         name="admin_reports_resolution_trends",
     ),
+    path(
+        "admin/reports/advanced/response-times/",
+        advanced_reports.response_times,
+        name="admin_reports_response_times",
+    ),
+    path(
+        "admin/reports/advanced/resolution-times/",
+        advanced_reports.resolution_times,
+        name="admin_reports_resolution_times",
+    ),
+    path("admin/reports/advanced/cohorts/", advanced_reports.cohorts, name="admin_reports_cohorts"),
     path("admin/reports/advanced/agent-ranking/", advanced_reports.agent_ranking, name="admin_reports_agent_ranking"),
     path("admin/reports/advanced/cohort/", advanced_reports.cohort, name="admin_reports_cohort"),
     path("admin/reports/advanced/comparison/", advanced_reports.comparison, name="admin_reports_comparison"),
