@@ -23,24 +23,13 @@ MANIFEST = Path(__file__).resolve().parent / "fixtures" / "escalated-pages.json"
 
 # Names that render a blank panel today and are not fixed by renaming.
 #
-# All nine advanced-report views pass ``{"data": ..., "filters": ...}`` while
-# every report component takes flat props -- ``period_days``, ``trend``,
-# ``by_agent``, ``distribution``. Three of the nine resolve by name and still
-# render an empty report because every prop falls back to its default; these six
-# do not resolve at all. Renaming them would turn this test green and leave the
-# screens just as blank. Closing them means reworking the views to the
-# components, which also means collapsing the three FRT views into the one
-# ResponseTimes screen and the two resolution views into ResolutionTimes.
+# Empty. The advanced reports were the whole of this list; they now render the
+# screens the frontend ships, with the props those screens read. Anything added
+# here needs the reason written against it, and the last test in this file fails
+# if an entry stays after the screen is fixed.
 #
 # This list may shrink. It must never grow.
-KNOWN_BLANK = {
-    "Escalated/Admin/Reports/Cohort",
-    "Escalated/Admin/Reports/FrtByAgent",
-    "Escalated/Admin/Reports/FrtDistribution",
-    "Escalated/Admin/Reports/FrtTrends",
-    "Escalated/Admin/Reports/ResolutionDistribution",
-    "Escalated/Admin/Reports/ResolutionTrends",
-}
+KNOWN_BLANK: set[str] = set()
 
 PAGE_NAME = re.compile(r'"(Escalated/[A-Za-z0-9/_]+)"')
 
