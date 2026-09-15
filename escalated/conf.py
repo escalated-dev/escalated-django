@@ -23,6 +23,8 @@ DEFAULTS = {
     "UI_RENDERER": None,
     "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
     "HOSTED_API_KEY": None,
+    # Verifies X-Escalated-Signature on cloud → site webhooks (Synced mode)
+    "HOSTED_SIGNING_SECRET": None,
     "ALLOW_CUSTOMER_CLOSE": True,
     "AUTO_CLOSE_RESOLVED_AFTER_DAYS": 7,
     "MAX_ATTACHMENTS": 5,

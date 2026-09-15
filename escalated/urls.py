@@ -7,6 +7,7 @@ from escalated.views import (
     advanced_reports,
     agent,
     chat,
+    cloud_webhook,
     customer,
     guest,
     import_views,
@@ -396,8 +397,13 @@ inbound_patterns = [
     path("inbound/<str:adapter_name>/", inbound.inbound_webhook, name="inbound_webhook"),
 ]
 
+# Cloud → site ticket webhook (Synced mode). Verified by X-Escalated-Signature.
+cloud_webhook_patterns = [
+    path("cloud/webhook/", cloud_webhook.cloud_webhook, name="cloud_webhook"),
+]
+
 # Core routes (always registered)
-urlpatterns = list(inbound_patterns) + list(widget_patterns) + list(widget_chat_patterns)
+urlpatterns = list(inbound_patterns) + list(cloud_webhook_patterns) + list(widget_patterns) + list(widget_chat_patterns)
 
 from escalated.newsletter_urls import (  # noqa: E402
     admin_newsletter_patterns,
