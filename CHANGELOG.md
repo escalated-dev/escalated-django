@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-09-15
+
+### Added
+- **Cloud → site webhook receiver.** `POST /support/cloud/webhook/` applies `ticket.updated` and
+  `ticket.status_changed` from cloud.escalated.dev to the local ticket (matched by `reference`),
+  verified with the new `HOSTED_SIGNING_SECRET` and deduplicated by `event_id`. Synced mode is
+  now two-way, as it already was for the Laravel package (v1.8.4).
+
 ## [0.6.3] - 2026-09-15
 
 ### Fixed
