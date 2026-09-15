@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-09-15
+
 ### Fixed
 - **Synced mode never reached the cloud.** `HostedApiClient.emit()` posted to
   `/sync/events`, a route cloud.escalated.dev does not serve, so every
