@@ -1,7 +1,9 @@
 import logging
+import uuid
 from urllib.parse import urljoin
 
 import requests
+from django.utils import timezone
 
 from escalated.conf import get_setting
 
@@ -129,15 +131,22 @@ class HostedApiClient:
 
     # ----- Sync endpoint -----
 
-    def emit(self, event_type, payload):
+    def emit(self, event_type, payload, event_id=None):
         """
-        Emit an event to the cloud for syncing purposes.
-        Used by the SyncedDriver after each local operation.
+        Emit a Synced-mode event to the cloud (POST /events).
+
+        Used by the SyncedDriver after each local operation. The cloud dedupes
+        on ``event_id``, so a retry of the same logical event must reuse it.
         """
         return self._request(
             "POST",
-            "/sync/events",
-            data={"event": event_type, "payload": payload},
+            "/events",
+            data={
+                "event": event_type,
+                "payload": payload,
+                "event_id": event_id or str(uuid.uuid4()),
+                "timestamp": timezone.now().isoformat(),
+            },
         )
 
 

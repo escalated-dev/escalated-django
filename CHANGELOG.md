@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Synced mode never reached the cloud.** `HostedApiClient.emit()` posted to
+  `/sync/events`, a route cloud.escalated.dev does not serve, so every
+  `ticket.*` / `reply.created` event from the `SyncedDriver` was a 404 that the
+  driver logged and dropped. Events now go to `POST /events` with a stable
+  `event_id` and timestamp so the cloud can project them and ignore
+  redeliveries.
+
 ## [0.6.2] - 2026-09-13
 
 ### Fixed
