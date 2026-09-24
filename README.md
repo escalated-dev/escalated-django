@@ -21,6 +21,7 @@
 [![Django](https://img.shields.io/badge/django-4.2+-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/escalated-django)](https://pypi.org/project/escalated-django/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Views](https://hits.sh/github.com/escalated-dev/escalated-django.svg?style=flat&label=views&color=007ec6)](https://hits.sh/github.com/escalated-dev/escalated-django/)
 
 A full-featured, embeddable support ticket system for Django. Drop it into any app — get a complete helpdesk with SLA tracking, escalation rules, agent workflows, and a customer portal. No external services required.
 
