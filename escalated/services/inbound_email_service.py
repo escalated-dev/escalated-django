@@ -7,6 +7,8 @@ from django.contrib.auth import get_user_model
 
 from escalated.conf import get_setting
 from escalated.mail.inbound_message import InboundMessage
+from escalated.mail.message_id_util import parse_ticket_id_from_message_id, verify_reply_to
+from escalated.mail.threading import get_inbound_secret
 from escalated.models import Contact, InboundEmail, Ticket
 
 logger = logging.getLogger("escalated")
@@ -23,9 +25,11 @@ class InboundEmailService:
     Processing flow:
     1. Check for duplicate message_id
     2. Create InboundEmail log record
-    3. Find existing ticket by subject reference pattern
-    4. Look up sender as a registered user, fall back to guest
-    5. Create a new ticket or add a reply via TicketService/driver
+    3. Find an existing ticket (signed Reply-To when a secret is set,
+       otherwise Message-ID headers and the subject reference)
+    4. Reply as the ticket's requester when the sender is that requester;
+       otherwise create a new ticket (registered user, or guest)
+    5. Reopen a resolved/closed ticket on an accepted reply
     6. Handle attachments
     7. Update InboundEmail record with result
     """
@@ -230,41 +234,88 @@ class InboundEmailService:
 
         driver = get_driver()
 
-        # Try to find an existing ticket by subject reference
-        ticket = InboundEmailService._find_ticket_by_reference(message.subject)
+        ticket = InboundEmailService._find_ticket(message)
 
-        # Also try by In-Reply-To / References headers
-        if ticket is None and message.in_reply_to:
-            ticket = InboundEmailService._find_ticket_by_message_id(message.in_reply_to)
-        if ticket is None and message.references:
-            ticket = InboundEmailService._find_ticket_by_references(message.references)
+        # A thread match alone is not enough to post on a ticket: the sender
+        # must also be the ticket's requester, and the reply is posted as that
+        # requester, never as an identity named by the unauthenticated From
+        # header. Anything else becomes a new ticket, so no mail is lost.
+        if ticket is not None and InboundEmailService._is_requester_sender(ticket, message.from_email):
+            author = ticket.requester
+            reply = InboundEmailService._add_reply(driver, ticket, author, message)
 
-        # Resolve sender — try to find a registered user first
-        User = get_user_model()
-        user = None
-        try:
-            user = User.objects.get(email__iexact=message.from_email)
-        except User.DoesNotExist:
-            pass
-        except User.MultipleObjectsReturned:
-            user = User.objects.filter(email__iexact=message.from_email).first()
-
-        if ticket is not None:
-            # Existing ticket — add a reply
-            reply = InboundEmailService._add_reply(driver, ticket, user, message)
+            # Only an accepted reply reopens a resolved or closed ticket.
+            if ticket.status in (Ticket.Status.RESOLVED, Ticket.Status.CLOSED):
+                driver.transition_status(ticket, author, Ticket.Status.REOPENED)
 
             # Handle attachments on the reply
             InboundEmailService._handle_attachments(reply, message.attachments)
 
             return ticket, reply
-        else:
-            # New ticket
-            ticket, reply = InboundEmailService._create_ticket(driver, user, message)
 
-            # Handle attachments on the ticket
-            InboundEmailService._handle_attachments(ticket, message.attachments)
+        if ticket is not None:
+            logger.info(f"Inbound email matched ticket {ticket.reference} but not its requester; opening a new ticket")
 
-            return ticket, reply
+        # New ticket. Resolve the sender as a registered user first.
+        User = get_user_model()
+        user = User.objects.filter(email__iexact=message.from_email).first()
+        ticket, reply = InboundEmailService._create_ticket(driver, user, message)
+
+        # Handle attachments on the ticket
+        InboundEmailService._handle_attachments(ticket, message.attachments)
+
+        return ticket, reply
+
+    @staticmethod
+    def _find_ticket(message: InboundMessage):
+        """
+        Find the ticket an inbound email belongs to, or None.
+
+        With ``EMAIL_INBOUND_SECRET`` configured, outbound mail carries the
+        signed Reply-To (``reply+{id}.{hmac8}@domain``) and only that address
+        links mail to a ticket: Message-IDs and subject references are
+        guessable. Without a secret the unsigned chain is used: our canonical
+        Message-ID in In-Reply-To / References, the subject reference, then
+        Message-IDs of earlier inbound emails.
+        """
+        secret = get_inbound_secret()
+        if secret:
+            ticket_id = verify_reply_to((message.to_email or "").strip(), secret)
+            if ticket_id is None:
+                return None
+            return Ticket.objects.filter(pk=ticket_id).first()
+
+        header_ids = []
+        if message.in_reply_to:
+            header_ids.append(message.in_reply_to.strip())
+        if message.references:
+            header_ids.extend(reversed(message.references.strip().split()))
+
+        for raw in header_ids:
+            ticket_id = parse_ticket_id_from_message_id(raw)
+            if ticket_id is not None:
+                ticket = Ticket.objects.filter(pk=ticket_id).first()
+                if ticket is not None:
+                    return ticket
+
+        ticket = InboundEmailService._find_ticket_by_reference(message.subject or "")
+        if ticket is None and message.in_reply_to:
+            ticket = InboundEmailService._find_ticket_by_message_id(message.in_reply_to)
+        if ticket is None and message.references:
+            ticket = InboundEmailService._find_ticket_by_references(message.references)
+        return ticket
+
+    @staticmethod
+    def _is_requester_sender(ticket, from_email: str | None) -> bool:
+        """Whether From is the ticket's guest email or its requester's email."""
+        sender = (from_email or "").strip().lower()
+        if not sender:
+            return False
+        if ticket.guest_email and ticket.guest_email.strip().lower() == sender:
+            return True
+        requester = ticket.requester if ticket.requester_object_id else None
+        requester_email = getattr(requester, "email", None) or ""
+        return requester_email.strip().lower() == sender
 
     @staticmethod
     def _find_ticket_by_reference(subject: str):
