@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Inbound replies come only from the ticket's requester.** With `EMAIL_INBOUND_SECRET` set, only
+  the signed Reply-To address links mail to a ticket. A matched email is a reply only when `From`
+  is the ticket's guest or requester email, and it is posted as the requester; any other sender
+  gets a new ticket. Accepted replies reopen resolved or closed tickets.
+
 ## [0.6.4] - 2026-09-15
 
 ### Added
