@@ -48,6 +48,7 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 - **Saved views / custom queues** — Save, name, and share filter presets as reusable ticket views
 - **Embeddable support widget** — Lightweight `<script>` widget with KB search, ticket form, and status check
 - **Email threading** — Outbound emails include proper `In-Reply-To` and `References` headers for correct threading in mail clients
+- **Inbound email** — Mailgun, Postmark, SES webhooks and IMAP polling create tickets and replies. See [Inbound email](#inbound-email)
 - **Branded email templates** — Configurable logo, primary color, and footer text for all outbound emails
 - **Real-time broadcasting** — Opt-in broadcasting via Django Channels with automatic polling fallback
 - **Knowledge base toggle** — Enable or disable the public knowledge base from admin settings
@@ -290,11 +291,25 @@ ESCALATED = {
     # Notifications
     "NOTIFICATION_CHANNELS": ["email"],
     "WEBHOOK_URL": None,
+    # Email threading: domain for Message-IDs, secret that signs the Reply-To
+    "EMAIL_DOMAIN": "support.example.com",
+    "EMAIL_INBOUND_SECRET": "",
     # Cloud/Synced mode
     "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
     "HOSTED_API_KEY": None,
 }
 ```
+
+### Inbound email
+
+Inbound mail is matched to a ticket like this:
+
+- **Thread matching**: when `EMAIL_INBOUND_SECRET` is set, outbound mail carries a signed Reply-To (`reply+{id}.{hmac8}@domain`) and only that address links an inbound email to a ticket. Without a secret, the `In-Reply-To` / `References` Message-IDs and the subject reference (e.g. `[ESC-A1B2C3]`) are used instead.
+- **Sender check**: a matched email becomes a reply only when the `From` address is the ticket's requester (the guest email or the requester's email, case-insensitive). It is posted as that requester. Staff identity is never taken from the `From` header, so agents reply in the app.
+- **Anything else** (no match, or a sender who is not the requester) creates a new ticket, so mail is never dropped.
+- **Reopen**: an accepted reply reopens a resolved or closed ticket.
+
+Set a secret in production; Message-IDs and ticket references can be guessed.
 
 ### UUID / string user keys
 
