@@ -1,4 +1,5 @@
 import pytest
+from django.core.cache import cache
 
 from tests.factories import (
     ApiTokenFactory,
@@ -22,6 +23,14 @@ from tests.factories import (
     TicketStatusFactory,
     UserFactory,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_cache():
+    """Rate-limit counters live in the cache; never let them leak between tests."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture
