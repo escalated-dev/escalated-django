@@ -76,6 +76,21 @@ DEFAULTS = {
     "API_RATE_LIMIT": 60,
     "API_TOKEN_EXPIRY_DAYS": None,
     "API_PREFIX": "support/api/v1",
+    # Per-client-IP limits on the unauthenticated guest endpoints (widget and
+    # guest-form ticket submission, guest replies). Over the limit: 429 with
+    # Retry-After. Tickets and replies are counted separately over a 60s
+    # window. Keys set here are merged over these defaults.
+    #   ENABLED: set False only when the host already throttles upstream.
+    #   CACHE: the django.core.cache alias holding the counters. Use a shared
+    #     backend (Redis, Memcached, database) when running several processes.
+    # The client IP is REMOTE_ADDR. Behind a reverse proxy, set REMOTE_ADDR
+    # from your trusted proxies, or every guest shares the proxy's address.
+    "GUEST_RATE_LIMIT": {
+        "ENABLED": True,
+        "TICKETS_PER_MINUTE": 5,
+        "REPLIES_PER_MINUTE": 10,
+        "CACHE": "default",
+    },
     # Host-app authentication callbacks for the general JSON API auth
     # endpoints (consumed by the Flutter app). Each is a callable (or a dotted
     # import path) the host provides; None means the endpoint responds 501.
@@ -143,6 +158,9 @@ def get_setting(name):
                 **value["BUSINESS_HOURS"],
             }
         return merged
+
+    if name == "GUEST_RATE_LIMIT" and isinstance(value, dict):
+        return {**DEFAULTS["GUEST_RATE_LIMIT"], **value}
 
     return value
 

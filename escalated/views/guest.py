@@ -4,6 +4,7 @@ from django.http import HttpResponseForbidden, HttpResponseNotFound
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
 
+from escalated import guest_throttle
 from escalated.conf import get_setting
 from escalated.models import Contact, Department, EscalatedSetting, SatisfactionRating, Ticket
 from escalated.rendering import render_page
@@ -43,6 +44,10 @@ def ticket_store(request):
 
     if request.method != "POST":
         return HttpResponseForbidden(_("Method not allowed"))
+
+    retry_after = guest_throttle.check(request, guest_throttle.TICKET)
+    if retry_after is not None:
+        return guest_throttle.too_many_requests(retry_after)
 
     name = request.POST.get("name", "").strip()
     email = request.POST.get("email", "").strip()
@@ -155,6 +160,11 @@ def ticket_reply(request, token):
     """Handle a guest reply submission."""
     if request.method != "POST":
         return HttpResponseForbidden(_("Method not allowed"))
+
+    # Throttle before the token lookup so requests with a wrong token count too.
+    retry_after = guest_throttle.check(request, guest_throttle.REPLY)
+    if retry_after is not None:
+        return guest_throttle.too_many_requests(retry_after)
 
     try:
         ticket = Ticket.objects.get(guest_token=token)
