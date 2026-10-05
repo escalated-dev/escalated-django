@@ -7,6 +7,7 @@ count too.
 """
 
 import json
+from unittest import mock
 
 import pytest
 from django.conf import settings
@@ -37,6 +38,14 @@ def _guest_ticket(client, ip="203.0.113.1"):
 
 def _guest_reply(client, token, ip="203.0.113.1"):
     return client.post(f"/support/guest/{token}/reply/", data={"body": "Any news?"}, REMOTE_ADDR=ip)
+
+
+@pytest.fixture(autouse=True)
+def _pinned_clock():
+    """The window is a clock-aligned 60s bucket; pin the clock mid-minute so a test never straddles two."""
+    with mock.patch("escalated.guest_throttle.time") as clock:
+        clock.time.return_value = 1_767_268_815.0  # 2026-01-01 12:00:15 UTC
+        yield
 
 
 @pytest.fixture
