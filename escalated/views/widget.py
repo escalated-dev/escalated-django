@@ -15,6 +15,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
+from escalated import guest_throttle
 from escalated.conf import get_setting
 from escalated.models import Article, Contact, EscalatedSetting, Ticket
 
@@ -156,8 +157,9 @@ def widget_create_ticket(request):
     if not EscalatedSetting.get_bool("widget_ticket_creation_enabled", default=True):
         return JsonResponse({"error": "Ticket creation is disabled"}, status=403)
 
-    if _rate_limited(request, scope="widget_create", limit=10, window=60):
-        return _reject()
+    retry_after = guest_throttle.check(request, guest_throttle.TICKET)
+    if retry_after is not None:
+        return guest_throttle.too_many_requests(retry_after, json=True)
 
     try:
         body = json.loads(request.body)
