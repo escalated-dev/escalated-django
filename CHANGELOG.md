@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-08
+
+### Upgrading
+
+- **Only the requester can reply by email.** A matched message is a reply only
+  when `From` is the ticket's guest email or the requester's `email`
+  (case-insensitive), and it is posted as the requester. Mail from anyone else,
+  an agent's address included, opens a new ticket, so agents reply in the app.
+- **Set `ESCALATED["EMAIL_INBOUND_SECRET"]`.** With it set, only the signed
+  Reply-To address links mail to a ticket; `In-Reply-To`, `References` and
+  subject references no longer do.
+- **Accepted email replies reopen resolved and closed tickets.**
+- **Guest endpoints are rate-limited per client IP** (5 tickets and 10 replies
+  a minute) through `ESCALATED["GUEST_RATE_LIMIT"]`. The widget ticket endpoint
+  drops from 10 to 5 a minute. Behind a proxy, set `REMOTE_ADDR` from your
+  trusted proxies or every guest shares one limit. Point `CACHE` at a shared
+  cache when you run more than one process.
+
 ### Added
 - **Per-IP rate limit on guest ticket creation and replies.** The widget and guest-form ticket
   endpoints allow 5 submissions and the guest reply endpoint 10 replies per client IP per minute,
