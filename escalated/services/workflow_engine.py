@@ -106,6 +106,19 @@ class WorkflowEngine:
         field = condition.get("field", "")
         operator = condition.get("operator", "equals")
         expected = condition.get("value")
+        if field == "account":
+            from django.core.exceptions import ValidationError
+
+            from escalated.ticket_access import normalize_account
+
+            actual = {"type": ticket.account_type, "id": ticket.account_id} if ticket.account_type else None
+            if operator in ("is_empty", "is_not_empty"):
+                return (actual is None) if operator == "is_empty" else (actual is not None)
+            try:
+                expected = normalize_account(expected)
+            except ValidationError:
+                return False
+            return {"equals": actual == expected, "not_equals": actual != expected}.get(operator, False)
         actual = self._resolve_field(field, ticket)
         return self._apply_operator(operator, actual, expected)
 
@@ -117,6 +130,8 @@ class WorkflowEngine:
             "department_id": getattr(ticket, "department_id", None),
             "channel": getattr(ticket, "channel", None),
             "ticket_type": getattr(ticket, "ticket_type", None),
+            "account_type": getattr(ticket, "account_type", None),
+            "account_id": getattr(ticket, "account_id", None),
             "subject": ticket.subject,
             "description": ticket.description,
             "sla_breached": getattr(ticket, "sla_first_response_breached", False)

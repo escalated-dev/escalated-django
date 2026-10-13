@@ -22,7 +22,9 @@ class AssignmentService:
         if not department:
             return None
 
-        agents = department.agents.all()
+        from escalated.ticket_access import eligible_agents
+
+        agents = eligible_agents(department.agents.all(), ticket)
         if not agents.exists():
             logger.info(f"No agents in department '{department.name}' for auto-assign on ticket {ticket.reference}")
             return None

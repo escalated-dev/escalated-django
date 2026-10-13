@@ -205,6 +205,9 @@ def tickets_index(request):
         return check
 
     tickets = Ticket.objects.select_related("assigned_to", "department").prefetch_related("tags")
+    from escalated.ticket_access import filter_accounts
+
+    tickets = filter_accounts(tickets, request.GET)
 
     # Apply filters
     status = request.GET.get("status")
@@ -730,6 +733,10 @@ def sla_policies_create(request):
     if request.method == "POST":
         import json
 
+        from escalated.ticket_access import sla_targets
+
+        targets = sla_targets(request.POST)
+
         name = request.POST.get("name", "").strip()
         if not name:
             return render_page(
@@ -757,6 +764,7 @@ def sla_policies_create(request):
             SlaPolicy.objects.filter(is_default=True).update(is_default=False)
 
         SlaPolicy.objects.create(
+            **targets,
             name=name,
             description=request.POST.get("description", ""),
             is_default=is_default,
@@ -790,6 +798,10 @@ def sla_policies_edit(request, policy_id):
     if request.method == "POST":
         import json
 
+        from escalated.ticket_access import sla_targets
+
+        targets = sla_targets(request.POST)
+
         policy.name = request.POST.get("name", policy.name)
         policy.description = request.POST.get("description", policy.description)
         policy.business_hours_only = request.POST.get("business_hours_only", "false") == "true"
@@ -810,6 +822,8 @@ def sla_policies_edit(request, policy_id):
         except (json.JSONDecodeError, TypeError):
             pass
 
+        for field, value in targets.items():
+            setattr(policy, field, value)
         policy.save()
         return redirect("escalated:admin_sla_policies_index")
 

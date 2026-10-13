@@ -13,6 +13,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from escalated.conf import get_table_name
+from escalated.identity_fields import AccountIdentityField
+from escalated.ticket_access import TicketChildManager, TicketLinkManager, scope_ticket_children, scope_tickets
 
 # ---------------------------------------------------------------------------
 # Managers / QuerySets
@@ -84,7 +86,7 @@ class TicketQuerySet(models.QuerySet):
 
 class TicketManager(models.Manager):
     def get_queryset(self):
-        return TicketQuerySet(self.model, using=self._db)
+        return scope_tickets(TicketQuerySet(self.model, using=self._db))
 
     def open(self):
         return self.get_queryset().open()
@@ -146,6 +148,8 @@ class Department(models.Model):
 
 
 class SlaPolicy(models.Model):
+    department = models.ForeignKey(Department, on_delete=models.PROTECT, null=True, blank=True)
+    ticket_type = models.CharField(max_length=20, null=True, blank=True, db_index=True)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, default="")
     is_default = models.BooleanField(default=False)
@@ -261,6 +265,9 @@ class Contact(models.Model):
 
 
 class Ticket(models.Model):
+    account_type = AccountIdentityField(max_length=255, null=True, blank=True)
+    account_id = AccountIdentityField(max_length=255, null=True, blank=True)
+
     class Status(models.TextChoices):
         OPEN = "open", _("Open")
         IN_PROGRESS = "in_progress", _("In Progress")
@@ -406,11 +413,13 @@ class Ticket(models.Model):
     )
 
     objects = TicketManager()
+    unrestricted = models.Manager()  # noqa: DJ012 - explicit trusted-code bypass
 
     class Meta:
         db_table = get_table_name("tickets")
         ordering = ["-created_at"]
         indexes = [
+            models.Index(fields=["account_type", "account_id"], name="escalated_t_account_idx"),
             models.Index(fields=["status"], name="escalated_t_status_idx"),
             models.Index(fields=["priority"], name="escalated_t_priority_idx"),
             models.Index(fields=["reference"], name="escalated_t_reference_idx"),
@@ -423,9 +432,36 @@ class Ticket(models.Model):
         return f"[{self.reference}] {self.subject}"
 
     def save(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+
+        from escalated.ticket_access import account_identity, account_options, resolve_account
+
+        if (
+            self._state.adding
+            and self.account_type is None
+            and self.account_id is None
+            and account_options()["ENABLED"]
+        ):
+            account = account_identity(resolve_account(self.requester))
+            if account:
+                self.account_type, self.account_id = account["type"], account["id"]
+        if (self.account_type is None) != (self.account_id is None):
+            raise ValidationError("Ticket accounts require both account_type and account_id.")
         if not self.reference:
             self.reference = self.generate_reference()
         super().save(*args, **kwargs)
+
+    @property
+    def account(self):
+        from django.apps import apps
+
+        if self.account_type is None or self.account_id is None:
+            return None
+        try:
+            model = apps.get_model(self.account_type)
+        except (LookupError, ValueError):
+            return None
+        return model._default_manager.filter(pk=self.account_id).first()
 
     @classmethod
     def generate_reference(cls):
@@ -433,7 +469,7 @@ class Ticket(models.Model):
         prefix = EscalatedSetting.get("ticket_reference_prefix", "ESC")
         while True:
             ref = f"{prefix}-{uuid.uuid4().hex[:6].upper()}"
-            if not cls.objects.filter(reference=ref).exists():
+            if not cls.unrestricted.filter(reference=ref).exists():
                 return ref
 
     @property
@@ -532,6 +568,16 @@ class Ticket(models.Model):
             object_id=object_id,
             defaults={"role": role, "position": position},
         )
+        from escalated.ticket_access import account_identity, resolve_account
+
+        account = account_identity(resolve_account(subject))
+        if account:
+            # Conditional update prevents stale instances from overwriting an account.
+            Ticket.unrestricted.filter(pk=self.pk, account_type__isnull=True, account_id__isnull=True).update(
+                account_type=account["type"], account_id=account["id"]
+            )
+            identity = Ticket.unrestricted.filter(pk=self.pk).values("account_type", "account_id").get()
+            self.account_type, self.account_id = identity["account_type"], identity["account_id"]
         return link
 
     def detach_subject(self, subject) -> int:
@@ -636,6 +682,8 @@ class TicketSubject(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = TicketChildManager()
+
     class Meta:
         db_table = get_table_name("ticket_subjects")
         ordering = ["position", "id"]
@@ -684,6 +732,8 @@ class Reply(models.Model):
         content_type_field="content_type",
         object_id_field="object_id",
     )
+
+    objects = TicketChildManager()
 
     class Meta:
         db_table = get_table_name("replies")
@@ -815,6 +865,8 @@ class TicketActivity(models.Model):
     type = models.CharField(max_length=30, choices=ActivityType.choices)
     properties = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = TicketChildManager()
 
     class Meta:
         db_table = get_table_name("activities")
@@ -965,6 +1017,8 @@ class SatisfactionRating(models.Model):
     rated_by = GenericForeignKey("rated_by_content_type", "rated_by_object_id")
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = TicketChildManager()
 
     class Meta:
         db_table = get_table_name("satisfaction_ratings")
@@ -1482,6 +1536,8 @@ class TicketLink(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = TicketLinkManager()
+
     class Meta:
         db_table = get_table_name("ticket_links")
         unique_together = [("parent_ticket", "child_ticket", "link_type")]
@@ -1502,7 +1558,7 @@ class SideConversationQuerySet(models.QuerySet):
 
 class SideConversationManager(models.Manager):
     def get_queryset(self):
-        return SideConversationQuerySet(self.model, using=self._db)
+        return scope_ticket_children(SideConversationQuerySet(self.model, using=self._db))
 
     def open(self):
         return self.get_queryset().open()
@@ -2365,7 +2421,7 @@ class ChatSessionQuerySet(models.QuerySet):
 
 class ChatSessionManager(models.Manager):
     def get_queryset(self):
-        return ChatSessionQuerySet(self.model, using=self._db)
+        return scope_ticket_children(ChatSessionQuerySet(self.model, using=self._db))
 
     def waiting(self):
         return self.get_queryset().waiting()

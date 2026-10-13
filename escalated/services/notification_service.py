@@ -15,9 +15,15 @@ logger = logging.getLogger("escalated")
 
 
 class NotificationService:
-    """
-    Sends notifications through configured channels (email, webhook).
-    """
+    """Sends notifications through configured channels (email, webhook)."""
+
+    @staticmethod
+    def _recipient_email(user, ticket):
+        from escalated.ticket_access import allows_ticket
+
+        if user is None or not allows_ticket(user, ticket):
+            return None
+        return getattr(user, "email", None)
 
     @staticmethod
     def notify_ticket_created(ticket):
@@ -75,7 +81,7 @@ class NotificationService:
 
             # Notify assigned agent if customer replied
             if ticket.assigned_to and reply.author != ticket.assigned_to:
-                agent_email = getattr(ticket.assigned_to, "email", None)
+                agent_email = NotificationService._recipient_email(ticket.assigned_to, ticket)
                 if agent_email:
                     NotificationService._send_email(
                         subject="[{}] {}".format(
@@ -121,7 +127,7 @@ class NotificationService:
         channels = get_setting("NOTIFICATION_CHANNELS")
 
         if "email" in channels:
-            agent_email = getattr(agent, "email", None)
+            agent_email = NotificationService._recipient_email(agent, ticket)
             if agent_email:
                 NotificationService._send_email(
                     subject="[{}] {}".format(
@@ -196,7 +202,7 @@ class NotificationService:
         channels = get_setting("NOTIFICATION_CHANNELS")
 
         if "email" in channels and ticket.assigned_to:
-            agent_email = getattr(ticket.assigned_to, "email", None)
+            agent_email = NotificationService._recipient_email(ticket.assigned_to, ticket)
             if agent_email:
                 NotificationService._send_email(
                     subject="[SLA BREACH] [{}] {}".format(
@@ -227,7 +233,7 @@ class NotificationService:
         channels = get_setting("NOTIFICATION_CHANNELS")
 
         if "email" in channels and ticket.assigned_to:
-            agent_email = getattr(ticket.assigned_to, "email", None)
+            agent_email = NotificationService._recipient_email(ticket.assigned_to, ticket)
             if agent_email:
                 NotificationService._send_email(
                     subject=f"[ESCALATED] [{ticket.reference}] {ticket.subject}",
@@ -295,7 +301,7 @@ class NotificationService:
             for follower in followers:
                 if follower.pk in exclude_ids:
                     continue
-                follower_email = getattr(follower, "email", None)
+                follower_email = NotificationService._recipient_email(follower, ticket)
                 if follower_email:
                     NotificationService._send_email(
                         subject=subject,
@@ -312,7 +318,7 @@ class NotificationService:
         try:
             requester = ticket.requester
             if requester:
-                return getattr(requester, "email", None)
+                return NotificationService._recipient_email(requester, ticket)
         except Exception:
             pass
         return None

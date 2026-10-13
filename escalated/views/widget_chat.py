@@ -98,7 +98,7 @@ def start_chat(request):
 
     # Try to auto-assign an agent
     routing_service = ChatRoutingService()
-    agent = routing_service.find_available_agent()
+    agent = routing_service.find_available_agent(ticket=ticket)
     if agent:
         session_service.assign_agent(session, agent)
         session.refresh_from_db()

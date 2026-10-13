@@ -42,6 +42,8 @@ class TicketPolicy:
 
     @staticmethod
     def assign(user, ticket):
+        from escalated.ticket_access import allows_ticket
+
         if not user or not user.is_authenticated:
             return False
-        return is_admin(user) or is_agent(user)
+        return (is_admin(user) or is_agent(user)) and allows_ticket(user, ticket)

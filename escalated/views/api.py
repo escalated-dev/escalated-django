@@ -234,6 +234,9 @@ def ticket_list(request):
                   search, sla_breached, following, sort_by, sort_dir, per_page, page
     """
     tickets = Ticket.objects.select_related("assigned_to", "department").prefetch_related("tags")
+    from escalated.ticket_access import filter_accounts
+
+    tickets = filter_accounts(tickets, request.GET)
 
     # Filters
     status = request.GET.get("status")

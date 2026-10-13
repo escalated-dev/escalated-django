@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in department and account ticket visibility across HTTP/API queries,
+  policies, reports, bulk actions, widgets, chat and notification recipients.
+- Nullable polymorphic account identities with host resolver hooks, account
+  filters, and account/type conditions in routing rules.
+- Optional department/type SLA targets with deterministic selection and
+  unchanged deadlines when a ticket moves departments.
+
 ## [0.7.0] - 2026-10-08
 
 ### Upgrading

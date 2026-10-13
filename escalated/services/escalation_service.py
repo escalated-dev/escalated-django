@@ -81,6 +81,21 @@ class EscalationService:
                 return False
 
         # Check additional conditions
+        from django.core.exceptions import ValidationError
+
+        from escalated.ticket_access import normalize_account
+
+        if "account" in conditions:
+            try:
+                account = normalize_account(conditions["account"])
+            except ValidationError:
+                return False
+            if ticket.account_type != account["type"] or ticket.account_id != account["id"]:
+                return False
+        for field in ("ticket_type", "account_type", "account_id"):
+            if field in conditions and str(getattr(ticket, field)) != str(conditions[field]):
+                return False
+
         if "status" in conditions:
             allowed_statuses = conditions["status"]
             if isinstance(allowed_statuses, str):

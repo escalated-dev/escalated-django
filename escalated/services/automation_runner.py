@@ -61,6 +61,18 @@ class AutomationRunner:
                     query = query.filter(assigned_to__isnull=False)
             elif field == "ticket_type":
                 query = query.filter(ticket_type=value)
+            elif field in ("department_id", "account_type", "account_id"):
+                query = query.filter(**{field: value})
+            elif field == "account":
+                from django.core.exceptions import ValidationError
+
+                from escalated.ticket_access import normalize_account
+
+                try:
+                    account = normalize_account(value)
+                except ValidationError:
+                    return query.none()
+                query = query.filter(account_type=account["type"], account_id=account["id"])
             elif field == "subject_contains":
                 query = query.filter(subject__icontains=value)
 

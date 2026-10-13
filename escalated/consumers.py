@@ -13,6 +13,9 @@ except ImportError:
     HAS_CHANNELS = False
 
 if HAS_CHANNELS:
+    from channels.db import database_sync_to_async
+
+    from escalated.ticket_access import can_access_chat
 
     class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
@@ -33,15 +36,36 @@ if HAS_CHANNELS:
 
         async def connect(self):
             self.session_id = self.scope["url_route"]["kwargs"]["session_id"]
+            from urllib.parse import parse_qs
+
+            self.guest_session = parse_qs(self.scope.get("query_string", b"").decode()).get("session", [None])[0]
+            if not await self._can_access():
+                await self.close(code=4403)
+                return
             self.room_group_name = f"chat_{self.session_id}"
 
             await self.channel_layer.group_add(self.room_group_name, self.channel_name)
             await self.accept()
 
         async def disconnect(self, close_code):
-            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+            if hasattr(self, "room_group_name"):
+                await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+        async def _can_access(self):
+            return await database_sync_to_async(can_access_chat)(
+                self.scope.get("user"), self.session_id, self.guest_session
+            )
+
+        async def send_json(self, content, close=False):
+            if not await self._can_access():
+                await self.close(code=4403)
+                return
+            await super().send_json(content, close=close)
 
         async def receive_json(self, content):
+            if not await self._can_access():
+                await self.close(code=4403)
+                return
             msg_type = content.get("type", "")
 
             if msg_type == "chat.message":

@@ -1,6 +1,7 @@
-from django.urls import include, path
+from django.urls import include
 
 from escalated.conf import get_setting
+from escalated.ticket_access import path
 from escalated.views import (
     admin,
     admin_plugins,

@@ -235,6 +235,6 @@ def test_route_is_registered_with_ui_disabled():
             reload(urls)
             match = resolve("/cloud/webhook/", urlconf=tuple(urls.urlpatterns))
             assert match.url_name == "cloud_webhook"
-            assert match.func is cloud_webhook.cloud_webhook
+            assert match.func.__wrapped__ is cloud_webhook.cloud_webhook
     finally:
         reload(urls)

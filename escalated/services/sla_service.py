@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.utils import timezone
 
 from escalated.conf import get_setting
@@ -16,6 +17,44 @@ class SlaService:
     """
 
     @staticmethod
+    def select_policy(ticket):
+        policies = SlaPolicy.objects.filter(is_active=True)
+        if get_setting("SLA").get("TARGETED", False):
+            policies = (
+                policies.filter(
+                    Q(department_id__isnull=True) | Q(department_id=ticket.department_id),
+                    Q(ticket_type__isnull=True) | Q(ticket_type=ticket.ticket_type),
+                    Q(department_id__isnull=False) | Q(ticket_type__isnull=False) | Q(is_default=True),
+                )
+                .annotate(
+                    specificity=Case(
+                        When(department_id__isnull=False, ticket_type__isnull=False, then=Value(0)),
+                        When(department_id__isnull=False, then=Value(1)),
+                        When(ticket_type__isnull=False, then=Value(2)),
+                        default=Value(3),
+                        output_field=IntegerField(),
+                    )
+                )
+                .order_by("specificity", "pk")
+            )
+        else:
+            policies = policies.filter(is_default=True, department_id__isnull=True, ticket_type__isnull=True).order_by(
+                "pk"
+            )
+        return policies.first()
+
+    @staticmethod
+    def attach_default_policy(ticket):
+        """Explicitly select again; department/type changes alone preserve deadlines."""
+        if not get_setting("SLA").get("ENABLED", True):
+            return
+        policy = SlaService.select_policy(ticket)
+        if policy:
+            ticket.sla_policy = policy
+            SlaService.apply_sla_deadlines(ticket)
+            ticket.save(update_fields=["sla_policy", "first_response_due_at", "resolution_due_at", "updated_at"])
+
+    @staticmethod
     def apply_sla_deadlines(ticket):
         """
         Apply SLA deadlines to a ticket based on its SLA policy and priority.
@@ -26,7 +65,7 @@ class SlaService:
 
         policy = ticket.sla_policy
         priority = ticket.priority
-        now = timezone.now()
+        now = (ticket.created_at if get_setting("SLA").get("TARGETED", False) else None) or timezone.now()
 
         # First response deadline
         first_response_hours = policy.get_first_response_hours(priority)

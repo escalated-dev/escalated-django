@@ -5,8 +5,7 @@ All routes are mounted under the configured API_PREFIX (default: support/api/v1)
 Authentication and rate limiting are handled by middleware.
 """
 
-from django.urls import path
-
+from escalated.ticket_access import path
 from escalated.views import admin_api_tokens, api, api_auth
 
 app_name = "escalated_api"

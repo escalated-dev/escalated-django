@@ -48,10 +48,14 @@ class LocalDriver:
                 description=data["description"],
                 priority=data.get("priority", Ticket.Priority.MEDIUM),
                 channel=data.get("channel", "web"),
+                ticket_type=data.get("ticket_type", Ticket.TicketType.QUESTION),
                 department_id=data.get("department_id"),
                 metadata=data.get("metadata"),
             )
             ticket.save()
+
+            for subject in data.get("subjects", []):
+                ticket.attach_subject(subject)
 
             # Attach tags if provided
             tag_ids = data.get("tag_ids", [])
