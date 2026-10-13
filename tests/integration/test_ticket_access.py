@@ -10,6 +10,31 @@ from tests.factories import DepartmentFactory, TicketFactory
 pytestmark = pytest.mark.django_db
 
 
+@pytest.mark.parametrize("field", ["account_type", "account_id"])
+def test_account_identity_preserves_trailing_spaces(settings, agent_user, field):
+    from types import SimpleNamespace
+
+    from escalated.services.automation_runner import AutomationRunner
+    from escalated.ticket_access import ticket_access
+
+    company = DepartmentFactory()
+    identity = {"account_type": "escalated.Department", "account_id": str(company.pk)}
+    exact = TicketFactory(**identity)
+    padded = TicketFactory(**{**identity, field: identity[field] + " "})
+    assert list(Ticket.objects.filter(**identity).values_list("pk", flat=True)) == [exact.pk]
+    assert list(Ticket.objects.exclude(**identity).values_list("pk", flat=True)) == [padded.pk]
+    rule = SimpleNamespace(
+        conditions=[{"field": "account", "value": {"type": identity["account_type"], "id": identity["account_id"]}}]
+    )
+    assert list(AutomationRunner()._find_matching_tickets(rule).values_list("pk", flat=True)) == [exact.pk]
+    settings.ESCALATED = {
+        **settings.ESCALATED,
+        "ACCOUNTS": {"ENABLED": True, "SCOPE_AGENTS": True, "RESOLVER": lambda model: company},
+    }
+    with ticket_access(agent_user):
+        assert list(Ticket.objects.values_list("pk", flat=True)) == [exact.pk]
+
+
 @pytest.fixture
 def access_setup(settings, agent_user):
     settings.ESCALATED = {**settings.ESCALATED, "VISIBILITY": "department"}
