@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Compare account identities exactly on MySQL, including trailing spaces, in visibility, filters, and routing.
+
 ### Added
 
 - Opt-in department and account ticket visibility across HTTP/API queries,
