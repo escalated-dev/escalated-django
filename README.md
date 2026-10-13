@@ -772,3 +772,7 @@ query.
 ## License
 
 MIT - Copyright (c) Escalated.dev. See [LICENSE](LICENSE).
+
+## Ticket access and routing
+
+See [ticket access and routing](docs/ticket-access-and-routing.md) for opt-in department/account visibility, host account resolver hooks, and targeted SLAs.

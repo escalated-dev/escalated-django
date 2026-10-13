@@ -44,24 +44,13 @@ def on_ticket_created(sender, ticket, user, **kwargs):
     if ImportContext.is_importing():
         return
 
-    from escalated.models import SlaPolicy, TicketActivity
+    from escalated.models import TicketActivity
     from escalated.services.notification_service import NotificationService
     from escalated.services.sla_service import SlaService
 
     # Attach default SLA policy if none set
     if not ticket.sla_policy:
-        default_policy = SlaPolicy.objects.filter(is_default=True, is_active=True).first()
-        if default_policy:
-            ticket.sla_policy = default_policy
-            SlaService.apply_sla_deadlines(ticket)
-            ticket.save(
-                update_fields=[
-                    "sla_policy",
-                    "first_response_due_at",
-                    "resolution_due_at",
-                    "updated_at",
-                ]
-            )
+        SlaService.attach_default_policy(ticket)
 
     # Log activity
     TicketActivity.objects.create(

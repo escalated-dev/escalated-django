@@ -5,6 +5,9 @@ def get_driver():
     """
     Return the appropriate driver instance based on the ESCALATED MODE setting.
     """
+    from escalated.ticket_access import validate_options
+
+    validate_options()
     mode = get_setting("MODE")
     if mode == "self_hosted":
         from escalated.drivers.local import LocalDriver

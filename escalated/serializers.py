@@ -5,6 +5,8 @@ suitable for Inertia.js props. No DRF dependency required.
 
 from django.utils.timesince import timesince
 
+from escalated.ticket_access import serialize_account
+
 
 def _format_dt(dt):
     """Format a datetime for JSON output, or return None."""
@@ -44,6 +46,8 @@ class TicketSerializer:
         data = {
             "id": ticket.pk,
             "reference": ticket.reference,
+            "ticket_type": ticket.ticket_type,
+            **serialize_account(ticket),
             "subject": ticket.subject,
             "description": ticket.description,
             "status": ticket.status,
@@ -224,6 +228,8 @@ class SlaPolicySerializer:
         return {
             "id": policy.pk,
             "name": policy.name,
+            "department_id": policy.department_id,
+            "ticket_type": policy.ticket_type,
             "description": policy.description,
             "is_default": policy.is_default,
             "first_response_hours": policy.first_response_hours,
@@ -564,6 +570,8 @@ class TicketLinkSerializer:
             "ticket": {
                 "id": ticket.pk,
                 "reference": ticket.reference,
+                "ticket_type": ticket.ticket_type,
+                **serialize_account(ticket),
                 "subject": ticket.subject,
                 "status": ticket.status,
                 "type": getattr(ticket, "type", "question"),

@@ -94,6 +94,9 @@ def ticket_list(request):
         return check
 
     tickets = Ticket.objects.select_related("assigned_to", "department").prefetch_related("tags")
+    from escalated.ticket_access import filter_accounts
+
+    tickets = filter_accounts(tickets, request.GET)
 
     # Apply filters
     status = request.GET.get("status")

@@ -6,7 +6,7 @@ from escalated.models import AgentProfile, ChatRoutingRule, ChatSession
 class ChatRoutingService:
     """Service for routing chats to available agents."""
 
-    def find_available_agent(self, department=None):
+    def find_available_agent(self, department=None, ticket=None):
         """
         Find an available agent based on routing rules.
 
@@ -27,6 +27,10 @@ class ChatRoutingService:
         # Filter out agents at capacity
         available = []
         for agent in agents:
+            from escalated.ticket_access import allows_ticket
+
+            if ticket is not None and not allows_ticket(agent, ticket):
+                continue
             active_count = ChatSession.objects.filter(
                 agent=agent,
                 status=ChatSession.Status.ACTIVE,

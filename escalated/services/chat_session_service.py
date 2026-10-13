@@ -49,6 +49,12 @@ class ChatSessionService:
         Returns:
             ChatSession: The updated session.
         """
+        from django.core.exceptions import ValidationError
+
+        from escalated.ticket_access import allows_ticket
+
+        if not allows_ticket(agent, session.ticket):
+            raise ValidationError("The agent cannot access this ticket.")
         session.agent = agent
         session.status = ChatSession.Status.ACTIVE
         session.save(update_fields=["agent", "status", "updated_at"])
@@ -93,6 +99,12 @@ class ChatSessionService:
         Returns:
             ChatSession: The updated session.
         """
+        from django.core.exceptions import ValidationError
+
+        from escalated.ticket_access import allows_ticket
+
+        if not allows_ticket(to_agent, session.ticket):
+            raise ValidationError("The agent cannot access this ticket.")
         session.agent = to_agent
         session.save(update_fields=["agent", "updated_at"])
 

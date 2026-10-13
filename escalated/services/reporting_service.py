@@ -86,10 +86,12 @@ class ReportingService:
         from escalated.models import Ticket
 
         User = get_user_model()
-        agents = User.objects.filter(
-            escalated_assigned_tickets__created_at__gte=start,
-            escalated_assigned_tickets__created_at__lte=end,
-        ).distinct()
+        agent_ids = list(
+            Ticket.objects.filter(created_at__gte=start, created_at__lte=end, assigned_to_id__isnull=False)
+            .values_list("assigned_to_id", flat=True)
+            .distinct()
+        )
+        agents = User.objects.filter(pk__in=agent_ids)
 
         results = []
         for agent in agents:

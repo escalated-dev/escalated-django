@@ -42,17 +42,22 @@ class SkillRoutingService:
             .values_list("user_id", flat=True)
         )
 
-        return (
-            User.objects.filter(pk__in=eligible_user_ids)
-            .annotate(
-                matched_proficiency_sum=Sum(
-                    "agentskill__proficiency",
-                    filter=Q(agentskill__skill_id__in=required_skill_ids),
-                ),
-                open_tickets_count=Count(
-                    "escalated_assigned_tickets",
-                    filter=~Q(escalated_assigned_tickets__status__in=["resolved", "closed"]),
-                ),
-            )
-            .order_by("-matched_proficiency_sum", "open_tickets_count")
+        from escalated.ticket_access import eligible_agents
+
+        return eligible_agents(
+            (
+                User.objects.filter(pk__in=eligible_user_ids)
+                .annotate(
+                    matched_proficiency_sum=Sum(
+                        "agentskill__proficiency",
+                        filter=Q(agentskill__skill_id__in=required_skill_ids),
+                    ),
+                    open_tickets_count=Count(
+                        "escalated_assigned_tickets",
+                        filter=~Q(escalated_assigned_tickets__status__in=["resolved", "closed"]),
+                    ),
+                )
+                .order_by("-matched_proficiency_sum", "open_tickets_count")
+            ),
+            ticket,
         )

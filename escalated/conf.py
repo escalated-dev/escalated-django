@@ -3,6 +3,8 @@ import os
 from django.conf import settings
 
 DEFAULTS = {
+    "VISIBILITY": "all",
+    "ACCOUNTS": {"ENABLED": False, "SCOPE_AGENTS": False, "RESOLVER": None},
     "MODE": "self_hosted",
     "USER_MODEL": None,  # Falls back to settings.AUTH_USER_MODEL
     "TABLE_PREFIX": "escalated_",
@@ -40,6 +42,7 @@ DEFAULTS = {
     "TICKET_SUBJECT_TYPES": [],
     "SLA": {
         "ENABLED": True,
+        "TARGETED": False,
         "BUSINESS_HOURS_ONLY": False,
         "BUSINESS_HOURS": {
             "START": "09:00",

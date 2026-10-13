@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 
 from escalated.models import Department
+from escalated.ticket_access import allows_ticket
 
 
 def is_agent(user):
@@ -46,6 +47,9 @@ def can_view_ticket(user, ticket):
     if not user or not user.is_authenticated:
         return False
 
+    if not allows_ticket(user, ticket):
+        return False
+
     if is_admin(user):
         return True
 
@@ -77,6 +81,9 @@ def can_update_ticket(user, ticket):
     if not user or not user.is_authenticated:
         return False
 
+    if not allows_ticket(user, ticket):
+        return False
+
     if is_admin(user):
         return True
 
@@ -95,6 +102,9 @@ def can_reply_ticket(user, ticket):
     department agents, and admins can reply.
     """
     if not user or not user.is_authenticated:
+        return False
+
+    if not allows_ticket(user, ticket):
         return False
 
     if is_admin(user):
@@ -118,6 +128,9 @@ def can_add_note(user, ticket):
     if not user or not user.is_authenticated:
         return False
 
+    if not allows_ticket(user, ticket):
+        return False
+
     return is_admin(user) or is_agent(user)
 
 
@@ -127,6 +140,9 @@ def can_close_ticket(user, ticket):
     Customers can close only if ALLOW_CUSTOMER_CLOSE is True.
     """
     if not user or not user.is_authenticated:
+        return False
+
+    if not allows_ticket(user, ticket):
         return False
 
     if is_admin(user) or is_agent(user):

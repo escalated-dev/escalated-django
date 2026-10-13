@@ -4,6 +4,7 @@ matches the Laravel API response format.
 """
 
 from escalated.serializers import _format_dt, _human_dt
+from escalated.ticket_access import serialize_account
 
 
 class ApiTicketCollectionSerializer:
@@ -17,6 +18,8 @@ class ApiTicketCollectionSerializer:
         return {
             "id": ticket.pk,
             "reference": ticket.reference,
+            "ticket_type": ticket.ticket_type,
+            **serialize_account(ticket),
             "subject": ticket.subject,
             "status": ticket.status,
             "status_label": ticket.get_status_display(),
@@ -67,6 +70,8 @@ class ApiTicketDetailSerializer:
         data = {
             "id": ticket.pk,
             "reference": ticket.reference,
+            "ticket_type": ticket.ticket_type,
+            **serialize_account(ticket),
             "subject": ticket.subject,
             "description": ticket.description,
             "status": ticket.status,

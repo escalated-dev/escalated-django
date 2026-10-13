@@ -88,6 +88,11 @@ def get_pending_events(channel):
 
     Useful for testing and for simple polling endpoints.
     """
+    from escalated.ticket_access import can_access_channel, current_actor, is_restricted
+
+    actor = current_actor()
+    if is_restricted(actor) and not can_access_channel(actor, channel):
+        return []
     cache_key = f"escalated.broadcast.{channel}"
     events = cache.get(cache_key, [])
     cache.delete(cache_key)
