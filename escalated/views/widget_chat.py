@@ -17,6 +17,7 @@ from escalated.models import ChatSession, EscalatedSetting
 from escalated.services.chat_availability_service import ChatAvailabilityService
 from escalated.services.chat_routing_service import ChatRoutingService
 from escalated.services.chat_session_service import ChatSessionService
+from escalated.widget_embed import WidgetMetadata
 
 
 def _rate_limited(request, scope="widget_chat", limit=None, window=60):
@@ -86,6 +87,9 @@ def start_chat(request):
         errors["name"] = "Name is required"
     if not email:
         errors["email"] = "Email is required"
+    metadata_error = WidgetMetadata.error(body.get("metadata"))
+    if metadata_error:
+        errors["metadata"] = metadata_error
     if errors:
         return JsonResponse({"errors": errors}, status=400)
 
@@ -93,7 +97,7 @@ def start_chat(request):
     ticket, session = session_service.start_chat(
         name=name,
         email=email,
-        metadata=body.get("metadata"),
+        metadata=WidgetMetadata.clean(body.get("metadata"), request),
     )
 
     # Try to auto-assign an agent

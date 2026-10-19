@@ -1,7 +1,8 @@
 from django.urls import include
+from django.urls import path as django_path
 
 from escalated.conf import get_setting
-from escalated.ticket_access import path
+from escalated.ticket_access import path, ticket_access_view
 from escalated.views import (
     admin,
     admin_plugins,
@@ -18,6 +19,7 @@ from escalated.views import (
     widget_chat,
     workflows,
 )
+from escalated.widget_embed import widget_cors
 
 app_name = "escalated"
 
@@ -374,24 +376,34 @@ chat_patterns = [
     path("agent/chat/<int:session_id>/typing/", chat.update_typing, name="agent_chat_typing"),
 ]
 
+
+def widget_path(route, view, name):
+    """A widget route: CORS for allowed embedding sites, outside the access context."""
+    return django_path(route, widget_cors(ticket_access_view(view)), name=name)
+
+
 # Widget public API (no authentication)
 widget_patterns = [
-    path("widget/config/", widget.widget_config, name="widget_config"),
-    path("widget/articles/search/", widget.widget_article_search, name="widget_article_search"),
-    path("widget/articles/<int:article_id>/", widget.widget_article_detail, name="widget_article_detail"),
-    path("widget/tickets/create/", widget.widget_create_ticket, name="widget_create_ticket"),
-    path("widget/tickets/lookup/", widget.widget_lookup_ticket, name="widget_lookup_ticket"),
+    widget_path("widget/config/", widget.widget_config, name="widget_config"),
+    widget_path("widget/articles/search/", widget.widget_article_search, name="widget_article_search"),
+    widget_path("widget/articles/<int:article_id>/", widget.widget_article_detail, name="widget_article_detail"),
+    widget_path("widget/tickets/create/", widget.widget_create_ticket, name="widget_create_ticket"),
+    widget_path("widget/tickets/lookup/", widget.widget_lookup_ticket, name="widget_lookup_ticket"),
 ]
 
 # Widget chat API (no authentication)
 widget_chat_patterns = [
-    path("widget/chat/availability/", widget_chat.chat_availability, name="widget_chat_availability"),
-    path("widget/chat/start/", widget_chat.start_chat, name="widget_chat_start"),
-    path("widget/chat/message/", widget_chat.send_message, name="widget_chat_message"),
-    path("widget/chat/typing/", widget_chat.update_typing, name="widget_chat_typing"),
-    path("widget/chat/end/", widget_chat.end_chat, name="widget_chat_end"),
-    path("widget/chat/rate/", widget_chat.rate_chat, name="widget_chat_rate"),
+    widget_path("widget/chat/availability/", widget_chat.chat_availability, name="widget_chat_availability"),
+    widget_path("widget/chat/start/", widget_chat.start_chat, name="widget_chat_start"),
+    widget_path("widget/chat/message/", widget_chat.send_message, name="widget_chat_message"),
+    widget_path("widget/chat/typing/", widget_chat.update_typing, name="widget_chat_typing"),
+    widget_path("widget/chat/end/", widget_chat.end_chat, name="widget_chat_end"),
+    widget_path("widget/chat/rate/", widget_chat.rate_chat, name="widget_chat_rate"),
 ]
+
+# The standalone widget bundle, loaded with a <script> tag on any site.
+if get_setting("WIDGET_SERVE_SCRIPT"):
+    widget_patterns.insert(0, django_path("widget/embed.js", widget.widget_embed_script, name="widget_embed_script"))
 
 # Inbound email webhook (no authentication — external services POST here)
 inbound_patterns = [

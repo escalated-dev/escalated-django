@@ -9,6 +9,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Embed the widget on other sites.** List the sites in
+  `ESCALATED["WIDGET_ALLOWED_ORIGINS"]` or the `widget_allowed_origins` admin
+  setting (origins such as `https://shop.example.com`, or
+  `https://*.example.com` for subdomains). For those origins the widget and
+  widget chat routes answer CORS preflights, add `Access-Control-Allow-Origin`
+  to every response (including 400, 403 and 429), and run as an anonymous
+  guest even when the browser is signed in. Other origins and same-origin
+  requests are unchanged. `GET /support/widget/embed.js` serves the standalone
+  bundle (`WIDGET_SERVE_SCRIPT`). Widget tickets and chats store the page's
+  sanitised `metadata`, with `embedded_on` set from the request's Origin, and
+  `/widget/config/` returns `accepts_metadata: true`. See
+  `docs/embedding-the-widget.md`.
 - Opt-in department and account ticket visibility across HTTP/API queries,
   policies, reports, bulk actions, widgets, chat and notification recipients.
 - Nullable polymorphic account identities with host resolver hooks, account
