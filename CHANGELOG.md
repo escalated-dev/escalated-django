@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- The bundled widget is now `@escalated-dev/escalated` 0.12.2. It hides its Check Status tab when `/config` returns `status_lookup_enabled: false`.
+
 ### Security
 - Removed `GET /widget/tickets/lookup/?reference=&email=`. It returned the
   ticket's `guest_token` to anyone who knew the reference and claimed the
