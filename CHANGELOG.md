@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-10-19
+
 ### Fixed
 - The package can be published to PyPI again. It no longer depends on
   `escalated-locale` through a git URL, which PyPI rejects
