@@ -150,16 +150,6 @@ def test_api_token_list_detail_and_mutation(access_setup, rf):
             assert {row["id"] for row in json.loads(response.content)["data"]} == {visible.pk}
 
 
-def test_widget_lookup_honors_authenticated_agent_scope(client, access_setup):
-    agent, visible, hidden, unassigned = access_setup
-    Ticket.objects.filter(pk=hidden.pk).update(guest_email="guest@example.test", guest_token="secret")
-    client.force_login(agent)
-    response = client.get(
-        reverse("escalated:widget_lookup_ticket"), data={"reference": hidden.reference, "email": "guest@example.test"}
-    )
-    assert response.status_code == 404
-
-
 def test_account_and_department_intersect_with_type_identity(settings, access_setup):
     from escalated.ticket_access import ticket_access
 

@@ -272,21 +272,27 @@ class TestWidgetCreateTicket:
 
 
 @pytest.mark.django_db
-class TestWidgetLookupTicket:
-    def test_lookup_by_reference_and_email(self, client):
+class TestNoEmailLookup:
+    """A claimed email address must never unlock a ticket (canonical guest policy)."""
+
+    def test_the_email_lookup_route_is_gone(self, client):
         ticket = TicketFactory(guest_email="john@example.com")
 
         response = client.get(f"/support/widget/tickets/lookup/?reference={ticket.reference}&email=john@example.com")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["ticket"]["reference"] == ticket.reference
-
-    def test_wrong_email_returns_404(self, client):
-        ticket = TicketFactory(guest_email="john@example.com")
-
-        response = client.get(f"/support/widget/tickets/lookup/?reference={ticket.reference}&email=wrong@example.com")
         assert response.status_code == 404
 
-    def test_missing_params(self, client):
-        response = client.get("/support/widget/tickets/lookup/")
-        assert response.status_code == 400
+    def test_no_public_endpoint_returns_a_token_for_reference_and_email(self, client):
+        ticket = TicketFactory(guest_email="john@example.com", guest_token="g" * 64)
+        query = {"reference": ticket.reference, "email": "john@example.com"}
+        attempts = [
+            client.get("/support/widget/tickets/lookup/", query),
+            client.get("/support/widget/tickets/lookup", query),
+            client.get(f"/support/widget/tickets/{ticket.reference}", {"email": "john@example.com"}),
+            client.get(f"/support/widget/tickets/{ticket.reference}/", {"email": "john@example.com"}),
+            client.post("/support/widget/lookup", data=json.dumps(query), content_type="application/json"),
+            client.post("/support/widget/lookup/", data=json.dumps(query), content_type="application/json"),
+            client.get("/support/widget/lookup", query),
+        ]
+        for response in attempts:
+            assert response.status_code >= 400, response.request["PATH_INFO"]
+            assert ticket.guest_token.encode() not in response.content

@@ -22,7 +22,7 @@ superusers retain full access. Customer and guest ownership checks still apply.
 
 Package routes establish a request-local access context automatically, including
 API bearer-token requests, lists, search, dashboards, bulk actions, reports and
-widget lookups. Ticket-related ratings, replies, activities, links, conversations
+widget routes. Ticket-related ratings, replies, activities, links, conversations
 and chats follow the same restrictions. Policies also check already-loaded
 tickets. Membership is read for each query, and contexts are reset on exit.
 

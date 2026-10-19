@@ -4,7 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+- Removed `GET /widget/tickets/lookup/?reference=&email=`. It returned the
+  ticket's `guest_token` to anyone who knew the reference and claimed the
+  guest's email address. Behaviour change: the email lookup no longer exists
+  (it now answers `404`); guests open their ticket from the link in their
+  confirmation email.
+
 ### Fixed
+- The shared widget (`@escalated-dev/escalated`) now works against this
+  backend. Its paths are added without trailing slashes beside the original
+  routes, which keep their shapes: `GET /widget/config` adds `color`,
+  `greeting`, `position`, `departments`, `kb_enabled`, `guest_tickets_enabled`
+  and `status_lookup_enabled: false`; `GET /widget/articles?q=`,
+  `GET /widget/articles/<slug>` (top-level fields), `POST /widget/tickets`
+  (`201` with top-level `reference`), and token-addressed chat:
+  `POST /widget/chat/start` returns the session token as `id`, used by
+  `GET`/`POST /widget/chat/<id>/messages`, `/typing`, `/end` and `/rate`.
+  Widget tickets and chats accept `department_id` (active departments only),
+  and chat start accepts an opening `message`. Chat session tokens are now
+  256-bit random values.
 - Compare account identities exactly on MySQL, including trailing spaces, in visibility, filters, and routing.
 
 ### Added

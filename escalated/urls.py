@@ -388,7 +388,12 @@ widget_patterns = [
     widget_path("widget/articles/search/", widget.widget_article_search, name="widget_article_search"),
     widget_path("widget/articles/<int:article_id>/", widget.widget_article_detail, name="widget_article_detail"),
     widget_path("widget/tickets/create/", widget.widget_create_ticket, name="widget_create_ticket"),
-    widget_path("widget/tickets/lookup/", widget.widget_lookup_ticket, name="widget_lookup_ticket"),
+    # The shared widget's paths (@escalated-dev/escalated): no trailing slash, so
+    # POSTs never meet an APPEND_SLASH redirect. See docs/embedding-the-widget.md.
+    widget_path("widget/config", widget.widget_config, name="widget_contract_config"),
+    widget_path("widget/articles", widget.widget_article_search, name="widget_contract_articles"),
+    widget_path("widget/articles/<slug:slug>", widget.widget_article_by_slug, name="widget_contract_article"),
+    widget_path("widget/tickets", widget.widget_tickets, name="widget_contract_tickets"),
 ]
 
 # Widget chat API (no authentication)
@@ -399,6 +404,13 @@ widget_chat_patterns = [
     widget_path("widget/chat/typing/", widget_chat.update_typing, name="widget_chat_typing"),
     widget_path("widget/chat/end/", widget_chat.end_chat, name="widget_chat_end"),
     widget_path("widget/chat/rate/", widget_chat.rate_chat, name="widget_chat_rate"),
+    # The shared widget's chat paths, addressed by the token chat/start returns as `id`.
+    widget_path("widget/chat/availability", widget_chat.chat_availability, name="widget_contract_chat_availability"),
+    widget_path("widget/chat/start", widget_chat.chat_start, name="widget_contract_chat_start"),
+    widget_path("widget/chat/<str:token>/messages", widget_chat.chat_messages, name="widget_contract_chat_messages"),
+    widget_path("widget/chat/<str:token>/typing", widget_chat.chat_typing, name="widget_contract_chat_typing"),
+    widget_path("widget/chat/<str:token>/end", widget_chat.chat_end, name="widget_contract_chat_end"),
+    widget_path("widget/chat/<str:token>/rate", widget_chat.chat_rate, name="widget_contract_chat_rate"),
 ]
 
 # The standalone widget bundle, loaded with a <script> tag on any site.

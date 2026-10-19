@@ -87,6 +87,35 @@ null are dropped). `page_url` is kept only when it is an http(s) URL of at most
 object, or has more than 50 keys, is rejected with `400`. Treat all of it as
 unverified visitor input.
 
+### The widget's API
+
+The shared widget calls these paths under `{ROUTE_PREFIX}/widget` (no trailing
+slash, so POSTs never meet an `APPEND_SLASH` redirect). The original
+trailing-slash routes and their answer shapes are unchanged.
+
+| Method + path | Answer |
+|---|---|
+| `GET /config` | `color`, `greeting`, `position` (admin setting `widget_position`, default `bottom-right`), `departments` (active, `[{id, name}]`), `kb_enabled`, `guest_tickets_enabled`, `accepts_metadata`, `status_lookup_enabled: false`, plus the original `widget_*` keys. A disabled widget answers `403` with `enabled: false`. |
+| `GET /chat/availability` | `{available}`; optional `department_id` |
+| `GET /articles?q=` | `{articles: [{title, slug, excerpt}]}` |
+| `GET /articles/<slug>` | the published article's `title`, `slug`, `body`, `category` at the top level |
+| `POST /tickets` | `201 {message, reference, guest_access_token}`; takes `name`, `email`, `subject`, `description`, optional `department_id` and `metadata` |
+| `POST /chat/start` | `201 {id, session_id, status, messages, agent}`; takes `name`, `email`, optional `department_id`, `message`, `subject`, `metadata` |
+| `GET /chat/<id>/messages` | `{messages: [{id, body, is_agent, author: {name}, created_at}], agent, typing, ended}` |
+| `POST /chat/<id>/messages` | `{body}` from the guest |
+| `POST /chat/<id>/typing`, `/end`, `/rate` | typing signal, end the chat, rate an ended chat (`{rating: 1-5, comment?}`) |
+
+`id` is the chat's random session token (256 bits); every chat path needs it,
+and an unknown token gets `404`. Validation errors on these paths are `422`
+with `{message, errors: {field: [messages]}}`; an unknown or inactive
+`department_id` is a validation error.
+
+There is no ticket status lookup by email: a claimed address never unlocks a
+ticket, so `/config` sends `status_lookup_enabled: false` and the widget hides
+its Status tab. The old `widget/tickets/lookup/?reference=&email=` route has
+been removed for the same reason. Guests follow their ticket through the link
+in their confirmation email.
+
 ### The script
 
 `GET {ROUTE_PREFIX}/widget/embed.js` serves the bundle shipped in

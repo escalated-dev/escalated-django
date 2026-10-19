@@ -18,7 +18,7 @@ from django.views.decorators.http import require_GET, require_POST, require_safe
 
 from escalated import guest_throttle
 from escalated.conf import get_setting
-from escalated.models import Article, Contact, EscalatedSetting, Ticket
+from escalated.models import Article, Contact, Department, EscalatedSetting, Ticket
 from escalated.widget_embed import WidgetMetadata, embed_script
 
 # ---------------------------------------------------------------------------
@@ -61,6 +61,32 @@ def _widget_enabled():
     return EscalatedSetting.get_bool("widget_enabled", default=True)
 
 
+def active_department(value):
+    """Resolve a widget-supplied ``department_id`` to an active Department.
+
+    Returns ``(department, error)``: ``(None, None)`` when no department was
+    chosen, ``(None, message)`` when the id is not an active department.
+    """
+    if value in (None, ""):
+        return None, None
+    invalid = (None, "The selected department is invalid.")
+    if isinstance(value, bool):
+        return invalid
+    try:
+        department_id = int(value)
+    except (TypeError, ValueError):
+        return invalid
+    department = Department.objects.filter(pk=department_id, is_active=True).first()
+    return (department, None) if department else invalid
+
+
+def contract_validation_error(errors):
+    """A validation answer in the shape the shared widget reads: 422 ``{message, errors: {field: [msg]}}``."""
+    errors = {field: msg if isinstance(msg, list) else [msg] for field, msg in errors.items()}
+    first = next(iter(errors.values()))[0]
+    return JsonResponse({"message": first, "errors": errors}, status=422)
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -70,21 +96,37 @@ def _widget_enabled():
 def widget_config(request):
     """Return public widget configuration."""
     if not _widget_enabled():
-        return JsonResponse({"error": "Widget is disabled"}, status=403)
+        return JsonResponse({"enabled": False, "error": "Widget is disabled"}, status=403)
 
     if _rate_limited(request, scope="widget_config"):
         return _reject()
+
+    greeting = EscalatedSetting.get("widget_greeting", "How can we help?")
+    color = EscalatedSetting.get("widget_accent_color", "#4f46e5")
+    kb_enabled = EscalatedSetting.get_bool("widget_kb_search_enabled", default=True)
+    tickets_enabled = EscalatedSetting.get_bool("widget_ticket_creation_enabled", default=True)
 
     return JsonResponse(
         {
             "widget_enabled": True,
             "widget_title": EscalatedSetting.get("widget_title", "Support"),
-            "widget_greeting": EscalatedSetting.get("widget_greeting", "How can we help?"),
-            "widget_accent_color": EscalatedSetting.get("widget_accent_color", "#4f46e5"),
-            "kb_search_enabled": EscalatedSetting.get_bool("widget_kb_search_enabled", default=True),
-            "ticket_creation_enabled": EscalatedSetting.get_bool("widget_ticket_creation_enabled", default=True),
+            "widget_greeting": greeting,
+            "widget_accent_color": color,
+            "kb_search_enabled": kb_enabled,
+            "ticket_creation_enabled": tickets_enabled,
+            # The keys the shared widget (@escalated-dev/escalated) reads.
+            "enabled": True,
+            "color": color,
+            "greeting": greeting,
+            "position": EscalatedSetting.get("widget_position", "bottom-right") or "bottom-right",
+            "departments": [{"id": d.pk, "name": d.name} for d in Department.objects.filter(is_active=True)],
+            "kb_enabled": kb_enabled,
+            "guest_tickets_enabled": tickets_enabled,
             # Ticket create and chat start store the host page's `metadata`.
             "accepts_metadata": True,
+            # There is no mailbox-verified status lookup, so the widget hides its
+            # Status tab: a claimed email address never unlocks a ticket.
+            "status_lookup_enabled": False,
         }
     )
 
@@ -121,59 +163,74 @@ def widget_article_search(request):
     )
 
 
-@require_GET
-def widget_article_detail(request, article_id):
-    """Return a single published article."""
+def _article_payload(request, lookup):
+    """Return ``(fields, None)`` for the published article matching ``lookup``, or ``(None, error_response)``."""
     if not _widget_enabled():
-        return JsonResponse({"error": "Widget is disabled"}, status=403)
+        return None, JsonResponse({"error": "Widget is disabled"}, status=403)
 
     if _rate_limited(request, scope="widget_article"):
-        return _reject()
+        return None, _reject()
 
     try:
-        article = Article.objects.published().get(pk=article_id)
+        article = Article.objects.published().select_related("category").get(**lookup)
     except Article.DoesNotExist:
-        return JsonResponse({"error": "Article not found"}, status=404)
+        return None, JsonResponse({"error": "Article not found", "message": "Article not found"}, status=404)
 
     # Increment view count
-    Article.objects.filter(pk=article_id).update(view_count=article.view_count + 1)
+    Article.objects.filter(pk=article.pk).update(view_count=article.view_count + 1)
 
-    return JsonResponse(
-        {
-            "article": {
-                "id": article.pk,
-                "title": article.title,
-                "slug": article.slug,
-                "body": article.body,
-                "category": article.category.name if article.category else None,
-            }
-        }
-    )
+    return {
+        "id": article.pk,
+        "title": article.title,
+        "slug": article.slug,
+        "body": article.body,
+        "category": article.category.name if article.category else None,
+    }, None
 
 
-@csrf_exempt
-@require_POST
-def widget_create_ticket(request):
-    """Create a ticket from the widget (guest mode)."""
+@require_GET
+def widget_article_detail(request, article_id):
+    """Return a single published article by id, wrapped in ``article``."""
+    fields, error = _article_payload(request, {"pk": article_id})
+    return error or JsonResponse({"article": fields})
+
+
+@require_GET
+def widget_article_by_slug(request, slug):
+    """Return a single published article by slug, its fields at the top level (shared widget)."""
+    fields, error = _article_payload(request, {"slug": slug})
+    return error or JsonResponse(fields)
+
+
+def _create_ticket(request, contract):
+    """Create a guest ticket from a widget request.
+
+    Returns ``(ticket, None)`` or ``(None, error_response)``. ``contract`` selects the
+    shared widget's validation shape (422 ``{message, errors: {field: [msg]}}``) over
+    the original one (400 ``{errors: {field: msg}}``).
+    """
     if not _widget_enabled():
-        return JsonResponse({"error": "Widget is disabled"}, status=403)
+        return None, JsonResponse({"error": "Widget is disabled", "message": "Widget is disabled"}, status=403)
 
     if not EscalatedSetting.get_bool("widget_ticket_creation_enabled", default=True):
-        return JsonResponse({"error": "Ticket creation is disabled"}, status=403)
+        message = "Ticket creation is disabled"
+        return None, JsonResponse({"error": message, "message": message}, status=403)
 
     retry_after = guest_throttle.check(request, guest_throttle.TICKET)
     if retry_after is not None:
-        return guest_throttle.too_many_requests(retry_after, json=True)
+        return None, guest_throttle.too_many_requests(retry_after, json=True)
 
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+        body = None
+    if not isinstance(body, dict):
+        return None, JsonResponse({"error": "Invalid JSON", "message": "Invalid JSON"}, status=400)
 
-    name = body.get("name", "").strip()
-    email = body.get("email", "").strip()
-    subject = body.get("subject", "").strip()
-    description = body.get("description", "").strip()
+    name = str(body.get("name") or "").strip()
+    email = str(body.get("email") or "").strip()
+    subject = str(body.get("subject") or "").strip()
+    description = str(body.get("description") or "").strip()
 
     errors = {}
     if not name:
@@ -184,12 +241,17 @@ def widget_create_ticket(request):
         errors["subject"] = "Subject is required"
     if not description:
         errors["description"] = "Description is required"
+    department, department_error = active_department(body.get("department_id"))
+    if department_error:
+        errors["department_id"] = department_error
     metadata_error = WidgetMetadata.error(body.get("metadata"))
     if metadata_error:
         errors["metadata"] = metadata_error
 
     if errors:
-        return JsonResponse({"errors": errors}, status=400)
+        if contract:
+            return None, contract_validation_error(errors)
+        return None, JsonResponse({"errors": errors}, status=400)
 
     import secrets
 
@@ -209,20 +271,49 @@ def widget_create_ticket(request):
             "priority": priority,
             "channel": "widget",
             "contact": contact,
+            "department": department,
             "metadata": WidgetMetadata.clean(body.get("metadata"), request),
         }
     )
 
-    ticket = Ticket.objects.create(**attrs)
+    return Ticket.objects.create(**attrs), None
+
+
+@csrf_exempt
+@require_POST
+def widget_create_ticket(request):
+    """Create a ticket from the widget (guest mode). Original route and answer shape."""
+    ticket, error = _create_ticket(request, contract=False)
+    if error is not None:
+        return error
 
     return JsonResponse(
         {
             "success": True,
             "ticket": {
                 "reference": ticket.reference,
-                "guest_token": guest_token,
+                "guest_token": ticket.guest_token,
             },
         }
+    )
+
+
+@csrf_exempt
+@require_POST
+def widget_tickets(request):
+    """Create a ticket from the shared widget: 201 with ``reference`` at the top level."""
+    ticket, error = _create_ticket(request, contract=True)
+    if error is not None:
+        return error
+
+    return JsonResponse(
+        {
+            "message": "Ticket created.",
+            "reference": ticket.reference,
+            # Opens the guest ticket page (guest/<token>/), as the original route's guest_token does.
+            "guest_access_token": ticket.guest_token,
+        },
+        status=201,
     )
 
 
@@ -248,39 +339,6 @@ def widget_embed_script(request):
         return response
 
     return HttpResponse(content, content_type="application/javascript; charset=utf-8", headers=headers)
-
-
-@require_GET
-def widget_lookup_ticket(request):
-    """Look up a guest ticket by reference and email."""
-    if not _widget_enabled():
-        return JsonResponse({"error": "Widget is disabled"}, status=403)
-
-    if _rate_limited(request, scope="widget_lookup", limit=10, window=60):
-        return _reject()
-
-    reference = request.GET.get("reference", "").strip()
-    email = request.GET.get("email", "").strip()
-
-    if not reference or not email:
-        return JsonResponse({"error": "reference and email are required"}, status=400)
-
-    try:
-        ticket = Ticket.objects.get(reference=reference, guest_email=email)
-    except Ticket.DoesNotExist:
-        return JsonResponse({"error": "Ticket not found"}, status=404)
-
-    return JsonResponse(
-        {
-            "ticket": {
-                "reference": ticket.reference,
-                "subject": ticket.subject,
-                "status": ticket.status,
-                "guest_token": ticket.guest_token,
-                "created_at": ticket.created_at.isoformat(),
-            }
-        }
-    )
 
 
 def _apply_guest_policy(attrs):
