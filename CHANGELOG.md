@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+- Removed `GET /widget/tickets/lookup/?reference=&email=`. It returned the
+  ticket's `guest_token` to anyone who knew the reference and claimed the
+  guest's email address. Behaviour change: the email lookup no longer exists
+  (it now answers `404`); guests open their ticket from the link in their
+  confirmation email.
+
 ### Fixed
 - The shared widget (`@escalated-dev/escalated`) now works against this
   backend. Its paths are added without trailing slashes beside the original

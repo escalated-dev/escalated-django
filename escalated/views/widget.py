@@ -341,39 +341,6 @@ def widget_embed_script(request):
     return HttpResponse(content, content_type="application/javascript; charset=utf-8", headers=headers)
 
 
-@require_GET
-def widget_lookup_ticket(request):
-    """Look up a guest ticket by reference and email."""
-    if not _widget_enabled():
-        return JsonResponse({"error": "Widget is disabled"}, status=403)
-
-    if _rate_limited(request, scope="widget_lookup", limit=10, window=60):
-        return _reject()
-
-    reference = request.GET.get("reference", "").strip()
-    email = request.GET.get("email", "").strip()
-
-    if not reference or not email:
-        return JsonResponse({"error": "reference and email are required"}, status=400)
-
-    try:
-        ticket = Ticket.objects.get(reference=reference, guest_email=email)
-    except Ticket.DoesNotExist:
-        return JsonResponse({"error": "Ticket not found"}, status=404)
-
-    return JsonResponse(
-        {
-            "ticket": {
-                "reference": ticket.reference,
-                "subject": ticket.subject,
-                "status": ticket.status,
-                "guest_token": ticket.guest_token,
-                "created_at": ticket.created_at.isoformat(),
-            }
-        }
-    )
-
-
 def _apply_guest_policy(attrs):
     """Layer the admin-configured guest policy onto a ticket-create attrs dict.
 

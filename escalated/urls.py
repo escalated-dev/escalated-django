@@ -388,7 +388,6 @@ widget_patterns = [
     widget_path("widget/articles/search/", widget.widget_article_search, name="widget_article_search"),
     widget_path("widget/articles/<int:article_id>/", widget.widget_article_detail, name="widget_article_detail"),
     widget_path("widget/tickets/create/", widget.widget_create_ticket, name="widget_create_ticket"),
-    widget_path("widget/tickets/lookup/", widget.widget_lookup_ticket, name="widget_lookup_ticket"),
     # The shared widget's paths (@escalated-dev/escalated): no trailing slash, so
     # POSTs never meet an APPEND_SLASH redirect. See docs/embedding-the-widget.md.
     widget_path("widget/config", widget.widget_config, name="widget_contract_config"),

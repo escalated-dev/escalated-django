@@ -112,7 +112,9 @@ with `{message, errors: {field: [messages]}}`; an unknown or inactive
 
 There is no ticket status lookup by email: a claimed address never unlocks a
 ticket, so `/config` sends `status_lookup_enabled: false` and the widget hides
-its Status tab. Guests follow their ticket through the link in their email.
+its Status tab. The old `widget/tickets/lookup/?reference=&email=` route has
+been removed for the same reason. Guests follow their ticket through the link
+in their confirmation email.
 
 ### The script
 
