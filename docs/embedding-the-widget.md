@@ -100,9 +100,9 @@ route, for example when you serve the bundle from a CDN or through
 
 ```python
 ESCALATED = {
-    "WIDGET_ALLOWED_ORIGINS": [],      # list or comma-separated string
-    "WIDGET_PREFLIGHT_MAX_AGE": 600,   # seconds browsers may cache a preflight
-    "WIDGET_SERVE_SCRIPT": True,       # mount {ROUTE_PREFIX}/widget/embed.js
+    "WIDGET_ALLOWED_ORIGINS": [],  # list or comma-separated string
+    "WIDGET_PREFLIGHT_MAX_AGE": 600,  # seconds browsers may cache a preflight
+    "WIDGET_SERVE_SCRIPT": True,  # mount {ROUTE_PREFIX}/widget/embed.js
 }
 ```
 
