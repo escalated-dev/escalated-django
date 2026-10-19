@@ -18,15 +18,16 @@ dependencies = [
     # is the first release clear of the RSA, PKCS12 and bundled-OpenSSL
     # advisories published up to 2025; hosts can and should run newer.
     "cryptography>=44.0.1",
-    # Central translations distributed via PyPI. Ships canonical JSON plus
-    # pre-compiled gettext .po/.mo files at
-    # `escalated_locale/locale/{lang}/LC_MESSAGES/django.{po,mo}`, which we
-    # surface via `escalated.locale.get_central_locale_path()` so host
-    # projects can wire it into Django's LOCALE_PATHS.
-    "escalated-locale @ git+https://github.com/escalated-dev/escalated-locale.git@v0.1.8#subdirectory=packages/pypi",
+    # Central translations: a copy of escalated-locale's gettext catalogues
+    # is bundled at escalated/_central_locale/ (see its README). PyPI rejects
+    # git-URL dependencies, so escalated-locale itself is only the optional
+    # `locale` extra below.
 ]
 
 [project.optional-dependencies]
+# Installs the standalone escalated-locale package, whose catalogues then win
+# over the bundled copy. Plain version spec: PyPI refuses `name @ url` here too.
+locale = ["escalated-locale>=0.1.8"]
 dev = [
     "pytest>=7.0",
     "pytest-django>=4.5",

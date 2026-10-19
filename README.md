@@ -173,15 +173,23 @@ See the [`@escalated-dev/escalated` README](https://github.com/escalated-dev/esc
 
 ## Translations (i18n)
 
-Escalated for Django consumes translations from the central
+Translations come from the central
 [`escalated-locale`](https://github.com/escalated-dev/escalated-locale)
-PyPI package. The package ships canonical JSON catalogues alongside
-pre-compiled gettext artifacts at
-`escalated_locale/locale/<lang>/LC_MESSAGES/django.{po,mo}`, which
-plug directly into Django's translation system via `LOCALE_PATHS`.
+project, which publishes pre-compiled gettext artifacts at
+`escalated_locale/locale/<lang>/LC_MESSAGES/django.{po,mo}` that plug
+directly into Django's translation system via `LOCALE_PATHS`.
 
-The package is installed automatically as a dependency of
-`escalated-django`. Wire it into your project's `settings.py`:
+`pip install escalated-django` bundles a copy of those catalogues
+(`escalated/_central_locale/`, synced from a tagged escalated-locale
+release), so translations work with no extra install. To use the
+standalone package instead, install the `locale` extra; when
+`escalated_locale` is importable its catalogues win over the bundled copy:
+
+```bash
+pip install "escalated-django[locale]"
+```
+
+Wire the catalogues into your project's `settings.py`:
 
 ```python
 # settings.py
@@ -197,7 +205,8 @@ LOCALE_PATHS = get_locale_paths(
 
 1. Your project's `locale/` (if you passed one to `get_locale_paths`)
 2. The plugin-local `escalated/locale/` override directory
-3. The central `escalated_locale/locale/` baseline
+3. The central baseline: the installed `escalated_locale/locale/` if
+   present, otherwise the bundled `escalated/_central_locale/locale/`
 
 Translation contributions should be sent to
 [`escalated-locale`](https://github.com/escalated-dev/escalated-locale).

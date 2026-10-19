@@ -18,3 +18,8 @@ Dockerfile* text eol=lf
 
 # Vendored from @escalated-dev/escalated (dist/widget/escalated-widget.js)
 escalated/static/escalated/widget/escalated-widget.js linguist-generated=true -diff
+
+# Vendored from escalated-locale by scripts/sync_central_locale.py
+escalated/_central_locale/locale/** linguist-generated=true
+escalated/_central_locale/locale/**/*.po text eol=lf -diff
+escalated/_central_locale/locale/**/*.mo binary
