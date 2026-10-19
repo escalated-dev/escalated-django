@@ -1,4 +1,4 @@
-import uuid
+import secrets
 
 from django.utils import timezone
 
@@ -9,7 +9,7 @@ from escalated.signals import chat_ended, chat_message_sent, chat_rated, chat_st
 class ChatSessionService:
     """Service for managing live chat sessions."""
 
-    def start_chat(self, *, name, email, department=None, metadata=None):
+    def start_chat(self, *, name, email, department=None, metadata=None, subject=None):
         """
         Start a new chat session. Creates a ticket with channel='chat' and
         a ChatSession in 'waiting' status.
@@ -17,10 +17,11 @@ class ChatSessionService:
         Returns:
             tuple: (ticket, session)
         """
-        customer_session_id = uuid.uuid4().hex
+        # The guest's only credential for this chat: an unguessable random token.
+        customer_session_id = secrets.token_hex(32)
 
         ticket = Ticket.objects.create(
-            subject=f"Chat from {name}",
+            subject=subject or f"Chat from {name}",
             description="Live chat conversation",
             status=Ticket.Status.OPEN,
             priority=Ticket.Priority.MEDIUM,

@@ -3,13 +3,20 @@ Public-facing widget chat endpoints for customers.
 
 All endpoints are unauthenticated and intended for use from a JavaScript
 widget embedded on a customer's website.
+
+The shared widget (``@escalated-dev/escalated``) addresses a chat by the
+unguessable token ``POST chat/start`` returns as ``id``:
+``chat/<token>/messages`` (GET + POST), ``/typing``, ``/end`` and ``/rate``.
+The original routes, which take ``session_id`` in the body, keep working.
 """
 
 import json
 import time
+from datetime import timedelta
 
 from django.core.cache import cache
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
@@ -17,7 +24,11 @@ from escalated.models import ChatSession, EscalatedSetting
 from escalated.services.chat_availability_service import ChatAvailabilityService
 from escalated.services.chat_routing_service import ChatRoutingService
 from escalated.services.chat_session_service import ChatSessionService
+from escalated.views.widget import active_department, contract_validation_error
 from escalated.widget_embed import WidgetMetadata
+
+# An agent counts as typing for this long after their last keystroke signal.
+AGENT_TYPING_WINDOW = timedelta(seconds=5)
 
 
 def _rate_limited(request, scope="widget_chat", limit=None, window=60):
@@ -52,8 +63,10 @@ def chat_availability(request):
     if _rate_limited(request, scope="widget_chat_availability"):
         return _reject()
 
+    # An unknown or inactive department falls back to "any agent".
+    department, _ = active_department(request.GET.get("department_id"))
     service = ChatAvailabilityService()
-    available = service.is_available()
+    available = service.is_available(department)
 
     routing_service = ChatRoutingService()
     routing = routing_service.evaluate_routing()
@@ -67,58 +80,273 @@ def chat_availability(request):
     )
 
 
-@csrf_exempt
-@require_POST
-def start_chat(request):
-    """Start a new chat session from the widget."""
+def _agent_name(user):
+    return (user.get_full_name() or user.get_username()) if user else None
+
+
+def _serialize_messages(session):
+    """The chat's public messages, oldest first, in the shape the shared widget renders."""
+    replies = (
+        session.ticket.replies.filter(is_internal_note=False, is_deleted=False)
+        .select_related("author")
+        .order_by("-created_at", "-pk")[:100]
+    )
+    return [
+        {
+            "id": reply.pk,
+            "body": reply.body,
+            "is_agent": reply.author_id is not None,
+            "author": {"name": _agent_name(reply.author) if reply.author_id else session.ticket.guest_name},
+            "created_at": reply.created_at.isoformat(),
+        }
+        for reply in reversed(list(replies))
+    ]
+
+
+def _start(request, contract):
+    """Start a chat from a widget request. Returns ``(ticket, session, None)`` or ``(None, None, error)``."""
     if _rate_limited(request, scope="widget_chat_start", limit=5, window=60):
-        return _reject()
+        return None, None, _reject()
 
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+        body = None
+    if not isinstance(body, dict):
+        return None, None, JsonResponse({"error": "Invalid JSON", "message": "Invalid JSON"}, status=400)
 
-    name = body.get("name", "").strip()
-    email = body.get("email", "").strip()
+    name = str(body.get("name") or "").strip()
+    email = str(body.get("email") or "").strip()
+    subject = str(body.get("subject") or "").strip()[:255]
+    message = str(body.get("message") or "").strip()
 
     errors = {}
     if not name:
         errors["name"] = "Name is required"
     if not email:
         errors["email"] = "Email is required"
+    department, department_error = active_department(body.get("department_id"))
+    if department_error:
+        errors["department_id"] = department_error
     metadata_error = WidgetMetadata.error(body.get("metadata"))
     if metadata_error:
         errors["metadata"] = metadata_error
     if errors:
-        return JsonResponse({"errors": errors}, status=400)
+        if contract:
+            return None, None, contract_validation_error(errors)
+        return None, None, JsonResponse({"errors": errors}, status=400)
 
     session_service = ChatSessionService()
     ticket, session = session_service.start_chat(
         name=name,
         email=email,
+        department=department,
+        subject=subject or None,
         metadata=WidgetMetadata.clean(body.get("metadata"), request),
     )
+    if message:
+        session_service.send_message(session, body=message, sender=None, sender_type="customer")
 
     # Try to auto-assign an agent
     routing_service = ChatRoutingService()
-    agent = routing_service.find_available_agent(ticket=ticket)
+    agent = routing_service.find_available_agent(department=department, ticket=ticket)
     if agent:
         session_service.assign_agent(session, agent)
         session.refresh_from_db()
 
-    availability_service = ChatAvailabilityService()
-    queue_position = availability_service.get_queue_position(session)
+    return ticket, session, None
 
+
+def _start_payload(ticket, session):
+    return {
+        "session_id": session.customer_session_id,
+        "ticket_reference": ticket.reference,
+        "status": session.status,
+        "queue_position": ChatAvailabilityService().get_queue_position(session),
+        "agent_name": _agent_name(session.agent) if session.agent else None,
+    }
+
+
+@csrf_exempt
+@require_POST
+def start_chat(request):
+    """Start a new chat session from the widget. Original route and answer shape."""
+    ticket, session, error = _start(request, contract=False)
+    if error is not None:
+        return error
+    return JsonResponse(_start_payload(ticket, session))
+
+
+@csrf_exempt
+@require_POST
+def chat_start(request):
+    """Start a chat for the shared widget: 201 with the session token as ``id``."""
+    ticket, session, error = _start(request, contract=True)
+    if error is not None:
+        return error
     return JsonResponse(
         {
-            "session_id": session.customer_session_id,
-            "ticket_reference": ticket.reference,
-            "status": session.status,
-            "queue_position": queue_position,
-            "agent_name": session.agent.get_full_name() if session.agent else None,
+            "id": session.customer_session_id,
+            **_start_payload(ticket, session),
+            "messages": _serialize_messages(session),
+            "agent": {"name": _agent_name(session.agent)} if session.agent else None,
+        },
+        status=201,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Token-addressed chat routes (shared widget): chat/<token>/...
+# ---------------------------------------------------------------------------
+
+
+def _session_for(token):
+    """The chat session the guest's token names, or ``None`` (answered with 404)."""
+    if not token:
+        return None
+    return ChatSession.objects.select_related("ticket", "agent").filter(customer_session_id=token).first()
+
+
+def _not_found():
+    return JsonResponse({"error": "Chat session not found", "message": "Chat session not found"}, status=404)
+
+
+def _ended():
+    return JsonResponse({"error": "Chat has ended", "message": "Chat has ended."}, status=422)
+
+
+def _is_open(session):
+    return session.status in [ChatSession.Status.ACTIVE, ChatSession.Status.WAITING]
+
+
+def _json_body(request):
+    """The request's JSON object body; an empty body is ``{}``, anything else unparseable is ``None``."""
+    if not request.body:
+        return {}
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    return body if isinstance(body, dict) else None
+
+
+@csrf_exempt
+def chat_messages(request, token):
+    """GET the chat's messages and state, or POST ``{body}`` as the guest."""
+    if request.method == "GET":
+        return _list_messages(request, token)
+    if request.method == "POST":
+        return _post_message(request, token)
+    return JsonResponse({"error": "Method not allowed"}, status=405, headers={"Allow": "GET, POST"})
+
+
+def _list_messages(request, token):
+    if _rate_limited(request, scope="widget_chat_poll", limit=120, window=60):
+        return _reject()
+
+    session = _session_for(token)
+    if session is None:
+        return _not_found()
+
+    agent_typing = (
+        session.agent is not None
+        and session.agent_typing_at is not None
+        and session.agent_typing_at > timezone.now() - AGENT_TYPING_WINDOW
+    )
+    return JsonResponse(
+        {
+            "messages": _serialize_messages(session),
+            "agent": {"name": _agent_name(session.agent)} if session.agent else None,
+            # The widget renders this as text: "<name> is typing...".
+            "typing": _agent_name(session.agent) if agent_typing else None,
+            "ended": not _is_open(session),
         }
     )
+
+
+def _post_message(request, token):
+    if _rate_limited(request, scope="widget_chat_message", limit=30, window=60):
+        return _reject()
+
+    session = _session_for(token)
+    if session is None:
+        return _not_found()
+    if not _is_open(session):
+        return _ended()
+
+    body = _json_body(request)
+    if body is None:
+        return JsonResponse({"error": "Invalid JSON", "message": "Invalid JSON"}, status=400)
+    message_body = str(body.get("body") or "").strip()
+    if not message_body:
+        return contract_validation_error({"body": "Message body is required"})
+    if len(message_body) > 5000:
+        return contract_validation_error({"body": "Message body may not be longer than 5000 characters"})
+
+    reply = ChatSessionService().send_message(session, body=message_body, sender=None, sender_type="customer")
+    return JsonResponse({"message": "Message sent.", "id": reply.pk})
+
+
+@csrf_exempt
+@require_POST
+def chat_typing(request, token):
+    """Mark the guest as typing."""
+    if _rate_limited(request, scope="widget_chat_typing", limit=60, window=60):
+        return _reject()
+
+    session = _session_for(token)
+    if session is None:
+        return _not_found()
+    if not _is_open(session):
+        return _ended()
+
+    ChatSessionService().update_typing(session, is_typing=True, sender_type="customer")
+    return JsonResponse({"ok": True})
+
+
+@csrf_exempt
+@require_POST
+def chat_end(request, token):
+    """End the chat from the guest's side."""
+    if _rate_limited(request, scope="widget_chat_end", limit=10, window=60):
+        return _reject()
+
+    session = _session_for(token)
+    if session is None:
+        return _not_found()
+    if not _is_open(session):
+        return JsonResponse({"error": "Chat has already ended", "message": "Chat has already ended."}, status=422)
+
+    ChatSessionService().end_chat(session, ended_by=None)
+    return JsonResponse({"ok": True, "message": "Chat ended."})
+
+
+@csrf_exempt
+@require_POST
+def chat_rate(request, token):
+    """Rate an ended chat: ``{rating: 1-5, comment?}``."""
+    if _rate_limited(request, scope="widget_chat_rate", limit=5, window=60):
+        return _reject()
+
+    session = _session_for(token)
+    if session is None:
+        return _not_found()
+    if session.status != ChatSession.Status.ENDED:
+        message = "Chat must be ended before rating."
+        return JsonResponse({"error": message, "message": message}, status=422)
+
+    body = _json_body(request)
+    if body is None:
+        return JsonResponse({"error": "Invalid JSON", "message": "Invalid JSON"}, status=400)
+    rating = body.get("rating")
+    if isinstance(rating, bool) or not isinstance(rating, int) or not 1 <= rating <= 5:
+        return contract_validation_error({"rating": "Rating must be an integer between 1 and 5"})
+    comment = body.get("comment") or ""
+    if not isinstance(comment, str) or len(comment) > 1000:
+        return contract_validation_error({"comment": "Comment must be text of at most 1000 characters"})
+
+    ChatSessionService().rate_chat(session, rating=rating, comment=comment)
+    return JsonResponse({"ok": True, "message": "Rating submitted."})
 
 
 @csrf_exempt
