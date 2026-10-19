@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- The package can be published to PyPI again. It no longer depends on
+  `escalated-locale` through a git URL, which PyPI rejects
+  (`400 Can't have direct dependency`).
+- Translations are bundled: the escalated-locale v0.1.8 gettext catalogues
+  ship inside the package at `escalated/_central_locale/locale/`, and
+  `get_central_locale_path()` falls back to them when the `escalated_locale`
+  package is not installed. `pip install escalated-django[locale]` installs
+  the standalone package, which still wins when present.
+  `scripts/sync_central_locale.py <tag>` refreshes the bundled copy.
+
 ## [0.7.1] - 2026-10-19
 
 ### Changed

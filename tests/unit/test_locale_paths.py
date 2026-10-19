@@ -1,9 +1,9 @@
 """Unit tests for `escalated.locale_paths`.
 
 These tests intentionally do not require the `escalated-locale` package
-to be installed — `get_central_locale_path()` returns None when it is
-absent, and `get_locale_paths()` should still surface the plugin-local
-override directory.
+to be installed — `get_central_locale_path()` falls back to the bundled
+copy when it is absent, and `get_locale_paths()` should still surface the
+plugin-local override directory.
 """
 
 import os
@@ -30,7 +30,7 @@ def test_get_locale_paths_extras_take_priority():
 
 
 def test_get_central_locale_path_handles_missing_package(monkeypatch):
-    """If `escalated_locale` cannot be imported, return None gracefully."""
+    """If `escalated_locale` cannot be imported, fall back to the bundled copy."""
     import importlib
 
     real_import_module = importlib.import_module
@@ -41,4 +41,4 @@ def test_get_central_locale_path_handles_missing_package(monkeypatch):
         return real_import_module(name, *args, **kwargs)
 
     monkeypatch.setattr(locale_paths, "import_module", fake_import_module)
-    assert locale_paths.get_central_locale_path() is None
+    assert locale_paths.get_central_locale_path() == locale_paths.VENDORED_CENTRAL_LOCALE_DIR
