@@ -104,6 +104,16 @@ DEFAULTS = {
     "API_TOKEN_REFRESHER": None,  # (token: str) -> dict | None
     "API_PROFILE_UPDATER": None,  # (user, attrs: dict) -> dict | None
     "API_LOGOUT": None,  # (token: str) -> None
+    # Sites that may embed the widget from another origin (see
+    # docs/embedding-the-widget.md). A list, or a comma-separated string, of
+    # origins ("https://shop.example.com", "http://localhost:5173") and
+    # subdomain patterns ("https://*.example.com"). Combined with the admin
+    # setting `widget_allowed_origins`. Empty: no cross-origin access.
+    "WIDGET_ALLOWED_ORIGINS": [],
+    # Seconds browsers may cache an allowed preflight answer.
+    "WIDGET_PREFLIGHT_MAX_AGE": 600,
+    # Mount {prefix}/widget/embed.js. Set False when serving the bundle from a CDN.
+    "WIDGET_SERVE_SCRIPT": True,
     # Plugin system settings
     "PLUGINS_ENABLED": True,
     "PLUGINS_PATH": None,  # Defaults to <BASE_DIR>/plugins/escalated at runtime

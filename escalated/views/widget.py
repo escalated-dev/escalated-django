@@ -11,13 +11,15 @@ import time
 
 from django.core.cache import cache
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
+from django.utils.http import parse_etags
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_safe
 
 from escalated import guest_throttle
 from escalated.conf import get_setting
 from escalated.models import Article, Contact, EscalatedSetting, Ticket
+from escalated.widget_embed import WidgetMetadata, embed_script
 
 # ---------------------------------------------------------------------------
 # Rate limiting helper
@@ -81,6 +83,8 @@ def widget_config(request):
             "widget_accent_color": EscalatedSetting.get("widget_accent_color", "#4f46e5"),
             "kb_search_enabled": EscalatedSetting.get_bool("widget_kb_search_enabled", default=True),
             "ticket_creation_enabled": EscalatedSetting.get_bool("widget_ticket_creation_enabled", default=True),
+            # Ticket create and chat start store the host page's `metadata`.
+            "accepts_metadata": True,
         }
     )
 
@@ -180,6 +184,9 @@ def widget_create_ticket(request):
         errors["subject"] = "Subject is required"
     if not description:
         errors["description"] = "Description is required"
+    metadata_error = WidgetMetadata.error(body.get("metadata"))
+    if metadata_error:
+        errors["metadata"] = metadata_error
 
     if errors:
         return JsonResponse({"errors": errors}, status=400)
@@ -202,6 +209,7 @@ def widget_create_ticket(request):
             "priority": priority,
             "channel": "widget",
             "contact": contact,
+            "metadata": WidgetMetadata.clean(body.get("metadata"), request),
         }
     )
 
@@ -216,6 +224,30 @@ def widget_create_ticket(request):
             },
         }
     )
+
+
+@require_safe
+def widget_embed_script(request):
+    """Serve the standalone widget bundle so any site can load it with a <script> tag."""
+    script = embed_script()
+    if script is None:
+        raise Http404("Widget bundle not found")
+
+    content, etag = script
+    headers = {
+        "Cache-Control": "public, max-age=3600",
+        "ETag": etag,
+        "X-Content-Type-Options": "nosniff",
+        "Cross-Origin-Resource-Policy": "cross-origin",
+        "Access-Control-Allow-Origin": "*",
+    }
+    if_none_match = parse_etags(request.META.get("HTTP_IF_NONE_MATCH", ""))
+    if etag in if_none_match or "*" in if_none_match:
+        response = HttpResponse(status=304, headers=headers)
+        del response["Content-Type"]
+        return response
+
+    return HttpResponse(content, content_type="application/javascript; charset=utf-8", headers=headers)
 
 
 @require_GET

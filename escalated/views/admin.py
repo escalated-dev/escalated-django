@@ -82,6 +82,7 @@ from escalated.serializers import (
     WebhookSerializer,
 )
 from escalated.services.ticket_service import TicketService
+from escalated.widget_embed import WidgetOrigins
 
 User = get_user_model()
 
@@ -1199,8 +1200,26 @@ def settings_index(request):
         "Escalated/Admin/Settings",
         props={
             "settings": settings_dict,
+            "errors": request.session.pop(SETTINGS_ERRORS_SESSION_KEY, {}),
         },
     )
+
+
+# A rejected settings save redirects back to the settings page, which shows
+# these errors once (the same flow as the workflow admin).
+SETTINGS_ERRORS_SESSION_KEY = "escalated_settings_errors"
+
+
+def _clean_widget_allowed_origins(raw):
+    """``(value, error)`` for the posted embedding-site list: one origin per line, or an error."""
+    entries = WidgetOrigins.split(raw)
+    invalid = [entry for entry in entries if WidgetOrigins.normalize_pattern(entry) is None]
+    if invalid:
+        return None, _(
+            "Each site must be an origin such as https://shop.example.com or https://*.example.com, "
+            "with no path. Not valid: %(entries)s"
+        ) % {"entries": ", ".join(invalid)}
+    return "\n".join(entries), None
 
 
 @login_required
@@ -1212,6 +1231,15 @@ def settings_update(request):
 
     if request.method != "POST":
         return HttpResponseForbidden(_("Method not allowed"))
+
+    # Validate before saving anything, so a rejected save changes nothing.
+    widget_allowed_origins = request.POST.get("widget_allowed_origins")
+    if widget_allowed_origins is not None:
+        widget_allowed_origins, error = _clean_widget_allowed_origins(widget_allowed_origins)
+        if error:
+            request.session[SETTINGS_ERRORS_SESSION_KEY] = {"widget_allowed_origins": error}
+            return redirect("escalated:admin_settings")
+        EscalatedSetting.set("widget_allowed_origins", widget_allowed_origins)
 
     # Boolean settings (sent as "1"/"0" or absent)
     bool_keys = [

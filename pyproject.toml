@@ -44,6 +44,8 @@ Homepage = "https://github.com/escalated-dev/escalated-django"
 [tool.ruff]
 line-length = 120
 target-version = "py310"
+# Vendored widget bundle, built by @escalated-dev/escalated.
+extend-exclude = ["escalated/static/escalated/widget"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "DJ"]
