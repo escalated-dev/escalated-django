@@ -7,6 +7,8 @@ from escalated.models import EscalatedSetting, Ticket
 from escalated.views.widget import _rate_limited
 from tests.factories import ArticleCategoryFactory, ArticleFactory, TicketFactory
 
+pytestmark = pytest.mark.usefixtures("widget_on")
+
 
 class FakeRequest:
     """Minimal request-like object for testing rate limiting."""

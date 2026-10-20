@@ -17,6 +17,8 @@ from django.test import override_settings
 from escalated.models import Ticket
 from tests.factories import TicketFactory
 
+pytestmark = pytest.mark.usefixtures("widget_on")
+
 WIDGET_CREATE = "/support/widget/tickets/create/"
 GUEST_STORE = "/support/guest/store/"
 

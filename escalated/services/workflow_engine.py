@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from escalated.outbound_security import validate_outbound_webhook_url
+from escalated.user_keys import user_pk
 
 logger = logging.getLogger("escalated")
 
@@ -189,7 +190,7 @@ class WorkflowEngine:
                 ticket.status = value
                 ticket.save()
             elif action_type == "assign_agent":
-                ticket.assigned_to_id = int(value)
+                ticket.assigned_to_id = user_pk(value)
                 ticket.save()
             elif action_type == "change_priority":
                 ticket.priority = value
@@ -231,7 +232,7 @@ class WorkflowEngine:
                 self._handle_delay(action, ticket, workflow)
                 return "delayed"
             elif action_type == "add_follower":
-                ticket.followers.add(int(value))
+                ticket.followers.add(user_pk(value))
             elif action_type == "send_notification":
                 logger.info(f"Workflow notification: {self._interpolate(str(value), ticket)}")
             return "executed"

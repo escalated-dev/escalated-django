@@ -13,12 +13,12 @@ from django.core.cache import cache
 from django.db.models import Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.utils.http import parse_etags
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST, require_safe
 
-from escalated import guest_throttle
+from escalated import guest_throttle, kb_guards
 from escalated.conf import get_setting
 from escalated.models import Article, Contact, Department, EscalatedSetting, Ticket
+from escalated.signals import ticket_created
 from escalated.widget_embed import WidgetMetadata, embed_script
 
 # ---------------------------------------------------------------------------
@@ -58,7 +58,50 @@ def _reject():
 
 
 def _widget_enabled():
-    return EscalatedSetting.get_bool("widget_enabled", default=True)
+    """Off until an admin turns it on, as in the other hosts (migration 0031 kept existing installs on)."""
+    return EscalatedSetting.get_bool("widget_enabled", default=False)
+
+
+def chat_enabled():
+    """Live chat in the widget: off until an admin turns it on."""
+    return EscalatedSetting.get_bool("chat_enabled", default=False)
+
+
+def _guest_tickets_enabled():
+    """Ticket creation from the widget: the shared guest-tickets switch and the widget's own."""
+    return EscalatedSetting.guest_tickets_enabled() and EscalatedSetting.get_bool(
+        "widget_ticket_creation_enabled", default=True
+    )
+
+
+def _signed_in(request):
+    user = getattr(request, "user", None)
+    return bool(user is not None and user.is_authenticated)
+
+
+def _kb_available(request):
+    """The knowledge base is on, and public or the visitor is signed in (always a guest cross-origin)."""
+    return kb_guards.kb_enabled() and (kb_guards.kb_public() or _signed_in(request))
+
+
+def _kb_error(request):
+    """The answer when the widget may not show articles, else None."""
+    if not kb_guards.kb_enabled():
+        return JsonResponse(
+            {"error": "Knowledge base is disabled", "message": "Knowledge base is disabled"}, status=404
+        )
+    if not (kb_guards.kb_public() or _signed_in(request)):
+        message = "Knowledge base is not public"
+        return JsonResponse({"error": message, "message": message}, status=403)
+    return None
+
+
+def _widget_departments():
+    """Active departments the widget offers: the admin's ``widget_departments`` list, or all of them."""
+    departments = Department.objects.filter(is_active=True)
+    raw = EscalatedSetting.get("widget_departments", "") or ""
+    ids = [int(part) for part in raw.replace(",", " ").split() if part.isdigit()]
+    return departments.filter(pk__in=ids) if ids else departments
 
 
 def active_department(value):
@@ -102,9 +145,9 @@ def widget_config(request):
         return _reject()
 
     greeting = EscalatedSetting.get("widget_greeting", "How can we help?")
-    color = EscalatedSetting.get("widget_accent_color", "#4f46e5")
-    kb_enabled = EscalatedSetting.get_bool("widget_kb_search_enabled", default=True)
-    tickets_enabled = EscalatedSetting.get_bool("widget_ticket_creation_enabled", default=True)
+    color = EscalatedSetting.get("widget_color") or EscalatedSetting.get("widget_accent_color", "#4f46e5")
+    kb_enabled = EscalatedSetting.get_bool("widget_kb_search_enabled", default=True) and _kb_available(request)
+    tickets_enabled = _guest_tickets_enabled()
 
     return JsonResponse(
         {
@@ -119,9 +162,10 @@ def widget_config(request):
             "color": color,
             "greeting": greeting,
             "position": EscalatedSetting.get("widget_position", "bottom-right") or "bottom-right",
-            "departments": [{"id": d.pk, "name": d.name} for d in Department.objects.filter(is_active=True)],
+            "departments": [{"id": d.pk, "name": d.name} for d in _widget_departments()],
             "kb_enabled": kb_enabled,
             "guest_tickets_enabled": tickets_enabled,
+            "chat_enabled": chat_enabled(),
             # Ticket create and chat start store the host page's `metadata`.
             "accepts_metadata": True,
             # There is no mailbox-verified status lookup, so the widget hides its
@@ -139,6 +183,10 @@ def widget_article_search(request):
 
     if _rate_limited(request, scope="widget_search"):
         return _reject()
+
+    kb_error = _kb_error(request)
+    if kb_error is not None:
+        return kb_error
 
     q = request.GET.get("q", "").strip()
     if not q or len(q) < 2:
@@ -170,6 +218,10 @@ def _article_payload(request, lookup):
 
     if _rate_limited(request, scope="widget_article"):
         return None, _reject()
+
+    kb_error = _kb_error(request)
+    if kb_error is not None:
+        return None, kb_error
 
     try:
         article = Article.objects.published().select_related("category").get(**lookup)
@@ -212,7 +264,7 @@ def _create_ticket(request, contract):
     if not _widget_enabled():
         return None, JsonResponse({"error": "Widget is disabled", "message": "Widget is disabled"}, status=403)
 
-    if not EscalatedSetting.get_bool("widget_ticket_creation_enabled", default=True):
+    if not _guest_tickets_enabled():
         message = "Ticket creation is disabled"
         return None, JsonResponse({"error": message, "message": message}, status=403)
 
@@ -276,10 +328,12 @@ def _create_ticket(request, contract):
         }
     )
 
-    return Ticket.objects.create(**attrs), None
+    ticket = Ticket.objects.create(**attrs)
+    # SLA, the created activity, notifications, webhooks and workflows hang off this signal.
+    ticket_created.send(sender=Ticket, ticket=ticket, user=None)
+    return ticket, None
 
 
-@csrf_exempt
 @require_POST
 def widget_create_ticket(request):
     """Create a ticket from the widget (guest mode). Original route and answer shape."""
@@ -298,7 +352,6 @@ def widget_create_ticket(request):
     )
 
 
-@csrf_exempt
 @require_POST
 def widget_tickets(request):
     """Create a ticket from the shared widget: 201 with ``reference`` at the top level."""

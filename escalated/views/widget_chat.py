@@ -13,18 +13,18 @@ The original routes, which take ``session_id`` in the body, keep working.
 import json
 import time
 from datetime import timedelta
+from functools import wraps
 
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from escalated.models import ChatSession, EscalatedSetting
 from escalated.services.chat_availability_service import ChatAvailabilityService
 from escalated.services.chat_routing_service import ChatRoutingService
 from escalated.services.chat_session_service import ChatSessionService
-from escalated.views.widget import active_department, contract_validation_error
+from escalated.views.widget import _widget_enabled, active_department, chat_enabled, contract_validation_error
 from escalated.widget_embed import WidgetMetadata
 
 # An agent counts as typing for this long after their last keystroke signal.
@@ -57,9 +57,35 @@ def _reject():
     return JsonResponse({"error": "Rate limit exceeded"}, status=429)
 
 
+def _chat_off_reason():
+    """Why the widget's live chat is unavailable, or None when it is on."""
+    if not _widget_enabled():
+        return "Widget is disabled."
+    if not chat_enabled():
+        return "Chat is disabled."
+    return None
+
+
+def chat_gated(view):
+    """403 unless both the widget and live chat are switched on."""
+
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        reason = _chat_off_reason()
+        if reason is not None:
+            return JsonResponse({"error": reason, "message": reason}, status=403)
+        return view(request, *args, **kwargs)
+
+    return wrapped
+
+
 @require_GET
 def chat_availability(request):
     """Check if live chat is currently available."""
+    reason = _chat_off_reason()
+    if reason is not None:
+        return JsonResponse({"available": False, "reason": reason})
+
     if _rate_limited(request, scope="widget_chat_availability"):
         return _reject()
 
@@ -167,7 +193,7 @@ def _start_payload(ticket, session):
     }
 
 
-@csrf_exempt
+@chat_gated
 @require_POST
 def start_chat(request):
     """Start a new chat session from the widget. Original route and answer shape."""
@@ -177,7 +203,7 @@ def start_chat(request):
     return JsonResponse(_start_payload(ticket, session))
 
 
-@csrf_exempt
+@chat_gated
 @require_POST
 def chat_start(request):
     """Start a chat for the shared widget: 201 with the session token as ``id``."""
@@ -230,7 +256,7 @@ def _json_body(request):
     return body if isinstance(body, dict) else None
 
 
-@csrf_exempt
+@chat_gated
 def chat_messages(request, token):
     """GET the chat's messages and state, or POST ``{body}`` as the guest."""
     if request.method == "GET":
@@ -287,7 +313,7 @@ def _post_message(request, token):
     return JsonResponse({"message": "Message sent.", "id": reply.pk})
 
 
-@csrf_exempt
+@chat_gated
 @require_POST
 def chat_typing(request, token):
     """Mark the guest as typing."""
@@ -304,7 +330,7 @@ def chat_typing(request, token):
     return JsonResponse({"ok": True})
 
 
-@csrf_exempt
+@chat_gated
 @require_POST
 def chat_end(request, token):
     """End the chat from the guest's side."""
@@ -321,7 +347,7 @@ def chat_end(request, token):
     return JsonResponse({"ok": True, "message": "Chat ended."})
 
 
-@csrf_exempt
+@chat_gated
 @require_POST
 def chat_rate(request, token):
     """Rate an ended chat: ``{rating: 1-5, comment?}``."""
@@ -349,7 +375,7 @@ def chat_rate(request, token):
     return JsonResponse({"ok": True, "message": "Rating submitted."})
 
 
-@csrf_exempt
+@chat_gated
 @require_POST
 def send_message(request):
     """Send a message from the customer."""
@@ -360,9 +386,11 @@ def send_message(request):
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
+    if not isinstance(body, dict):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    session_id = body.get("session_id", "").strip()
-    message_body = body.get("body", "").strip()
+    session_id = str(body.get("session_id") or "").strip()
+    message_body = str(body.get("body") or "").strip()
 
     if not session_id:
         return JsonResponse({"error": "session_id is required"}, status=400)
@@ -392,7 +420,7 @@ def send_message(request):
     )
 
 
-@csrf_exempt
+@chat_gated
 @require_POST
 def update_typing(request):
     """Update typing indicator from customer."""
@@ -403,8 +431,10 @@ def update_typing(request):
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
+    if not isinstance(body, dict):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    session_id = body.get("session_id", "").strip()
+    session_id = str(body.get("session_id") or "").strip()
     if not session_id:
         return JsonResponse({"error": "session_id is required"}, status=400)
 
@@ -419,7 +449,7 @@ def update_typing(request):
     return JsonResponse({"ok": True})
 
 
-@csrf_exempt
+@chat_gated
 @require_POST
 def end_chat(request):
     """End a chat from the customer side."""
@@ -430,8 +460,10 @@ def end_chat(request):
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
+    if not isinstance(body, dict):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    session_id = body.get("session_id", "").strip()
+    session_id = str(body.get("session_id") or "").strip()
     if not session_id:
         return JsonResponse({"error": "session_id is required"}, status=400)
 
@@ -449,7 +481,7 @@ def end_chat(request):
     return JsonResponse({"ok": True})
 
 
-@csrf_exempt
+@chat_gated
 @require_POST
 def rate_chat(request):
     """Rate a completed chat session."""
@@ -460,8 +492,10 @@ def rate_chat(request):
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
+    if not isinstance(body, dict):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    session_id = body.get("session_id", "").strip()
+    session_id = str(body.get("session_id") or "").strip()
     rating = body.get("rating")
     comment = body.get("comment", "")
 

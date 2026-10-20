@@ -6,6 +6,7 @@ from django import VERSION as DJANGO_VERSION
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
@@ -863,7 +864,8 @@ class TicketActivity(models.Model):
     causer = GenericForeignKey("causer_content_type", "causer_object_id")
 
     type = models.CharField(max_length=30, choices=ActivityType.choices)
-    properties = models.JSONField(default=dict)
+    # DjangoJSONEncoder: host user keys may be UUIDs (agent_id, previous_agent_id).
+    properties = models.JSONField(default=dict, encoder=DjangoJSONEncoder)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = TicketChildManager()

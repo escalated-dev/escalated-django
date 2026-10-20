@@ -13,6 +13,8 @@ from escalated.models import ChatSession, EscalatedSetting, Reply, Ticket
 from escalated.services.chat_session_service import ChatSessionService
 from tests.factories import ArticleCategoryFactory, ArticleFactory, DepartmentFactory, UserFactory
 
+pytestmark = pytest.mark.usefixtures("widget_on")
+
 W = "/support/widget"
 SHOP = "https://shop.example.com"
 

@@ -3,6 +3,7 @@ import json
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Avg, Q
 from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
@@ -20,6 +21,7 @@ from escalated.models import (
 )
 from escalated.permissions import can_update_ticket, can_view_ticket, is_admin, is_agent
 from escalated.rendering import paginated, render_page
+from escalated.request_data import request_data
 from escalated.serializers import (
     ActivitySerializer,
     AttachmentSerializer,
@@ -30,8 +32,10 @@ from escalated.serializers import (
     SatisfactionRatingSerializer,
     TagSerializer,
     TicketSerializer,
+    ticket_detail,
 )
 from escalated.services.ticket_service import TicketService
+from escalated.user_keys import user_pk
 
 User = get_user_model()
 
@@ -229,7 +233,7 @@ def ticket_show(request, ticket_id):
         request,
         "Escalated/Agent/TicketShow",
         props={
-            "ticket": TicketSerializer.serialize(ticket, include_replies=True, include_activities=True),
+            "ticket": ticket_detail(ticket, pinned_notes, satisfaction_data),
             "customActions": _custom_actions_for(request, ticket),
             "replies": ReplySerializer.serialize_list(replies),
             "activities": [ActivitySerializer.serialize(a) for a in activities],
@@ -237,6 +241,8 @@ def ticket_show(request, ticket_id):
             "agents": [{"id": a.pk, "name": a.get_full_name() or a.username, "email": a.email} for a in agents],
             "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
             "tags": TagSerializer.serialize_list(Tag.objects.all()),
+            # The page declares cannedResponses; canned_responses is kept for host overrides.
+            "cannedResponses": CannedResponseSerializer.serialize_list(canned_responses),
             "canned_responses": CannedResponseSerializer.serialize_list(canned_responses),
             "macros": MacroSerializer.serialize_list(macros),
             "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
@@ -270,10 +276,10 @@ def ticket_update(request, ticket_id):
 
     service = TicketService()
     data = {}
-    if "subject" in request.POST:
-        data["subject"] = request.POST["subject"]
-    if "description" in request.POST:
-        data["description"] = request.POST["description"]
+    if "subject" in request_data(request):
+        data["subject"] = request_data(request)["subject"]
+    if "description" in request_data(request):
+        data["description"] = request_data(request)["description"]
 
     service.update(ticket, request.user, data)
     return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
@@ -294,7 +300,7 @@ def ticket_reply(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    body = request.POST.get("body", "").strip()
+    body = request_data(request).get("body", "").strip()
     if not body:
         return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
 
@@ -331,7 +337,7 @@ def ticket_note(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    body = request.POST.get("body", "").strip()
+    body = request_data(request).get("body", "").strip()
     if not body:
         return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
 
@@ -356,7 +362,7 @@ def ticket_assign(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    agent_id = request.POST.get("agent_id")
+    agent_id = request_data(request).get("agent_id")
     if not agent_id:
         # Unassign
         service = TicketService()
@@ -388,7 +394,7 @@ def ticket_status(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    new_status = request.POST.get("status")
+    new_status = request_data(request).get("status")
     valid_statuses = [s.value for s in Ticket.Status]
     if new_status not in valid_statuses:
         return HttpResponseForbidden(_("Invalid status."))
@@ -414,7 +420,7 @@ def ticket_priority(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    new_priority = request.POST.get("priority")
+    new_priority = request_data(request).get("priority")
     valid_priorities = [p.value for p in Ticket.Priority]
     if new_priority not in valid_priorities:
         return HttpResponseForbidden(_("Invalid priority."))
@@ -442,11 +448,11 @@ def ticket_tags(request, ticket_id):
 
     service = TicketService()
 
-    add_tags = request.POST.getlist("add_tags")
+    add_tags = request_data(request).getlist("add_tags")
     if add_tags:
         service.add_tags(ticket, request.user, [int(t) for t in add_tags])
 
-    remove_tags = request.POST.getlist("remove_tags")
+    remove_tags = request_data(request).getlist("remove_tags")
     if remove_tags:
         service.remove_tags(ticket, request.user, [int(t) for t in remove_tags])
 
@@ -508,7 +514,7 @@ def ticket_department(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    department_id = request.POST.get("department_id")
+    department_id = request_data(request).get("department_id")
     try:
         department = Department.objects.get(pk=department_id)
     except Department.DoesNotExist:
@@ -538,7 +544,7 @@ def ticket_bulk_action(request):
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        body = request.POST
+        body = request_data(request)
 
     action = body.get("action", "")
     ticket_ids = body.get("ticket_ids", [])
@@ -558,9 +564,9 @@ def ticket_bulk_action(request):
             if action == "assign":
                 if value:
                     try:
-                        agent = User.objects.get(pk=int(value))
+                        agent = User.objects.get(pk=user_pk(value))
                         service.assign(ticket, user, agent)
-                    except User.DoesNotExist:
+                    except (User.DoesNotExist, ValidationError):
                         continue
                 else:
                     service.unassign(ticket, user)
@@ -608,7 +614,7 @@ def ticket_apply_macro(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    macro_id = request.POST.get("macro_id")
+    macro_id = request_data(request).get("macro_id")
     if not macro_id:
         return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
 
@@ -672,7 +678,7 @@ def ticket_custom_action(request, ticket_id, action):
     except (ValueError, TypeError):
         payload = {}
     if not payload:
-        payload = request.POST.get("payload") or {}
+        payload = request_data(request).get("payload") or {}
 
     custom_action_triggered.send(
         sender=Ticket,

@@ -4,6 +4,7 @@ import re as re_module
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Avg, Count, Max, Q
@@ -49,6 +50,7 @@ from escalated.models import (
 )
 from escalated.permissions import is_admin, is_agent
 from escalated.rendering import paginated, render_page
+from escalated.request_data import is_json, request_data
 from escalated.serializers import (
     ActivitySerializer,
     AgentCapacitySerializer,
@@ -80,8 +82,10 @@ from escalated.serializers import (
     TicketStatusSerializer,
     WebhookDeliverySerializer,
     WebhookSerializer,
+    ticket_detail,
 )
 from escalated.services.ticket_service import TicketService
+from escalated.user_keys import user_pk
 from escalated.widget_embed import WidgetOrigins
 
 User = get_user_model()
@@ -329,13 +333,15 @@ def tickets_show(request, ticket_id):
         request,
         "Escalated/Admin/Tickets/Show",
         props={
-            "ticket": TicketSerializer.serialize(ticket),
+            "ticket": ticket_detail(ticket, pinned_notes, satisfaction_data),
             "replies": ReplySerializer.serialize_list(replies),
             "activities": [ActivitySerializer.serialize(a) for a in activities],
             "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
             "agents": _get_agents(),
             "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
             "tags": TagSerializer.serialize_list(Tag.objects.all()),
+            # The page declares cannedResponses; canned_responses is kept for host overrides.
+            "cannedResponses": CannedResponseSerializer.serialize_list(canned_responses),
             "canned_responses": CannedResponseSerializer.serialize_list(canned_responses),
             "macros": MacroSerializer.serialize_list(macros),
             "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
@@ -363,7 +369,7 @@ def tickets_reply(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    body = request.POST.get("body", "").strip()
+    body = request_data(request).get("body", "").strip()
     if not body:
         return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
 
@@ -399,7 +405,7 @@ def tickets_note(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    body = request.POST.get("body", "").strip()
+    body = request_data(request).get("body", "").strip()
     if not body:
         return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
 
@@ -428,7 +434,7 @@ def tickets_assign(request, ticket_id):
 
     User = get_user_model()
 
-    agent_id = request.POST.get("agent_id")
+    agent_id = request_data(request).get("agent_id")
     if not agent_id:
         service = TicketService()
         service.unassign(ticket, request.user)
@@ -459,7 +465,7 @@ def tickets_status(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    new_status = request.POST.get("status")
+    new_status = request_data(request).get("status")
     valid_statuses = [s.value for s in Ticket.Status]
     if new_status not in valid_statuses:
         return HttpResponseForbidden(_("Invalid status."))
@@ -485,7 +491,7 @@ def tickets_priority(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    new_priority = request.POST.get("priority")
+    new_priority = request_data(request).get("priority")
     valid_priorities = [p.value for p in Ticket.Priority]
     if new_priority not in valid_priorities:
         return HttpResponseForbidden(_("Invalid priority."))
@@ -513,11 +519,11 @@ def tickets_tags(request, ticket_id):
 
     service = TicketService()
 
-    add_tags = request.POST.getlist("add_tags")
+    add_tags = request_data(request).getlist("add_tags")
     if add_tags:
         service.add_tags(ticket, request.user, [int(t) for t in add_tags])
 
-    remove_tags = request.POST.getlist("remove_tags")
+    remove_tags = request_data(request).getlist("remove_tags")
     if remove_tags:
         service.remove_tags(ticket, request.user, [int(t) for t in remove_tags])
 
@@ -579,7 +585,7 @@ def tickets_department(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    department_id = request.POST.get("department_id")
+    department_id = request_data(request).get("department_id")
     try:
         department = Department.objects.get(pk=department_id)
     except Department.DoesNotExist:
@@ -623,10 +629,10 @@ def departments_create(request):
         return check
 
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        slug = slugify(request.POST.get("slug", "") or name)
-        description = request.POST.get("description", "")
-        is_active = request.POST.get("is_active", "true") == "true"
+        name = request_data(request).get("name", "").strip()
+        slug = slugify(request_data(request).get("slug", "") or name)
+        description = request_data(request).get("description", "")
+        is_active = request_data(request).get("is_active", "true") == "true"
 
         if not name:
             return render_page(
@@ -655,14 +661,14 @@ def departments_edit(request, department_id):
         return HttpResponseNotFound(_("Department not found"))
 
     if request.method == "POST":
-        department.name = request.POST.get("name", department.name)
-        department.slug = slugify(request.POST.get("slug", "") or department.name)
-        department.description = request.POST.get("description", department.description)
-        department.is_active = request.POST.get("is_active", "true") == "true"
+        department.name = request_data(request).get("name", department.name)
+        department.slug = slugify(request_data(request).get("slug", "") or department.name)
+        department.description = request_data(request).get("description", department.description)
+        department.is_active = request_data(request).get("is_active", "true") == "true"
         department.save()
 
         # Update agents
-        agent_ids = request.POST.getlist("agent_ids")
+        agent_ids = request_data(request).getlist("agent_ids")
         if agent_ids is not None:
             department.agents.set(agent_ids)
 
@@ -736,9 +742,9 @@ def sla_policies_create(request):
 
         from escalated.ticket_access import sla_targets
 
-        targets = sla_targets(request.POST)
+        targets = sla_targets(request_data(request))
 
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             return render_page(
                 request,
@@ -749,16 +755,16 @@ def sla_policies_create(request):
             )
 
         try:
-            first_response_hours = json.loads(request.POST.get("first_response_hours", "{}"))
+            first_response_hours = json.loads(request_data(request).get("first_response_hours", "{}"))
         except (json.JSONDecodeError, TypeError):
             first_response_hours = {}
 
         try:
-            resolution_hours = json.loads(request.POST.get("resolution_hours", "{}"))
+            resolution_hours = json.loads(request_data(request).get("resolution_hours", "{}"))
         except (json.JSONDecodeError, TypeError):
             resolution_hours = {}
 
-        is_default = request.POST.get("is_default", "false") == "true"
+        is_default = request_data(request).get("is_default", "false") == "true"
 
         # If setting as default, unset other defaults
         if is_default:
@@ -767,12 +773,12 @@ def sla_policies_create(request):
         SlaPolicy.objects.create(
             **targets,
             name=name,
-            description=request.POST.get("description", ""),
+            description=request_data(request).get("description", ""),
             is_default=is_default,
             first_response_hours=first_response_hours,
             resolution_hours=resolution_hours,
-            business_hours_only=request.POST.get("business_hours_only", "false") == "true",
-            is_active=request.POST.get("is_active", "true") == "true",
+            business_hours_only=request_data(request).get("business_hours_only", "false") == "true",
+            is_active=request_data(request).get("is_active", "true") == "true",
         )
         return redirect("escalated:admin_sla_policies_index")
 
@@ -801,25 +807,25 @@ def sla_policies_edit(request, policy_id):
 
         from escalated.ticket_access import sla_targets
 
-        targets = sla_targets(request.POST)
+        targets = sla_targets(request_data(request))
 
-        policy.name = request.POST.get("name", policy.name)
-        policy.description = request.POST.get("description", policy.description)
-        policy.business_hours_only = request.POST.get("business_hours_only", "false") == "true"
-        policy.is_active = request.POST.get("is_active", "true") == "true"
+        policy.name = request_data(request).get("name", policy.name)
+        policy.description = request_data(request).get("description", policy.description)
+        policy.business_hours_only = request_data(request).get("business_hours_only", "false") == "true"
+        policy.is_active = request_data(request).get("is_active", "true") == "true"
 
-        is_default = request.POST.get("is_default", "false") == "true"
+        is_default = request_data(request).get("is_default", "false") == "true"
         if is_default and not policy.is_default:
             SlaPolicy.objects.filter(is_default=True).update(is_default=False)
         policy.is_default = is_default
 
         try:
-            policy.first_response_hours = json.loads(request.POST.get("first_response_hours", "{}"))
+            policy.first_response_hours = json.loads(request_data(request).get("first_response_hours", "{}"))
         except (json.JSONDecodeError, TypeError):
             pass
 
         try:
-            policy.resolution_hours = json.loads(request.POST.get("resolution_hours", "{}"))
+            policy.resolution_hours = json.loads(request_data(request).get("resolution_hours", "{}"))
         except (json.JSONDecodeError, TypeError):
             pass
 
@@ -886,7 +892,7 @@ def escalation_rules_create(request):
     if request.method == "POST":
         import json
 
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             return render_page(
                 request,
@@ -898,23 +904,23 @@ def escalation_rules_create(request):
             )
 
         try:
-            conditions = json.loads(request.POST.get("conditions", "{}"))
+            conditions = json.loads(request_data(request).get("conditions", "{}"))
         except (json.JSONDecodeError, TypeError):
             conditions = {}
 
         try:
-            actions = json.loads(request.POST.get("actions", "{}"))
+            actions = json.loads(request_data(request).get("actions", "{}"))
         except (json.JSONDecodeError, TypeError):
             actions = {}
 
         EscalationRule.objects.create(
             name=name,
-            description=request.POST.get("description", ""),
-            trigger_type=request.POST.get("trigger_type", EscalationRule.TriggerType.SLA_BREACH),
+            description=request_data(request).get("description", ""),
+            trigger_type=request_data(request).get("trigger_type", EscalationRule.TriggerType.SLA_BREACH),
             conditions=conditions,
             actions=actions,
-            order=int(request.POST.get("order", 0)),
-            is_active=request.POST.get("is_active", "true") == "true",
+            order=int(request_data(request).get("order", 0)),
+            is_active=request_data(request).get("is_active", "true") == "true",
         )
         return redirect("escalated:admin_escalation_rules_index")
 
@@ -941,19 +947,19 @@ def escalation_rules_edit(request, rule_id):
     if request.method == "POST":
         import json
 
-        rule.name = request.POST.get("name", rule.name)
-        rule.description = request.POST.get("description", rule.description)
-        rule.trigger_type = request.POST.get("trigger_type", rule.trigger_type)
-        rule.order = int(request.POST.get("order", rule.order))
-        rule.is_active = request.POST.get("is_active", "true") == "true"
+        rule.name = request_data(request).get("name", rule.name)
+        rule.description = request_data(request).get("description", rule.description)
+        rule.trigger_type = request_data(request).get("trigger_type", rule.trigger_type)
+        rule.order = int(request_data(request).get("order", rule.order))
+        rule.is_active = request_data(request).get("is_active", "true") == "true"
 
         try:
-            rule.conditions = json.loads(request.POST.get("conditions", "{}"))
+            rule.conditions = json.loads(request_data(request).get("conditions", "{}"))
         except (json.JSONDecodeError, TypeError):
             pass
 
         try:
-            rule.actions = json.loads(request.POST.get("actions", "{}"))
+            rule.actions = json.loads(request_data(request).get("actions", "{}"))
         except (json.JSONDecodeError, TypeError):
             pass
 
@@ -1029,14 +1035,14 @@ def tags_create(request):
         return check
 
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             return _tags_page(request, errors={"name": _("Name is required.")})
 
         Tag.objects.create(
             name=name,
-            slug=slugify(request.POST.get("slug", "") or name),
-            color=request.POST.get("color", "#6b7280"),
+            slug=slugify(request_data(request).get("slug", "") or name),
+            color=request_data(request).get("color", "#6b7280"),
         )
         return redirect("escalated:admin_tags_index")
 
@@ -1055,9 +1061,9 @@ def tags_edit(request, tag_id):
         return HttpResponseNotFound(_("Tag not found"))
 
     if request.method == "POST":
-        tag.name = request.POST.get("name", tag.name)
-        tag.slug = slugify(request.POST.get("slug", "") or tag.name)
-        tag.color = request.POST.get("color", tag.color)
+        tag.name = request_data(request).get("name", tag.name)
+        tag.slug = slugify(request_data(request).get("slug", "") or tag.name)
+        tag.color = request_data(request).get("color", tag.color)
         tag.save()
         return redirect("escalated:admin_tags_index")
 
@@ -1106,6 +1112,7 @@ def _canned_responses_page(request, errors=None):
         request,
         "Escalated/Admin/CannedResponses/Index",
         props={
+            "responses": CannedResponseSerializer.serialize_list(responses),
             "canned_responses": CannedResponseSerializer.serialize_list(responses),
             "errors": errors or {},
         },
@@ -1119,16 +1126,16 @@ def canned_responses_create(request):
         return check
 
     if request.method == "POST":
-        title = request.POST.get("title", "").strip()
+        title = request_data(request).get("title", "").strip()
         if not title:
             return _canned_responses_page(request, errors={"title": _("Title is required.")})
 
         CannedResponse.objects.create(
             title=title,
-            body=request.POST.get("body", ""),
-            category=request.POST.get("category", ""),
+            body=request_data(request).get("body", ""),
+            category=request_data(request).get("category", ""),
             created_by=request.user,
-            is_shared=request.POST.get("is_shared", "true") == "true",
+            is_shared=request_data(request).get("is_shared", "true") == "true",
         )
         return redirect("escalated:admin_canned_responses_index")
 
@@ -1147,10 +1154,10 @@ def canned_responses_edit(request, response_id):
         return HttpResponseNotFound(_("Canned response not found"))
 
     if request.method == "POST":
-        canned.title = request.POST.get("title", canned.title)
-        canned.body = request.POST.get("body", canned.body)
-        canned.category = request.POST.get("category", canned.category)
-        canned.is_shared = request.POST.get("is_shared", "true") == "true"
+        canned.title = request_data(request).get("title", canned.title)
+        canned.body = request_data(request).get("body", canned.body)
+        canned.category = request_data(request).get("category", canned.category)
+        canned.is_shared = request_data(request).get("is_shared", "true") == "true"
         canned.save()
         return redirect("escalated:admin_canned_responses_index")
 
@@ -1190,6 +1197,17 @@ def settings_index(request):
     all_settings = EscalatedSetting.objects.all()
     settings_dict = EscalatedSettingSerializer.serialize_as_dict(all_settings)
 
+    # The page binds switches and number inputs to these, so send real
+    # booleans and integers rather than the stored "1"/"0" text.
+    for key, default in _SETTINGS_BOOL_DEFAULTS.items():
+        value = settings_dict.get(key)
+        settings_dict[key] = default if value is None else value in ("1", "true", "True", "yes")
+    for key in _SETTINGS_INT_KEYS:
+        try:
+            settings_dict[key] = int(settings_dict[key])
+        except (KeyError, TypeError, ValueError):
+            pass
+
     # Mask sensitive values before sending to frontend
     for key in _SENSITIVE_SETTING_KEYS:
         if key in settings_dict and settings_dict[key]:
@@ -1201,8 +1219,28 @@ def settings_index(request):
         props={
             "settings": settings_dict,
             "errors": request.session.pop(SETTINGS_ERRORS_SESSION_KEY, {}),
+            "supported_settings": SUPPORTED_SETTINGS,
         },
     )
+
+
+_SETTINGS_BOOL_DEFAULTS = {
+    "guest_tickets_enabled": True,
+    "allow_customer_close": True,
+    "show_powered_by": True,
+    "inbound_email_enabled": False,
+    "knowledge_base_enabled": True,
+    "knowledge_base_public": False,
+    "knowledge_base_feedback_enabled": True,
+    "widget_enabled": False,
+    "chat_enabled": False,
+}
+_SETTINGS_INT_KEYS = (
+    "auto_close_resolved_after_days",
+    "max_attachments_per_reply",
+    "max_attachment_size_kb",
+    "imap_port",
+)
 
 
 # A rejected settings save redirects back to the settings page, which shows
@@ -1222,9 +1260,115 @@ def _clean_widget_allowed_origins(raw):
     return "\n".join(entries), None
 
 
+# Keys settings_update saves. Sent to the page as ``supported_settings`` so the
+# shared Settings page only shows controls whose values are kept.
+SUPPORTED_SETTINGS = [
+    "guest_tickets_enabled",
+    "allow_customer_close",
+    "auto_close_resolved_after_days",
+    "max_attachments_per_reply",
+    "max_attachment_size_kb",
+    "ticket_reference_prefix",
+    "show_powered_by",
+    "inbound_email_enabled",
+    "inbound_email_adapter",
+    "inbound_email_address",
+    "mailgun_signing_key",
+    "postmark_inbound_token",
+    "ses_region",
+    "ses_topic_arn",
+    "imap_host",
+    "imap_port",
+    "imap_encryption",
+    "imap_username",
+    "imap_password",
+    "imap_mailbox",
+    "knowledge_base_enabled",
+    "knowledge_base_public",
+    "knowledge_base_feedback_enabled",
+    "widget_enabled",
+    "widget_color",
+    "widget_position",
+    "widget_greeting",
+    "widget_departments",
+    "widget_allowed_origins",
+    "chat_enabled",
+]
+
+# Checkboxes of the original form-encoded page: an unticked box is absent from
+# a form post, so absence means off. A JSON post (the shared Inertia page)
+# only changes the keys it sends.
+_FORM_CHECKBOX_KEYS = [
+    "guest_tickets_enabled",
+    "allow_customer_close",
+    "inbound_email_enabled",
+    "show_powered_by",
+]
+# Switches saved only when sent, for form and JSON posts alike.
+_OPTIONAL_BOOL_KEYS = [
+    "knowledge_base_enabled",
+    "knowledge_base_public",
+    "knowledge_base_feedback_enabled",
+    "widget_enabled",
+    "chat_enabled",
+]
+_WIDGET_COLOR_RE = re_module.compile(r"^#[0-9A-Fa-f]{6}$")
+_WIDGET_DEPARTMENTS_RE = re_module.compile(r"^[0-9,\s]*$")
+_WIDGET_POSITIONS = ("bottom-right", "bottom-left")
+
+
+def _truthy(value):
+    return str(value).strip().lower() in ("1", "true", "on", "yes")
+
+
+def _clean_widget_settings(data):
+    """``(values, errors)`` for the Support Widget fields present in ``data``."""
+    values, errors = {}, {}
+
+    origins = data.get("widget_allowed_origins")
+    if origins is not None:
+        cleaned, error = _clean_widget_allowed_origins(origins)
+        if error:
+            errors["widget_allowed_origins"] = error
+        else:
+            values["widget_allowed_origins"] = cleaned
+
+    color = data.get("widget_color")
+    if color is not None:
+        color = color.strip()
+        if _WIDGET_COLOR_RE.match(color):
+            values["widget_color"] = color
+        else:
+            errors["widget_color"] = _("The widget colour must be a hex colour such as #4F46E5.")
+
+    position = data.get("widget_position")
+    if position is not None:
+        if position in _WIDGET_POSITIONS:
+            values["widget_position"] = position
+        else:
+            errors["widget_position"] = _("The widget position must be bottom-right or bottom-left.")
+
+    greeting = data.get("widget_greeting")
+    if greeting is not None:
+        greeting = greeting.strip()
+        if len(greeting) > 255:
+            errors["widget_greeting"] = _("The widget greeting may not be longer than 255 characters.")
+        else:
+            values["widget_greeting"] = greeting
+
+    departments = data.get("widget_departments")
+    if departments is not None:
+        if len(departments) > 1000 or not _WIDGET_DEPARTMENTS_RE.match(departments):
+            errors["widget_departments"] = _("The widget departments must be department ids separated by commas.")
+        else:
+            values["widget_departments"] = departments.strip()
+
+    return values, errors
+
+
 @login_required
 def settings_update(request):
-    """Update Escalated settings."""
+    """Update Escalated settings from the Settings page (JSON from Inertia, or a form post)."""
     check = _require_admin(request)
     if check:
         return check
@@ -1232,25 +1376,28 @@ def settings_update(request):
     if request.method != "POST":
         return HttpResponseForbidden(_("Method not allowed"))
 
-    # Validate before saving anything, so a rejected save changes nothing.
-    widget_allowed_origins = request.POST.get("widget_allowed_origins")
-    if widget_allowed_origins is not None:
-        widget_allowed_origins, error = _clean_widget_allowed_origins(widget_allowed_origins)
-        if error:
-            request.session[SETTINGS_ERRORS_SESSION_KEY] = {"widget_allowed_origins": error}
-            return redirect("escalated:admin_settings")
-        EscalatedSetting.set("widget_allowed_origins", widget_allowed_origins)
+    data = request_data(request)
+    is_json_post = is_json(request)
 
-    # Boolean settings (sent as "1"/"0" or absent)
-    bool_keys = [
-        "guest_tickets_enabled",
-        "allow_customer_close",
-        "inbound_email_enabled",
-        "show_powered_by",
-    ]
-    for key in bool_keys:
-        value = "1" if request.POST.get(key) in ("1", "true", "on") else "0"
+    # Validate before saving anything, so a rejected save changes nothing.
+    widget_values, errors = _clean_widget_settings(data)
+    if errors:
+        request.session[SETTINGS_ERRORS_SESSION_KEY] = errors
+        return redirect("escalated:admin_settings")
+
+    for key, value in widget_values.items():
         EscalatedSetting.set(key, value)
+
+    for key in _FORM_CHECKBOX_KEYS:
+        raw = data.get(key)
+        if raw is None and is_json_post:
+            continue
+        EscalatedSetting.set(key, "1" if raw is not None and _truthy(raw) else "0")
+
+    for key in _OPTIONAL_BOOL_KEYS:
+        raw = data.get(key)
+        if raw is not None:
+            EscalatedSetting.set(key, "1" if _truthy(raw) else "0")
 
     # Integer settings
     int_keys = [
@@ -1260,7 +1407,7 @@ def settings_update(request):
         "imap_port",
     ]
     for key in int_keys:
-        raw = request.POST.get(key)
+        raw = data.get(key)
         if raw is not None:
             try:
                 value = str(max(0, int(raw)))
@@ -1269,7 +1416,7 @@ def settings_update(request):
                 pass
 
     # String settings
-    prefix = request.POST.get("ticket_reference_prefix", "").strip()
+    prefix = (data.get("ticket_reference_prefix") or "").strip()
     if prefix and prefix.isalnum() and len(prefix) <= 10:
         EscalatedSetting.set("ticket_reference_prefix", prefix)
 
@@ -1288,7 +1435,7 @@ def settings_update(request):
         "imap_mailbox",
     ]
     for key in inbound_str_keys:
-        raw = request.POST.get(key)
+        raw = data.get(key)
         if raw is not None:
             stripped = raw.strip()
             # Skip saving sensitive fields that still contain masked values
@@ -1317,7 +1464,7 @@ def tickets_bulk_action(request):
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        body = request.POST
+        body = request_data(request)
 
     action = body.get("action", "")
     ticket_ids = body.get("ticket_ids", [])
@@ -1337,9 +1484,9 @@ def tickets_bulk_action(request):
             if action == "assign":
                 if value:
                     try:
-                        agent = User.objects.get(pk=int(value))
+                        agent = User.objects.get(pk=user_pk(value))
                         service.assign(ticket, user, agent)
-                    except User.DoesNotExist:
+                    except (User.DoesNotExist, ValidationError):
                         continue
                 else:
                     service.unassign(ticket, user)
@@ -1387,7 +1534,7 @@ def tickets_apply_macro(request, ticket_id):
     except Ticket.DoesNotExist:
         return HttpResponseNotFound(_("Ticket not found"))
 
-    macro_id = request.POST.get("macro_id")
+    macro_id = request_data(request).get("macro_id")
     if not macro_id:
         return redirect("escalated:admin_tickets_show", ticket_id=ticket_id)
 
@@ -1552,21 +1699,21 @@ def macros_create(request):
         return check
 
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             return _macros_page(request, errors={"name": _("Name is required.")})
 
         try:
-            actions = json.loads(request.POST.get("actions", "[]"))
+            actions = json.loads(request_data(request).get("actions", "[]"))
         except (json.JSONDecodeError, TypeError):
             actions = []
 
         Macro.objects.create(
             name=name,
-            description=request.POST.get("description", ""),
+            description=request_data(request).get("description", ""),
             actions=actions,
-            is_shared=request.POST.get("is_shared", "true") == "true",
-            order=int(request.POST.get("order", 0)),
+            is_shared=request_data(request).get("is_shared", "true") == "true",
+            order=int(request_data(request).get("order", 0)),
             created_by=request.user,
         )
         return redirect("escalated:admin_macros_index")
@@ -1587,13 +1734,13 @@ def macros_edit(request, macro_id):
         return HttpResponseNotFound(_("Macro not found"))
 
     if request.method == "POST":
-        macro.name = request.POST.get("name", macro.name)
-        macro.description = request.POST.get("description", macro.description)
-        macro.is_shared = request.POST.get("is_shared", "true") == "true"
-        macro.order = int(request.POST.get("order", macro.order))
+        macro.name = request_data(request).get("name", macro.name)
+        macro.description = request_data(request).get("description", macro.description)
+        macro.is_shared = request_data(request).get("is_shared", "true") == "true"
+        macro.order = int(request_data(request).get("order", macro.order))
 
         try:
-            macro.actions = json.loads(request.POST.get("actions", "[]"))
+            macro.actions = json.loads(request_data(request).get("actions", "[]"))
         except (json.JSONDecodeError, TypeError):
             pass
 
@@ -1708,7 +1855,7 @@ def statuses_create(request):
         return check
 
     if request.method == "POST":
-        label = request.POST.get("label", "").strip()
+        label = request_data(request).get("label", "").strip()
         if not label:
             return render_page(
                 request,
@@ -1719,8 +1866,8 @@ def statuses_create(request):
                 },
             )
 
-        category = request.POST.get("category", "open")
-        is_default = request.POST.get("is_default", "false") == "true"
+        category = request_data(request).get("category", "open")
+        is_default = request_data(request).get("is_default", "false") == "true"
 
         if is_default:
             TicketStatus.objects.filter(category=category).update(is_default=False)
@@ -1728,9 +1875,9 @@ def statuses_create(request):
         TicketStatus.objects.create(
             label=label,
             category=category,
-            color=request.POST.get("color", "#6b7280"),
-            description=request.POST.get("description", ""),
-            position=int(request.POST.get("position", 0)),
+            color=request_data(request).get("color", "#6b7280"),
+            description=request_data(request).get("description", ""),
+            position=int(request_data(request).get("position", 0)),
             is_default=is_default,
         )
         return redirect("escalated:admin_statuses_index")
@@ -1756,13 +1903,13 @@ def statuses_edit(request, status_id):
         return HttpResponseNotFound(_("Status not found"))
 
     if request.method == "POST":
-        status.label = request.POST.get("label", status.label)
-        status.category = request.POST.get("category", status.category)
-        status.color = request.POST.get("color", status.color)
-        status.description = request.POST.get("description", status.description)
-        status.position = int(request.POST.get("position", status.position))
+        status.label = request_data(request).get("label", status.label)
+        status.category = request_data(request).get("category", status.category)
+        status.color = request_data(request).get("color", status.color)
+        status.description = request_data(request).get("description", status.description)
+        status.position = int(request_data(request).get("position", status.position))
 
-        is_default = request.POST.get("is_default", "false") == "true"
+        is_default = request_data(request).get("is_default", "false") == "true"
         if is_default and not status.is_default:
             TicketStatus.objects.filter(category=status.category).exclude(pk=status.pk).update(is_default=False)
         status.is_default = is_default
@@ -1826,7 +1973,7 @@ def business_hours_create(request):
         return check
 
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             return render_page(
                 request,
@@ -1836,24 +1983,24 @@ def business_hours_create(request):
                 },
             )
 
-        is_default = request.POST.get("is_default", "false") == "true"
+        is_default = request_data(request).get("is_default", "false") == "true"
         if is_default:
             BusinessSchedule.objects.filter(is_default=True).update(is_default=False)
 
         try:
-            schedule_data = json.loads(request.POST.get("schedule", "{}"))
+            schedule_data = json.loads(request_data(request).get("schedule", "{}"))
         except (json.JSONDecodeError, TypeError):
             schedule_data = {}
 
         sched = BusinessSchedule.objects.create(
             name=name,
-            timezone=request.POST.get("timezone", "UTC"),
+            timezone=request_data(request).get("timezone", "UTC"),
             is_default=is_default,
             schedule=schedule_data,
         )
 
         try:
-            holidays = json.loads(request.POST.get("holidays", "[]"))
+            holidays = json.loads(request_data(request).get("holidays", "[]"))
         except (json.JSONDecodeError, TypeError):
             holidays = []
 
@@ -1890,16 +2037,16 @@ def business_hours_edit(request, schedule_id):
         return HttpResponseNotFound(_("Business schedule not found"))
 
     if request.method == "POST":
-        sched.name = request.POST.get("name", sched.name)
-        sched.timezone = request.POST.get("timezone", sched.timezone)
+        sched.name = request_data(request).get("name", sched.name)
+        sched.timezone = request_data(request).get("timezone", sched.timezone)
 
-        is_default = request.POST.get("is_default", "false") == "true"
+        is_default = request_data(request).get("is_default", "false") == "true"
         if is_default and not sched.is_default:
             BusinessSchedule.objects.filter(is_default=True).exclude(pk=sched.pk).update(is_default=False)
         sched.is_default = is_default
 
         try:
-            sched.schedule = json.loads(request.POST.get("schedule", "{}"))
+            sched.schedule = json.loads(request_data(request).get("schedule", "{}"))
         except (json.JSONDecodeError, TypeError):
             pass
 
@@ -1908,7 +2055,7 @@ def business_hours_edit(request, schedule_id):
         # Sync holidays
         sched.holidays.all().delete()
         try:
-            holidays = json.loads(request.POST.get("holidays", "[]"))
+            holidays = json.loads(request_data(request).get("holidays", "[]"))
         except (json.JSONDecodeError, TypeError):
             holidays = []
 
@@ -1980,7 +2127,7 @@ def roles_create(request):
         return check
 
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             return render_page(
                 request,
@@ -1993,10 +2140,10 @@ def roles_create(request):
 
         role = Role.objects.create(
             name=name,
-            description=request.POST.get("description", ""),
+            description=request_data(request).get("description", ""),
         )
 
-        permission_ids = request.POST.getlist("permissions")
+        permission_ids = request_data(request).getlist("permissions")
         if permission_ids:
             role.permissions.set(permission_ids)
 
@@ -2023,11 +2170,11 @@ def roles_edit(request, role_id):
         return HttpResponseNotFound(_("Role not found"))
 
     if request.method == "POST":
-        role.name = request.POST.get("name", role.name)
-        role.description = request.POST.get("description", role.description)
+        role.name = request_data(request).get("name", role.name)
+        role.description = request_data(request).get("description", role.description)
         role.save()
 
-        permission_ids = request.POST.getlist("permissions")
+        permission_ids = request_data(request).getlist("permissions")
         role.permissions.set(permission_ids)
 
         return redirect("escalated:admin_roles_index")
@@ -2092,7 +2239,7 @@ def custom_fields_create(request):
         return check
 
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             return render_page(
                 request,
@@ -2104,33 +2251,33 @@ def custom_fields_create(request):
             )
 
         try:
-            options = json.loads(request.POST.get("options", "null"))
+            options = json.loads(request_data(request).get("options", "null"))
         except (json.JSONDecodeError, TypeError):
             options = None
 
         try:
-            validation_rules = json.loads(request.POST.get("validation_rules", "null"))
+            validation_rules = json.loads(request_data(request).get("validation_rules", "null"))
         except (json.JSONDecodeError, TypeError):
             validation_rules = None
 
         try:
-            conditions = json.loads(request.POST.get("conditions", "null"))
+            conditions = json.loads(request_data(request).get("conditions", "null"))
         except (json.JSONDecodeError, TypeError):
             conditions = None
 
         CustomField.objects.create(
             name=name,
-            slug=slugify(request.POST.get("slug", "") or name),
-            type=request.POST.get("type", CustomField.FieldType.TEXT),
-            context=request.POST.get("context", CustomField.Context.TICKET),
+            slug=slugify(request_data(request).get("slug", "") or name),
+            type=request_data(request).get("type", CustomField.FieldType.TEXT),
+            context=request_data(request).get("context", CustomField.Context.TICKET),
             options=options,
-            required=request.POST.get("required", "false") == "true",
-            placeholder=request.POST.get("placeholder", ""),
-            description=request.POST.get("description", ""),
+            required=request_data(request).get("required", "false") == "true",
+            placeholder=request_data(request).get("placeholder", ""),
+            description=request_data(request).get("description", ""),
             validation_rules=validation_rules,
             conditions=conditions,
-            position=int(request.POST.get("position", 0)),
-            active=request.POST.get("active", "true") == "true",
+            position=int(request_data(request).get("position", 0)),
+            active=request_data(request).get("active", "true") == "true",
         )
         return redirect("escalated:admin_custom_fields_index")
 
@@ -2156,28 +2303,28 @@ def custom_fields_edit(request, field_id):
         return HttpResponseNotFound(_("Custom field not found"))
 
     if request.method == "POST":
-        field.name = request.POST.get("name", field.name)
-        field.slug = slugify(request.POST.get("slug", "") or field.name)
-        field.type = request.POST.get("type", field.type)
-        field.context = request.POST.get("context", field.context)
-        field.required = request.POST.get("required", "false") == "true"
-        field.placeholder = request.POST.get("placeholder", field.placeholder)
-        field.description = request.POST.get("description", field.description)
-        field.position = int(request.POST.get("position", field.position))
-        field.active = request.POST.get("active", "true") == "true"
+        field.name = request_data(request).get("name", field.name)
+        field.slug = slugify(request_data(request).get("slug", "") or field.name)
+        field.type = request_data(request).get("type", field.type)
+        field.context = request_data(request).get("context", field.context)
+        field.required = request_data(request).get("required", "false") == "true"
+        field.placeholder = request_data(request).get("placeholder", field.placeholder)
+        field.description = request_data(request).get("description", field.description)
+        field.position = int(request_data(request).get("position", field.position))
+        field.active = request_data(request).get("active", "true") == "true"
 
         try:
-            field.options = json.loads(request.POST.get("options", "null"))
+            field.options = json.loads(request_data(request).get("options", "null"))
         except (json.JSONDecodeError, TypeError):
             pass
 
         try:
-            field.validation_rules = json.loads(request.POST.get("validation_rules", "null"))
+            field.validation_rules = json.loads(request_data(request).get("validation_rules", "null"))
         except (json.JSONDecodeError, TypeError):
             pass
 
         try:
-            field.conditions = json.loads(request.POST.get("conditions", "null"))
+            field.conditions = json.loads(request_data(request).get("conditions", "null"))
         except (json.JSONDecodeError, TypeError):
             pass
 
@@ -2931,7 +3078,7 @@ def articles_create(request):
         return check
 
     if request.method == "POST":
-        title = request.POST.get("title", "").strip()
+        title = request_data(request).get("title", "").strip()
         if not title:
             return render_page(
                 request,
@@ -2942,17 +3089,17 @@ def articles_create(request):
                 },
             )
 
-        status = request.POST.get("status", Article.Status.DRAFT)
+        status = request_data(request).get("status", Article.Status.DRAFT)
         published_at = None
         if status == Article.Status.PUBLISHED:
             published_at = timezone.now()
 
-        category_id = request.POST.get("category_id")
+        category_id = request_data(request).get("category_id")
 
         Article.objects.create(
             title=title,
-            slug=slugify(request.POST.get("slug", "") or title),
-            body=request.POST.get("body", ""),
+            slug=slugify(request_data(request).get("slug", "") or title),
+            body=request_data(request).get("body", ""),
             status=status,
             category_id=category_id if category_id else None,
             author=request.user,
@@ -2983,16 +3130,16 @@ def articles_edit(request, article_id):
         return HttpResponseNotFound(_("Article not found"))
 
     if request.method == "POST":
-        article.title = request.POST.get("title", article.title)
-        article.slug = slugify(request.POST.get("slug", "") or article.title)
-        article.body = request.POST.get("body", article.body)
+        article.title = request_data(request).get("title", article.title)
+        article.slug = slugify(request_data(request).get("slug", "") or article.title)
+        article.body = request_data(request).get("body", article.body)
 
-        new_status = request.POST.get("status", article.status)
+        new_status = request_data(request).get("status", article.status)
         if new_status == Article.Status.PUBLISHED and article.status != Article.Status.PUBLISHED:
             article.published_at = timezone.now()
         article.status = new_status
 
-        category_id = request.POST.get("category_id")
+        category_id = request_data(request).get("category_id")
         article.category_id = category_id if category_id else None
 
         article.save()
@@ -3063,18 +3210,18 @@ def kb_categories_store(request):
     if request.method != "POST":
         return HttpResponseForbidden(_("Method not allowed"))
 
-    name = request.POST.get("name", "").strip()
+    name = request_data(request).get("name", "").strip()
     if not name:
         return JsonResponse({"error": "Name is required"}, status=400)
 
-    parent_id = request.POST.get("parent_id")
+    parent_id = request_data(request).get("parent_id")
 
     ArticleCategory.objects.create(
         name=name,
         slug=slugify(name),
         parent_id=parent_id if parent_id else None,
-        position=int(request.POST.get("position", 0)),
-        description=request.POST.get("description", ""),
+        position=int(request_data(request).get("position", 0)),
+        description=request_data(request).get("description", ""),
     )
 
     return redirect("escalated:admin_kb_categories_index")
@@ -3096,12 +3243,12 @@ def kb_categories_update(request, category_id):
     except ArticleCategory.DoesNotExist:
         return HttpResponseNotFound(_("Category not found"))
 
-    category.name = request.POST.get("name", category.name)
-    category.slug = slugify(request.POST.get("slug", "") or category.name)
-    category.description = request.POST.get("description", category.description)
-    category.position = int(request.POST.get("position", category.position))
+    category.name = request_data(request).get("name", category.name)
+    category.slug = slugify(request_data(request).get("slug", "") or category.name)
+    category.description = request_data(request).get("description", category.description)
+    category.position = int(request_data(request).get("position", category.position))
 
-    parent_id = request.POST.get("parent_id")
+    parent_id = request_data(request).get("parent_id")
     category.parent_id = parent_id if parent_id else None
 
     category.save()
@@ -3318,7 +3465,7 @@ def _skills_parse_request(request):
                 return _normalize_skills_payload_dict(raw)
         except (json.JSONDecodeError, TypeError, UnicodeDecodeError):
             pass
-    return _skills_post_to_payload_dict(request.POST)
+    return _skills_post_to_payload_dict(request_data(request))
 
 
 def _skills_apply_payload(skill, payload):
@@ -3360,7 +3507,7 @@ def _skills_method_is_update(request):
     if request.method in ("PUT", "PATCH"):
         return True
     if request.method == "POST":
-        spoofed = request.POST.get("_method", "").upper()
+        spoofed = request_data(request).get("_method", "").upper()
         if spoofed in ("PUT", "PATCH", ""):
             return True
     return False
@@ -3520,7 +3667,7 @@ def capacity_update(request, capacity_id):
         capacity = AgentCapacity.objects.get(pk=capacity_id)
     except AgentCapacity.DoesNotExist:
         return HttpResponseNotFound(_("Capacity not found"))
-    max_concurrent = request.POST.get("max_concurrent")
+    max_concurrent = request_data(request).get("max_concurrent")
     if max_concurrent:
         capacity.max_concurrent = int(max_concurrent)
         capacity.save(update_fields=["max_concurrent", "updated_at"])
@@ -3554,7 +3701,7 @@ def webhooks_create(request):
     if check:
         return check
     if request.method == "POST":
-        url = request.POST.get("url", "").strip()
+        url = request_data(request).get("url", "").strip()
         if not url:
             return render_page(
                 request,
@@ -3565,14 +3712,14 @@ def webhooks_create(request):
                 },
             )
         try:
-            events = json.loads(request.POST.get("events", "[]"))
+            events = json.loads(request_data(request).get("events", "[]"))
         except (json.JSONDecodeError, TypeError):
             events = []
         Webhook.objects.create(
             url=url,
             events=events,
-            secret=request.POST.get("secret", "") or None,
-            active=request.POST.get("active", "true") == "true",
+            secret=request_data(request).get("secret", "") or None,
+            active=request_data(request).get("active", "true") == "true",
         )
         return redirect("escalated:admin_webhooks_index")
     return render_page(
@@ -3590,15 +3737,15 @@ def webhooks_edit(request, webhook_id):
     except Webhook.DoesNotExist:
         return HttpResponseNotFound(_("Webhook not found"))
     if request.method == "POST":
-        webhook.url = request.POST.get("url", webhook.url)
+        webhook.url = request_data(request).get("url", webhook.url)
         try:
-            webhook.events = json.loads(request.POST.get("events", "[]"))
+            webhook.events = json.loads(request_data(request).get("events", "[]"))
         except (json.JSONDecodeError, TypeError):
             pass
-        secret = request.POST.get("secret")
+        secret = request_data(request).get("secret")
         if secret is not None:
             webhook.secret = secret or None
-        webhook.active = request.POST.get("active", "true") == "true"
+        webhook.active = request_data(request).get("active", "true") == "true"
         webhook.save()
         return redirect("escalated:admin_webhooks_index")
     return render_page(
@@ -3718,17 +3865,17 @@ def automations_create(request):
         return check
     if request.method == "POST":
         errors = {}
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             errors["name"] = _("Name is required.")
         try:
-            conditions = json.loads(request.POST.get("conditions", "[]"))
+            conditions = json.loads(request_data(request).get("conditions", "[]"))
         except (json.JSONDecodeError, TypeError):
             conditions = []
         if not isinstance(conditions, list) or len(conditions) < 1:
             errors["conditions"] = _("At least one condition is required.")
         try:
-            actions = json.loads(request.POST.get("actions", "[]"))
+            actions = json.loads(request_data(request).get("actions", "[]"))
         except (json.JSONDecodeError, TypeError):
             actions = []
         if not isinstance(actions, list) or len(actions) < 1:
@@ -3740,7 +3887,7 @@ def automations_create(request):
             name=name,
             conditions=conditions,
             actions=actions,
-            active=request.POST.get("active", "true") == "true",
+            active=request_data(request).get("active", "true") == "true",
             position=max_pos + 1,
         )
         return redirect("escalated:admin_automations_index")
@@ -3758,17 +3905,17 @@ def automations_edit(request, automation_id):
         return HttpResponseNotFound(_("Automation not found"))
     if request.method == "POST":
         errors = {}
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             errors["name"] = _("Name is required.")
         try:
-            conditions = json.loads(request.POST.get("conditions", "[]"))
+            conditions = json.loads(request_data(request).get("conditions", "[]"))
         except (json.JSONDecodeError, TypeError):
             conditions = automation.conditions
         if not isinstance(conditions, list) or len(conditions) < 1:
             errors["conditions"] = _("At least one condition is required.")
         try:
-            actions = json.loads(request.POST.get("actions", "[]"))
+            actions = json.loads(request_data(request).get("actions", "[]"))
         except (json.JSONDecodeError, TypeError):
             actions = automation.actions
         if not isinstance(actions, list) or len(actions) < 1:
@@ -3782,7 +3929,7 @@ def automations_edit(request, automation_id):
         automation.name = name
         automation.conditions = conditions
         automation.actions = actions
-        automation.active = request.POST.get("active", "true") == "true"
+        automation.active = request_data(request).get("active", "true") == "true"
         automation.save()
         return redirect("escalated:admin_automations_index")
     return render_page(
@@ -3824,7 +3971,9 @@ def settings_csat(request):
     }
     if request.method == "POST":
         for key in defaults:
-            EscalatedSetting.objects.update_or_create(key=key, defaults={"value": request.POST.get(key, defaults[key])})
+            EscalatedSetting.objects.update_or_create(
+                key=key, defaults={"value": request_data(request).get(key, defaults[key])}
+            )
         return redirect("escalated:admin_settings")
     config = {}
     for key, default in defaults.items():
@@ -3851,7 +4000,7 @@ def settings_public_tickets(request):
     valid_modes = {"unassigned", "guest_user", "prompt_signup"}
 
     if request.method == "POST":
-        mode = request.POST.get("guest_policy_mode", "unassigned")
+        mode = request_data(request).get("guest_policy_mode", "unassigned")
         if mode not in valid_modes:
             mode = "unassigned"
 
@@ -3859,14 +4008,14 @@ def settings_public_tickets(request):
 
         user_id_value = ""
         if mode == "guest_user":
-            raw = request.POST.get("guest_policy_user_id", "").strip()
+            raw = request_data(request).get("guest_policy_user_id", "").strip()
             if raw.isdigit() and int(raw) > 0:
                 user_id_value = raw
         EscalatedSetting.objects.update_or_create(key="guest_policy_user_id", defaults={"value": user_id_value})
 
         signup_url_value = ""
         if mode == "prompt_signup":
-            signup_url_value = request.POST.get("guest_policy_signup_url_template", "").strip()[:500]
+            signup_url_value = request_data(request).get("guest_policy_signup_url_template", "").strip()[:500]
         EscalatedSetting.objects.update_or_create(
             key="guest_policy_signup_url_template",
             defaults={"value": signup_url_value},
@@ -3903,7 +4052,7 @@ def settings_sso(request):
 
     sso = SsoService()
     if request.method == "POST":
-        sso.save_config(request.POST.dict())
+        sso.save_config(request_data(request).dict())
         return redirect("escalated:admin_settings")
     return render_page(request, "Escalated/Admin/Settings/SsoSettings", props={"settings": sso.get_config()})
 
@@ -4006,14 +4155,14 @@ def custom_objects_create(request):
     if check:
         return check
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
+        name = request_data(request).get("name", "").strip()
         if not name:
             return render_page(
                 request, "Escalated/Admin/CustomObjects/Form", props={"errors": {"name": _("Name is required.")}}
             )
-        slug_val = slugify(request.POST.get("slug", "") or name)
+        slug_val = slugify(request_data(request).get("slug", "") or name)
         try:
-            fields_schema = json.loads(request.POST.get("fields_schema", "[]"))
+            fields_schema = json.loads(request_data(request).get("fields_schema", "[]"))
         except (json.JSONDecodeError, TypeError):
             fields_schema = []
         CustomObject.objects.create(name=name, slug=slug_val, fields_schema=fields_schema)
@@ -4031,10 +4180,10 @@ def custom_objects_edit(request, object_id):
     except CustomObject.DoesNotExist:
         return HttpResponseNotFound(_("Custom object not found"))
     if request.method == "POST":
-        obj.name = request.POST.get("name", obj.name)
-        obj.slug = slugify(request.POST.get("slug", "") or obj.name)
+        obj.name = request_data(request).get("name", obj.name)
+        obj.slug = slugify(request_data(request).get("slug", "") or obj.name)
         try:
-            obj.fields_schema = json.loads(request.POST.get("fields_schema", "[]"))
+            obj.fields_schema = json.loads(request_data(request).get("fields_schema", "[]"))
         except (json.JSONDecodeError, TypeError):
             pass
         obj.save()
@@ -4294,7 +4443,7 @@ def users_role(request, user_id):
         except (json.JSONDecodeError, ValueError):
             data = {}
     else:
-        data = request.POST
+        data = request_data(request)
 
     role = data.get("role") if isinstance(data, dict) else data.get("role", "")
     raw_value = data.get("value") if isinstance(data, dict) else data.get("value", "")

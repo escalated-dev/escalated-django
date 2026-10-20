@@ -6,8 +6,9 @@ setting ``widget_allowed_origins`` (one origin per line or comma separated)
 may load ``{prefix}/widget/embed.js`` and call the widget endpoints from the
 browser. :func:`widget_cors` wraps every widget view: it answers preflight
 requests, adds CORS headers to every answer for an allowed origin and runs
-such requests as an anonymous guest. Requests from any other origin, and
-same-origin requests, pass through untouched.
+such requests as an anonymous guest. Only those requests skip the host's CSRF
+check: requests from any other origin, and same-origin requests, go through
+the host's ``CsrfViewMiddleware`` exactly as any other view would.
 
 :class:`WidgetMetadata` cleans the host parameters (order number, plan, page
 URL, ...) the embedding page sends with a ticket or chat.
@@ -20,10 +21,13 @@ import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import DisallowedHost
 from django.http import HttpResponse
+from django.middleware.csrf import CsrfViewMiddleware
 from django.utils.cache import patch_vary_headers
+from django.utils.module_loading import import_string
 
 from escalated.conf import get_setting
 
@@ -155,6 +159,31 @@ def _with_cors_headers(response, origin):
     return response
 
 
+def _host_csrf_middleware():
+    """The host's CSRF middleware class, when it installed one."""
+    for path in getattr(settings, "MIDDLEWARE", None) or []:
+        try:
+            middleware = import_string(path)
+        except ImportError:
+            continue
+        if isinstance(middleware, type) and issubclass(middleware, CsrfViewMiddleware):
+            return middleware
+    return None
+
+
+def _csrf_rejection(request, view, args, kwargs):
+    """
+    The host's CSRF answer for a request that is not from an allowed embedding
+    site, else None. Mirrors Laravel's WidgetCsrf: an allowed cross-origin
+    request carries no session cookie and runs as a guest, so it has no token
+    to send and nothing to protect; every other request is checked as usual.
+    """
+    middleware = _host_csrf_middleware()
+    if middleware is None:
+        return None
+    return middleware(lambda req: None).process_view(request, view, args, kwargs)
+
+
 def widget_cors(view):
     """
     CORS for a widget view. Only allowed origins get CORS headers, and such
@@ -178,12 +207,17 @@ def widget_cors(view):
             return response
 
         if not allowed:
+            rejection = _csrf_rejection(request, view, args, kwargs)
+            if rejection is not None:
+                return rejection
             return view(request, *args, **kwargs)
 
         setattr(request, ORIGIN_ATTRIBUTE, origin)
         request.user = AnonymousUser()
         return _with_cors_headers(view(request, *args, **kwargs), origin)
 
+    # The host's middleware skips these views; the check above decides instead.
+    wrapped.csrf_exempt = True
     return wrapped
 
 
