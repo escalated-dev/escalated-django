@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-10-20
+
 ### Fixed
 - Forms on the shared frontend post JSON (Inertia). Views now read a JSON body
   through `escalated.request_data.request_data()`, which falls back to
