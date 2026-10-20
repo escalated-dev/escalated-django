@@ -36,6 +36,7 @@ All notable changes to this project will be documented in this file.
 - Widget live chat requires `widget_enabled` and the new `chat_enabled`.
 
 ### Changed
+- The bundled widget is now `@escalated-dev/escalated` 0.12.3. It keeps its script settings when `embed.js` is placed in the page `<head>`, and Enter no longer picks a stale mention suggestion.
 - `widget_enabled` and `chat_enabled` default to off, as in the other hosts.
   Migration `0031` keeps both on for installs that already existed.
 
