@@ -16,6 +16,8 @@ from escalated.services.chat_routing_service import ChatRoutingService
 from escalated.services.chat_session_service import ChatSessionService
 from tests.factories import DepartmentFactory, UserFactory
 
+pytestmark = pytest.mark.usefixtures("widget_on")
+
 # ---------------------------------------------------------------------------
 # Model tests
 # ---------------------------------------------------------------------------

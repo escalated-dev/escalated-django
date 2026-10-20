@@ -3,7 +3,14 @@ import secrets
 from django.utils import timezone
 
 from escalated.models import ChatSession, Reply, Ticket
-from escalated.signals import chat_ended, chat_message_sent, chat_rated, chat_started, chat_transferred
+from escalated.signals import (
+    chat_ended,
+    chat_message_sent,
+    chat_rated,
+    chat_started,
+    chat_transferred,
+    ticket_created,
+)
 
 
 class ChatSessionService:
@@ -39,6 +46,8 @@ class ChatSessionService:
             metadata=metadata or {},
         )
 
+        # SLA, the created activity, notifications, webhooks and workflows hang off this signal.
+        ticket_created.send(sender=Ticket, ticket=ticket, user=None)
         chat_started.send(sender=ChatSession, session=session, ticket=ticket)
 
         return ticket, session

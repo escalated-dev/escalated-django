@@ -1,8 +1,10 @@
 import logging
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 
 from escalated.models import Department, Macro, Ticket
+from escalated.user_keys import user_pk
 
 logger = logging.getLogger("escalated")
 
@@ -42,9 +44,9 @@ class MacroService:
                     self.ticket_service.change_priority(ticket, user, value)
                 elif action_type == "assign":
                     try:
-                        agent = User.objects.get(pk=int(value))
+                        agent = User.objects.get(pk=user_pk(value))
                         self.ticket_service.assign(ticket, user, agent)
-                    except User.DoesNotExist:
+                    except (User.DoesNotExist, ValidationError):
                         logger.warning(f"Macro action 'assign' skipped: user {value} not found")
                 elif action_type == "add_note" or action_type == "note":
                     if value:

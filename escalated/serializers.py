@@ -892,3 +892,15 @@ class CustomObjectRecordSerializer:
     @staticmethod
     def serialize_list(records):
         return [CustomObjectRecordSerializer.serialize(r) for r in records]
+
+
+def ticket_detail(ticket, pinned_notes=(), satisfaction_rating=None):
+    """
+    The ``ticket`` prop of the agent and admin ticket screens. The shared pages
+    read the thread, activity, pinned notes and rating from the ticket itself
+    (``ticket.replies``, ``ticket.activities``, ``ticket.pinned_notes``).
+    """
+    data = TicketSerializer.serialize(ticket, include_replies=True, include_activities=True)
+    data["pinned_notes"] = ReplySerializer.serialize_list(pinned_notes)
+    data["satisfaction_rating"] = satisfaction_rating
+    return data

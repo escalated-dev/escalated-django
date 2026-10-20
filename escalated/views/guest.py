@@ -8,6 +8,7 @@ from escalated import guest_throttle
 from escalated.conf import get_setting
 from escalated.models import Contact, Department, EscalatedSetting, SatisfactionRating, Ticket
 from escalated.rendering import render_page
+from escalated.request_data import request_data
 from escalated.serializers import (
     AttachmentSerializer,
     DepartmentSerializer,
@@ -49,12 +50,12 @@ def ticket_store(request):
     if retry_after is not None:
         return guest_throttle.too_many_requests(retry_after)
 
-    name = request.POST.get("name", "").strip()
-    email = request.POST.get("email", "").strip()
-    subject = request.POST.get("subject", "").strip()
-    description = request.POST.get("description", "").strip()
-    priority = request.POST.get("priority", get_setting("DEFAULT_PRIORITY"))
-    department_id = request.POST.get("department_id") or None
+    name = request_data(request).get("name", "").strip()
+    email = request_data(request).get("email", "").strip()
+    subject = request_data(request).get("subject", "").strip()
+    description = request_data(request).get("description", "").strip()
+    priority = request_data(request).get("priority", get_setting("DEFAULT_PRIORITY"))
+    department_id = request_data(request).get("department_id") or None
 
     # Validate required fields
     errors = {}
@@ -126,6 +127,11 @@ def ticket_store(request):
             except Exception:
                 pass
 
+    # SLA, the created activity, notifications, webhooks and workflows hang off this signal.
+    from escalated.signals import ticket_created
+
+    ticket_created.send(sender=Ticket, ticket=ticket, user=None)
+
     return redirect("escalated:guest_ticket_show", token=guest_token)
 
 
@@ -174,7 +180,7 @@ def ticket_reply(request, token):
     if not ticket.is_open:
         return HttpResponseForbidden(_("This ticket is closed."))
 
-    body = request.POST.get("body", "").strip()
+    body = request_data(request).get("body", "").strip()
     if not body:
         return redirect("escalated:guest_ticket_show", token=token)
 
@@ -217,7 +223,7 @@ def ticket_rate(request, token):
     if SatisfactionRating.objects.filter(ticket=ticket).exists():
         return HttpResponseForbidden(_("This ticket has already been rated."))
 
-    rating_value = request.POST.get("rating")
+    rating_value = request_data(request).get("rating")
     try:
         rating_value = int(rating_value)
         if not (1 <= rating_value <= 5):
@@ -225,7 +231,7 @@ def ticket_rate(request, token):
     except (ValueError, TypeError):
         return HttpResponseForbidden(_("Invalid rating value."))
 
-    comment = request.POST.get("comment", "").strip() or None
+    comment = request_data(request).get("comment", "").strip() or None
 
     # Guest rating has no authenticated user, so rated_by is null
     SatisfactionRating.objects.create(

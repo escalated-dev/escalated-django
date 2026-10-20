@@ -11,6 +11,8 @@ from django.test import Client, RequestFactory
 from escalated.models import ChatSession, EscalatedSetting, Ticket
 from escalated.widget_embed import EMBED_SCRIPT_PATH, widget_cors
 
+pytestmark = pytest.mark.usefixtures("widget_on")
+
 SHOP = "https://shop.example.com"
 EVIL = "https://evil.example.net"
 

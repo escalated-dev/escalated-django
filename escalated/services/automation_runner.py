@@ -3,6 +3,8 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from escalated.user_keys import user_pk
+
 logger = logging.getLogger(__name__)
 
 
@@ -90,7 +92,7 @@ class AutomationRunner:
                     ticket.status = value
                     ticket.save(update_fields=["status", "updated_at"])
                 elif action_type == "assign":
-                    ticket.assigned_to_id = int(value)
+                    ticket.assigned_to_id = user_pk(value)
                     ticket.save(update_fields=["assigned_to_id", "updated_at"])
                 elif action_type == "add_tag":
                     tag = Tag.objects.filter(name=value).first()

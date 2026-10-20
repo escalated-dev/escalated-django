@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Forms on the shared frontend post JSON (Inertia). Views now read a JSON body
+  through `escalated.request_data.request_data()`, which falls back to
+  `request.POST` for form posts. Saving the admin Settings page no longer
+  turns off guest tickets, customer close, inbound email and the powered-by
+  badge, and `widget_allowed_origins` can be saved from the UI. A JSON save
+  only changes the keys it sends.
+- The Settings page receives typed values and `supported_settings`, and saves
+  the Support Widget settings (`widget_enabled`, `widget_color`,
+  `widget_position`, `widget_greeting`, `widget_departments`), `chat_enabled`
+  and the knowledge-base switches.
+- Widget, guest-portal and live-chat tickets send `ticket_created`, so they
+  get SLA, the created activity, notifications, the `ticket.created` webhook
+  and workflows.
+- Assign and unassign work on hosts with UUID user keys (activity
+  `properties` use `DjangoJSONEncoder`); bulk, macro, workflow and automation
+  assign convert user ids with the user model's key field instead of `int()`.
+- Customer ticket, admin ticket and agent ticket screens send the props the
+  shared pages read: `ticket.replies` (public replies only for customers),
+  `ticket.activities`, `ticket.pinned_notes`, `ticket.satisfaction_rating`,
+  `cannedResponses`; the canned-responses screen gets `responses`.
+- `/widget/config` lists only the `widget_departments` and reads `widget_color`.
+
+### Security
+- The widget skips CSRF only for requests from an allowed embedding origin;
+  other cross-site and same-origin posts go through the host's
+  `CsrfViewMiddleware`.
+- Widget article search and articles honour `knowledge_base_enabled` and
+  `knowledge_base_public`.
+- Widget live chat requires `widget_enabled` and the new `chat_enabled`.
+
+### Changed
+- `widget_enabled` and `chat_enabled` default to off, as in the other hosts.
+  Migration `0031` keeps both on for installs that already existed.
+
 ## [0.7.2] - 2026-10-19
 
 ### Fixed

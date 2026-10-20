@@ -9,6 +9,7 @@ from escalated.conf import get_setting
 from escalated.models import Department, SatisfactionRating, Ticket
 from escalated.permissions import can_close_ticket, can_reply_ticket, can_view_ticket
 from escalated.rendering import paginated, render_page
+from escalated.request_data import request_data
 from escalated.serializers import DepartmentSerializer, TicketSerializer
 from escalated.services.ticket_service import TicketService
 
@@ -74,10 +75,10 @@ def ticket_store(request):
 
     service = TicketService()
     data = {
-        "subject": request.POST.get("subject", ""),
-        "description": request.POST.get("description", ""),
-        "priority": request.POST.get("priority", get_setting("DEFAULT_PRIORITY")),
-        "department_id": request.POST.get("department_id") or None,
+        "subject": request_data(request).get("subject", ""),
+        "description": request_data(request).get("description", ""),
+        "priority": request_data(request).get("priority", get_setting("DEFAULT_PRIORITY")),
+        "department_id": request_data(request).get("department_id") or None,
     }
 
     # Validate required fields
@@ -136,14 +137,23 @@ def ticket_show(request, ticket_id):
     # Filter out internal notes for customers
     replies = ticket.replies.filter(is_deleted=False, is_internal_note=False)
 
-    from escalated.serializers import AttachmentSerializer, ReplySerializer
+    from escalated.serializers import AttachmentSerializer, ReplySerializer, SatisfactionRatingSerializer
+
+    serialized_replies = ReplySerializer.serialize_list(replies)
+    # Customer/Show reads the thread and rating from the ticket itself.
+    ticket_data = TicketSerializer.serialize(ticket)
+    ticket_data["replies"] = serialized_replies
+    try:
+        ticket_data["satisfaction_rating"] = SatisfactionRatingSerializer.serialize(ticket.satisfaction_rating)
+    except SatisfactionRating.DoesNotExist:
+        ticket_data["satisfaction_rating"] = None
 
     return render_page(
         request,
         "Escalated/Customer/Show",
         props={
-            "ticket": TicketSerializer.serialize(ticket),
-            "replies": ReplySerializer.serialize_list(replies),
+            "ticket": ticket_data,
+            "replies": serialized_replies,
             "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
             "can_reply": can_reply_ticket(request.user, ticket),
             "can_close": can_close_ticket(request.user, ticket),
@@ -165,7 +175,7 @@ def ticket_reply(request, ticket_id):
     if not can_reply_ticket(request.user, ticket):
         return HttpResponseForbidden(_("You cannot reply to this ticket."))
 
-    body = request.POST.get("body", "").strip()
+    body = request_data(request).get("body", "").strip()
     if not body:
         from django.shortcuts import redirect
 
@@ -253,7 +263,7 @@ def ticket_rate(request, ticket_id):
     if SatisfactionRating.objects.filter(ticket=ticket).exists():
         return HttpResponseForbidden(_("This ticket has already been rated."))
 
-    rating_value = request.POST.get("rating")
+    rating_value = request_data(request).get("rating")
     try:
         rating_value = int(rating_value)
         if not (1 <= rating_value <= 5):
@@ -261,7 +271,7 @@ def ticket_rate(request, ticket_id):
     except (ValueError, TypeError):
         return HttpResponseForbidden(_("Invalid rating value."))
 
-    comment = request.POST.get("comment", "").strip() or None
+    comment = request_data(request).get("comment", "").strip() or None
 
     ct = ContentType.objects.get_for_model(request.user)
     SatisfactionRating.objects.create(

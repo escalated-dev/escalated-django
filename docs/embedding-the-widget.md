@@ -25,8 +25,22 @@ matches every subdomain of `example.org` but not `example.org` itself. A bare
 `*` is rejected, and the admin settings refuse to save a list with an invalid
 entry.
 
-The widget's own switches (`widget_enabled`, `widget_ticket_creation_enabled`)
-apply to embedded requests unchanged.
+The widget's switches apply to embedded requests unchanged:
+
+- `widget_enabled` turns the whole widget on. It is off on a new install;
+  installs that already existed keep it on (migration `0031`).
+- `chat_enabled` turns on live chat in the widget (start, messages, typing,
+  end, rate; availability reports `available: false` while it is off). Off on a
+  new install; existing installs keep it on.
+- `guest_tickets_enabled` and `widget_ticket_creation_enabled` must both be on
+  for the widget to create tickets.
+- `knowledge_base_enabled` and `knowledge_base_public` apply to the widget's
+  article search and articles (`404` when the knowledge base is off, `403` when
+  it is not public and the visitor is not signed in; a cross-origin visitor is
+  always a guest).
+
+All of them, plus `widget_color`, `widget_position`, `widget_greeting` and
+`widget_departments`, are saved from the admin Settings page.
 
 ## 2. Add the script to the other site
 
@@ -67,9 +81,12 @@ For a request whose `Origin` is on the list, every widget route under
   the same browser is signed in to Escalated. A signed-in agent's session is
   never used from another site.
 
-The widget POST endpoints were already exempt from Django's CSRF check, and
-still are. Requests from any other origin, and same-origin requests, are
-handled exactly as before and get no CORS headers. A preflight from an origin
+Only those requests skip Django's CSRF check: they carry no session cookie
+and run as a guest, so there is no token to send and nothing to protect.
+Requests from any other origin, and same-origin requests, go through the
+host's `CsrfViewMiddleware` like any other view (a same-origin page sends its
+token as `X-CSRF-TOKEN`, so set `CSRF_HEADER_NAME = "HTTP_X_CSRF_TOKEN"` or
+embed from a listed origin) and get no CORS headers. A preflight from an origin
 that is not listed gets `204` with no `Access-Control-Allow-Origin`, so the
 browser blocks the request.
 

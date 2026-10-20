@@ -4,6 +4,8 @@ from django.test import RequestFactory
 from escalated.models import EscalatedSetting
 from escalated.widget_embed import WidgetOrigins
 
+pytestmark = pytest.mark.usefixtures("widget_on")
+
 
 @pytest.mark.parametrize(
     ("entry", "expected"),

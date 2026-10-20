@@ -32,6 +32,7 @@ from django.utils.translation import gettext as _
 from escalated.models import ImportJob
 from escalated.permissions import is_admin
 from escalated.rendering import render_page
+from escalated.request_data import request_data
 from escalated.services.import_service import ImportService
 
 logger = logging.getLogger("escalated.import")
@@ -144,7 +145,7 @@ def import_store(request):
     if request.method != "POST":
         return HttpResponseForbidden(_("Method not allowed."))
 
-    platform = request.POST.get("platform") or (
+    platform = request_data(request).get("platform") or (
         request.content_type == "application/json" and __import__("json").loads(request.body or "{}").get("platform")
     )
 
@@ -157,7 +158,7 @@ def import_store(request):
     credentials = {}
     for field_spec in adapter.credential_fields():
         name = field_spec["name"]
-        credentials[name] = request.POST.get(name, "")
+        credentials[name] = request_data(request).get(name, "")
 
     job = ImportJob.objects.create(
         platform=platform,
