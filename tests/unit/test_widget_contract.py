@@ -9,9 +9,11 @@ import json
 import pytest
 from django.core.cache import cache
 
+from escalated import guest_access
 from escalated.models import ChatSession, EscalatedSetting, Reply, Ticket
 from escalated.services.chat_session_service import ChatSessionService
 from tests.factories import ArticleCategoryFactory, ArticleFactory, DepartmentFactory, UserFactory
+from tests.guest_proof import with_proof
 
 pytestmark = pytest.mark.usefixtures("widget_on")
 
@@ -33,7 +35,7 @@ def api(client, method, path, body=None, origin=None):
         return client.get(f"{W}{path}", **headers)
     return client.post(
         f"{W}{path}",
-        data=json.dumps(body) if body is not None else "",
+        data=json.dumps(with_proof(f"{W}{path}", body)) if body is not None else "",
         content_type="application/json",
         **headers,
     )
@@ -65,9 +67,9 @@ class TestConfig:
         assert data["kb_enabled"] is True
         assert data["guest_tickets_enabled"] is True
         assert data["accepts_metadata"] is True
-        # No mailbox verification here, so the Status tab must stay hidden.
-        assert data["status_lookup_enabled"] is False
-        assert "guest_verification_required" not in data
+        # Mailbox-verified status lookup (docs/guest-access.md).
+        assert data["status_lookup_enabled"] is True
+        assert data["guest_verification_required"] is True
 
     def test_keeps_the_existing_keys(self, client):
         data = api(client, "GET", "/config").json()
@@ -155,7 +157,8 @@ class TestTickets:
         data = response.json()
         ticket = Ticket.objects.get(reference=data["reference"])
         assert data["message"]
-        assert data["guest_access_token"] == ticket.guest_token
+        assert guest_access.resolve(data["guest_access_token"]) == ticket
+        assert data["expires_at"]
         assert ticket.channel == "widget"
 
     def test_routes_to_the_chosen_department(self, client):
@@ -186,7 +189,8 @@ class TestTickets:
         assert response["Access-Control-Allow-Origin"] == SHOP
 
     def test_the_old_create_route_keeps_its_shape(self, client):
-        response = client.post(f"{W}/tickets/create/", data=json.dumps(self.payload()), content_type="application/json")
+        body = with_proof(f"{W}/tickets/create/", self.payload())
+        response = client.post(f"{W}/tickets/create/", data=json.dumps(body), content_type="application/json")
         assert response.status_code == 200
         assert response.json()["ticket"]["reference"]
 

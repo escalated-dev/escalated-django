@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from escalated.models import ApiToken, ImportJob, WebhookDelivery
+from escalated.models import ApiToken, GuestVerification, ImportJob, WebhookDelivery
 
 
 class Command(BaseCommand):
@@ -45,12 +45,17 @@ class Command(BaseCommand):
         )
         import_count = stale_imports.count()
 
+        # 4. Expired guest email codes
+        expired_codes = GuestVerification.objects.filter(expires_at__lt=now)
+        code_count = expired_codes.count()
+
         if dry_run:
             self.stdout.write(
                 f"[DRY RUN] Would purge: "
                 f"{token_count} expired tokens, "
                 f"{delivery_count} webhook deliveries (>{days}d), "
-                f"{import_count} stale import jobs."
+                f"{import_count} stale import jobs, "
+                f"{code_count} expired guest verification codes."
             )
             return
 
@@ -68,6 +73,11 @@ class Command(BaseCommand):
             deleted, _ = stale_imports.delete()
             total_purged += deleted
             self.stdout.write(f"Purged {deleted} stale import jobs.")
+
+        if code_count:
+            deleted, _ = expired_codes.delete()
+            total_purged += deleted
+            self.stdout.write(f"Purged {deleted} expired guest verification codes.")
 
         if total_purged == 0:
             self.stdout.write("No expired data to purge.")

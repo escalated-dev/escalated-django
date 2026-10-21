@@ -337,8 +337,14 @@ class Ticket(models.Model):
         null=True,
         blank=True,
         unique=True,
-        help_text=_("Unique token for guest ticket access"),
+        help_text=_("Legacy permanent guest link token; new tickets use expiring grants"),
     )
+    # Verified guest access (escalated/guest_access.py). The grant's nonce is
+    # stored only as a SHA-256 hash, and the proven email only as a keyed digest.
+    guest_access_hash = models.CharField(max_length=64, null=True, blank=True)
+    guest_access_expires_at = models.DateTimeField(null=True, blank=True)
+    guest_verified_email = models.CharField(max_length=64, null=True, blank=True)
+    guest_email_verified_at = models.DateTimeField(null=True, blank=True)
 
     # First-class Contact FK (Pattern B convergence).
     contact = models.ForeignKey(
@@ -500,7 +506,7 @@ class Ticket(models.Model):
     @property
     def is_guest(self):
         """Check if this is a guest ticket (no authenticated requester)."""
-        return self.requester_content_type is None and self.guest_token is not None
+        return self.requester_content_type is None and (self.guest_token is not None or bool(self.guest_email))
 
     @property
     def requester_name(self):
@@ -2727,3 +2733,22 @@ from escalated.bridge.plugin_store_record import PluginStoreRecord  # noqa: E402
 from escalated.mention_models import Mention  # noqa: E402, F401
 from escalated.plugin_models import EscalatedPlugin  # noqa: E402, F401
 from escalated.workflow_models import DelayedAction, Workflow, WorkflowLog  # noqa: E402, F401
+
+
+class GuestVerification(models.Model):
+    """A one-time email code proving a guest can read a mailbox (escalated/guest_access.py)."""
+
+    id = models.UUIDField(primary_key=True)
+    email_digest = models.CharField(max_length=64)
+    purpose = models.CharField(max_length=16)
+    code_hash = models.CharField(max_length=64)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    expires_at = models.DateTimeField(db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = get_table_name("guest_verifications")
+
+    def __str__(self):
+        return f"GuestVerification({self.purpose})"

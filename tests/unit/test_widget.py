@@ -6,6 +6,7 @@ from django.core.cache import cache
 from escalated.models import EscalatedSetting, Ticket
 from escalated.views.widget import _rate_limited
 from tests.factories import ArticleCategoryFactory, ArticleFactory, TicketFactory
+from tests.guest_proof import proven
 
 pytestmark = pytest.mark.usefixtures("widget_on")
 
@@ -130,12 +131,14 @@ class TestWidgetCreateTicket:
         response = client.post(
             "/support/widget/tickets/create/",
             data=json.dumps(
-                {
-                    "name": "John Doe",
-                    "email": "john@example.com",
-                    "subject": "Help me",
-                    "description": "I need help with something",
-                }
+                proven(
+                    {
+                        "name": "John Doe",
+                        "email": "john@example.com",
+                        "subject": "Help me",
+                        "description": "I need help with something",
+                    }
+                )
             ),
             content_type="application/json",
         )
@@ -167,12 +170,14 @@ class TestWidgetCreateTicket:
         response = client.post(
             "/support/widget/tickets/create/",
             data=json.dumps(
-                {
-                    "name": "Test",
-                    "email": "test@example.com",
-                    "subject": "Test",
-                    "description": "Test",
-                }
+                proven(
+                    {
+                        "name": "Test",
+                        "email": "test@example.com",
+                        "subject": "Test",
+                        "description": "Test",
+                    }
+                )
             ),
             content_type="application/json",
         )
@@ -184,12 +189,14 @@ class TestWidgetCreateTicket:
         response = client.post(
             "/support/widget/tickets/create/",
             data=json.dumps(
-                {
-                    "name": "Alice",
-                    "email": "alice@example.com",
-                    "subject": "Hi",
-                    "description": "Question.",
-                }
+                proven(
+                    {
+                        "name": "Alice",
+                        "email": "alice@example.com",
+                        "subject": "Hi",
+                        "description": "Question.",
+                    }
+                )
             ),
             content_type="application/json",
         )
@@ -213,12 +220,14 @@ class TestWidgetCreateTicket:
         response = client.post(
             "/support/widget/tickets/create/",
             data=json.dumps(
-                {
-                    "name": "Bob",
-                    "email": "bob@example.com",
-                    "subject": "Hi",
-                    "description": "Another question.",
-                }
+                proven(
+                    {
+                        "name": "Bob",
+                        "email": "bob@example.com",
+                        "subject": "Hi",
+                        "description": "Another question.",
+                    }
+                )
             ),
             content_type="application/json",
         )
@@ -237,12 +246,14 @@ class TestWidgetCreateTicket:
         response = client.post(
             "/support/widget/tickets/create/",
             data=json.dumps(
-                {
-                    "name": "Charlie",
-                    "email": "charlie@example.com",
-                    "subject": "Hi",
-                    "description": "Misconfig scenario.",
-                }
+                proven(
+                    {
+                        "name": "Charlie",
+                        "email": "charlie@example.com",
+                        "subject": "Hi",
+                        "description": "Misconfig scenario.",
+                    }
+                )
             ),
             content_type="application/json",
         )
@@ -258,12 +269,14 @@ class TestWidgetCreateTicket:
         response = client.post(
             "/support/widget/tickets/create/",
             data=json.dumps(
-                {
-                    "name": "Dana",
-                    "email": "dana@example.com",
-                    "subject": "Hi",
-                    "description": "Signup prompt scenario.",
-                }
+                proven(
+                    {
+                        "name": "Dana",
+                        "email": "dana@example.com",
+                        "subject": "Hi",
+                        "description": "Signup prompt scenario.",
+                    }
+                )
             ),
             content_type="application/json",
         )

@@ -35,6 +35,7 @@ from tests.factories import (
     TicketFactory,
     UserFactory,
 )
+from tests.guest_proof import with_proof
 
 SETTINGS_URL = "/support/admin/settings/update/"
 WIDGET_TICKETS_URL = "/support/widget/tickets"
@@ -42,7 +43,7 @@ WIDGET_CHAT_START_URL = "/support/widget/chat/start"
 
 
 def _post_json(client, url, body, **extra):
-    return client.post(url, data=json.dumps(body), content_type="application/json", **extra)
+    return client.post(url, data=json.dumps(with_proof(url, body)), content_type="application/json", **extra)
 
 
 def _inertia_props(client, url):
@@ -233,7 +234,10 @@ class TestTicketCreatedSignal:
         policy = SlaPolicyFactory(is_default=True)
         response = client.post(
             "/support/guest/store/",
-            {"name": "Bo", "email": "bo@example.com", "subject": "Hi", "description": "Question"},
+            with_proof(
+                "/support/guest/store/",
+                {"name": "Bo", "email": "bo@example.com", "subject": "Hi", "description": "Question"},
+            ),
         )
         assert response.status_code == 302
         self._assert_created_side_effects(Ticket.objects.get(guest_email="bo@example.com"), created_tickets, policy)

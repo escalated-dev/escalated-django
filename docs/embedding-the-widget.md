@@ -112,12 +112,15 @@ trailing-slash routes and their answer shapes are unchanged.
 
 | Method + path | Answer |
 |---|---|
-| `GET /config` | `color`, `greeting`, `position` (admin setting `widget_position`, default `bottom-right`), `departments` (active, `[{id, name}]`), `kb_enabled`, `guest_tickets_enabled`, `accepts_metadata`, `status_lookup_enabled: false`, plus the original `widget_*` keys. A disabled widget answers `403` with `enabled: false`. |
+| `GET /config` | `color`, `greeting`, `position` (admin setting `widget_position`, default `bottom-right`), `departments` (active, `[{id, name}]`), `kb_enabled`, `guest_tickets_enabled`, `accepts_metadata`, `guest_verification_required: true`, `status_lookup_enabled: true`, plus the original `widget_*` keys. A disabled widget answers `403` with `enabled: false`. |
 | `GET /chat/availability` | `{available}`; optional `department_id` |
 | `GET /articles?q=` | `{articles: [{title, slug, excerpt}]}` |
 | `GET /articles/<slug>` | the published article's `title`, `slug`, `body`, `category` at the top level |
-| `POST /tickets` | `201 {message, reference, guest_access_token}`; takes `name`, `email`, `subject`, `description`, optional `department_id` and `metadata` |
-| `POST /chat/start` | `201 {id, session_id, status, messages, agent}`; takes `name`, `email`, optional `department_id`, `message`, `subject`, `metadata` |
+| `POST /verification` | `202 {verification_id, expires_in, message}`; takes `email` and `purpose` (`ticket`, `chat` or `lookup`) and emails an 8-digit code |
+| `POST /lookup` | `{data: [{reference, subject, guest_access_token, expires_at}]}`; takes `email`, `reference` and a `lookup` code |
+| `POST /tickets` | `201 {message, reference, guest_access_token, expires_at}`; takes `name`, `email`, `subject`, `description`, `verification_id`, `verification_code`, optional `department_id` and `metadata` |
+| `GET /tickets/<reference>` | the ticket's `reference`, `subject`, `status`, `status_label`, `department`, `created_at` and latest public `replies`; needs `Authorization: Bearer <guest_access_token>` for that ticket |
+| `POST /chat/start` | `201 {id, session_id, status, messages, agent}`; takes `name`, `email`, `verification_id`, `verification_code` (a `chat` code), optional `department_id`, `message`, `subject`, `metadata` |
 | `GET /chat/<id>/messages` | `{messages: [{id, body, is_agent, author: {name}, created_at}], agent, typing, ended}` |
 | `POST /chat/<id>/messages` | `{body}` from the guest |
 | `POST /chat/<id>/typing`, `/end`, `/rate` | typing signal, end the chat, rate an ended chat (`{rating: 1-5, comment?}`) |
@@ -127,11 +130,10 @@ and an unknown token gets `404`. Validation errors on these paths are `422`
 with `{message, errors: {field: [messages]}}`; an unknown or inactive
 `department_id` is a validation error.
 
-There is no ticket status lookup by email: a claimed address never unlocks a
-ticket, so `/config` sends `status_lookup_enabled: false` and the widget hides
-its Status tab. The old `widget/tickets/lookup/?reference=&email=` route has
-been removed for the same reason. Guests follow their ticket through the link
-in their confirmation email.
+A claimed address never unlocks a ticket. Ticket creation, chat and the Status
+tab need a code emailed to the guest, and status reads need the expiring grant
+that creation or `/lookup` returns. See [verified guest access](guest-access.md).
+The old `widget/tickets/lookup/?reference=&email=` route stays removed.
 
 ### The script
 

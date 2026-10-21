@@ -30,8 +30,9 @@ Browser downloads use the host session. API and mobile clients send their
 Escalated bearer token (`Authorization: Bearer ...`); a supplied token that is
 invalid or expired gets 401 and never falls back to the session.
 
-Guest links carry a capability bound to the ticket's guest credential, so
-rotating that credential revokes every link already issued. Attachments whose
+Guest links carry a capability bound to the ticket's active guest grant (see
+[verified guest access](guest-access.md)), so renewing or revoking the grant
+revokes every link already issued, and no link outlives its grant. Attachments whose
 ticket or reply has been deleted, and files missing from storage, return 404.
 
 Refresh the ticket to get a new link after one expires.

@@ -13,6 +13,7 @@ from django.test import Client, override_settings
 
 from escalated.models import ApiToken, Attachment, Department
 from tests.factories import ReplyFactory, TicketFactory, UserFactory
+from tests.guest_proof import grant
 
 INERTIA = {"HTTP_X_INERTIA": "true"}
 
@@ -162,13 +163,14 @@ class TestDownload:
 @pytest.mark.django_db
 class TestGuests:
     def guest_ticket(self):
-        return TicketFactory(guest_name="G", guest_email="g@example.com", guest_token="a" * 64)
+        ticket = TicketFactory(guest_name="G", guest_email="g@example.com")
+        ticket.grant = grant(ticket)
+        return ticket
 
     def test_guest_page_links_download_without_a_session(self):
         ticket = self.guest_ticket()
         attach(ticket)
-        with override_settings(ESCALATED={"UI_ENABLED": True}):
-            response = Client().get(f"/support/guest/{ticket.guest_token}/", **INERTIA)
+        response = Client().get(f"/support/guest/{ticket.grant}/", **INERTIA)
         props = json.loads(response.content)["props"]
         url = props["attachments"][0]["url"]
         download = Client().get(url)
@@ -179,15 +181,16 @@ class TestGuests:
         ticket = self.guest_ticket()
         url = link(attach(ticket), guest_ticket=ticket)
         assert Client().get(url).status_code == 200
-        ticket.guest_token = "b" * 64
-        ticket.save(update_fields=["guest_token"])
+        grant(ticket)  # renewing the grant revokes links issued under the old one
         assert Client().get(url).status_code == 403
 
     def test_a_guest_link_never_covers_internal_notes_or_other_tickets(self):
         ticket = self.guest_ticket()
         on_note = attach(ReplyFactory(ticket=ticket, is_internal_note=True))
         assert Client().get(link(on_note, guest_ticket=ticket)).status_code == 403
-        other = attach(TicketFactory(guest_token="c" * 64))
+        other_ticket = TicketFactory(guest_email="o@example.com")
+        grant(other_ticket)
+        other = attach(other_ticket)
         assert Client().get(link(other, guest_ticket=ticket)).status_code == 403
 
 

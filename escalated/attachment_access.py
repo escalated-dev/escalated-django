@@ -9,12 +9,14 @@ needs current access to the attachment's ticket:
 - an agent or admin who can view the ticket;
 - the ticket's requester, for attachments on the ticket and on public replies;
 - a guest holding a link issued by a guest page for that ticket. The link is
-  bound to the ticket's guest credential, so rotating it revokes the link.
+  bound to the ticket's active guest grant, so renewing or revoking the grant
+  revokes the link, and it never outlives the grant.
 
 Attachments on internal notes are only ever served to agents and admins.
 """
 
 import hashlib
+import time
 from contextlib import contextmanager
 from contextvars import ContextVar
 
@@ -76,8 +78,20 @@ def is_public(attachment):
 
 
 def guest_capability(ticket):
-    """A digest of the ticket's current guest credential, or None if it has none."""
-    secret = getattr(ticket, "guest_token", None)
+    """A digest of the ticket's current guest credential, or None if it has none.
+
+    The credential is the active grant's nonce hash, so renewing or revoking
+    the grant revokes every link issued with it. A legacy permanent token only
+    counts while ``GUEST_ACCESS["LEGACY_TOKENS"]`` is on.
+    """
+    from escalated import guest_access
+
+    if guest_access.active(ticket):
+        secret = ticket.guest_access_hash
+    elif guest_access.legacy_tokens_enabled():
+        secret = getattr(ticket, "guest_token", None)
+    else:
+        secret = None
     if not secret:
         return None
     return hashlib.sha256(f"escalated-attachment:{secret}".encode()).hexdigest()
@@ -92,6 +106,8 @@ def download_url(attachment):
         capability = guest_capability(guest)
         if ticket is not None and ticket.pk == guest.pk and capability:
             payload["g"] = capability
+            if guest.guest_access_expires_at is not None:
+                payload["x"] = int(guest.guest_access_expires_at.timestamp())
     token = signing.dumps(payload, salt=SALT, compress=True)
     return f"{reverse('escalated:attachment_download', args=[attachment.pk])}?token={token}"
 
@@ -129,6 +145,9 @@ def allows(user, attachment, payload):
     public = is_public(attachment)
 
     guest = payload.get("g")
+    expires = payload.get("x")
+    if isinstance(expires, int) and expires <= int(time.time()):
+        guest = None
     if guest and public:
         capability = guest_capability(ticket)
         if capability and signing.constant_time_compare(capability, guest):
