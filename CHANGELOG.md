@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-10-21
+
+### Upgrading
+- Run the migrations (`0032_verified_guest_access`) and configure outbound
+  email. Use a shared cache across workers for the code budgets.
+- Existing permanent guest links (`guest/<guest_token>/`, the widget's old
+  `guest_token`) stop working. Guests renew them with the lookup form (email
+  code plus ticket reference). `ESCALATED["GUEST_ACCESS"]["LEGACY_TOKENS"] =
+  True` keeps the old links working during a transition.
+- Clients that do not send `verification_id` and `verification_code` can no
+  longer create guest tickets or start widget chats. The widget's create
+  responses now carry the grant (with `expires_at`) where they carried the
+  permanent token.
+- The new URL does not make files already in MEDIA private. Stop your web
+  server or CDN from serving `MEDIA_ROOT/escalated/attachments/` publicly; see
+  `docs/private-attachments.md`. Links expire, so clients that cached
+  attachment URLs must refetch the ticket.
+- Webhooks saved under the old names keep receiving those events, now under
+  the new names in the delivery's `event` field and `X-Escalated-Event`
+  header. Receivers that switch on the event name should accept the new
+  names. The edit form shows (and saving stores) the canonical names.
+- Stored names are read as aliases, not rewritten: `ticket.replied`,
+  `internal_note.added`, `internal_note.created`, `tag.added`,
+  `ticket.tagged`, `tag.removed`, `ticket.untagged`, `chat.session_started`
+  and `chat.session_ended`. A workflow saved with the `ticket.replied`
+  trigger is stored and shown as `reply.created` and keeps firing on replies.
+
 ### Added
 - Live chat events (ADR 2026-10-21): `chat.started`, `chat.assigned`,
   `chat.transferred`, `chat.message` and `chat.ended` are now sent to
@@ -59,31 +86,6 @@ All notable changes to this project will be documented in this file.
   `ticket.tag_removed` (were `tag.added` / `tag.removed`). The admin Webhooks
   form offers only the canonical names. The names live in
   `escalated/event_names.py`.
-
-### Upgrade notes
-- Run the migrations (`0032_verified_guest_access`) and configure outbound
-  email. Use a shared cache across workers for the code budgets.
-- Existing permanent guest links (`guest/<guest_token>/`, the widget's old
-  `guest_token`) stop working. Guests renew them with the lookup form (email
-  code plus ticket reference). `ESCALATED["GUEST_ACCESS"]["LEGACY_TOKENS"] =
-  True` keeps the old links working during a transition.
-- Clients that do not send `verification_id` and `verification_code` can no
-  longer create guest tickets or start widget chats. The widget's create
-  responses now carry the grant (with `expires_at`) where they carried the
-  permanent token.
-- The new URL does not make files already in MEDIA private. Stop your web
-  server or CDN from serving `MEDIA_ROOT/escalated/attachments/` publicly; see
-  `docs/private-attachments.md`. Links expire, so clients that cached
-  attachment URLs must refetch the ticket.
-- Webhooks saved under the old names keep receiving those events, now under
-  the new names in the delivery's `event` field and `X-Escalated-Event`
-  header. Receivers that switch on the event name should accept the new
-  names. The edit form shows (and saving stores) the canonical names.
-- Stored names are read as aliases, not rewritten: `ticket.replied`,
-  `internal_note.added`, `internal_note.created`, `tag.added`,
-  `ticket.tagged`, `tag.removed`, `ticket.untagged`, `chat.session_started`
-  and `chat.session_ended`. A workflow saved with the `ticket.replied`
-  trigger is stored and shown as `reply.created` and keeps firing on replies.
 
 ## [0.7.3] - 2026-10-20
 
