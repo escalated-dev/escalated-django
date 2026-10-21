@@ -10,6 +10,7 @@ from django.test import Client, RequestFactory
 
 from escalated.models import ChatSession, EscalatedSetting, Ticket
 from escalated.widget_embed import EMBED_SCRIPT_PATH, widget_cors
+from tests.guest_proof import with_proof
 
 pytestmark = pytest.mark.usefixtures("widget_on")
 
@@ -40,7 +41,7 @@ def ticket_payload(**extra):
 
 def post_json(client, url, data, origin=None):
     headers = {"HTTP_ORIGIN": origin} if origin else {}
-    return client.post(url, data=json.dumps(data), content_type="application/json", **headers)
+    return client.post(url, data=json.dumps(with_proof(url, data)), content_type="application/json", **headers)
 
 
 @pytest.mark.django_db

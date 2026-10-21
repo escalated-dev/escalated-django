@@ -20,10 +20,12 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from escalated import guest_access
 from escalated.models import ChatSession, EscalatedSetting
 from escalated.services.chat_availability_service import ChatAvailabilityService
 from escalated.services.chat_routing_service import ChatRoutingService
 from escalated.services.chat_session_service import ChatSessionService
+from escalated.views import guest_verification
 from escalated.views.widget import _widget_enabled, active_department, chat_enabled, contract_validation_error
 from escalated.widget_embed import WidgetMetadata
 
@@ -157,19 +159,33 @@ def _start(request, contract):
     metadata_error = WidgetMetadata.error(body.get("metadata"))
     if metadata_error:
         errors["metadata"] = metadata_error
+    # A chat needs an emailed code (purpose "chat"), like a widget ticket.
+    errors.update(guest_verification.proof_errors(body))
     if errors:
         if contract:
             return None, None, contract_validation_error(errors)
         return None, None, JsonResponse({"errors": errors}, status=400)
 
     session_service = ChatSessionService()
-    ticket, session = session_service.start_chat(
-        name=name,
-        email=email,
-        department=department,
-        subject=subject or None,
-        metadata=WidgetMetadata.clean(body.get("metadata"), request),
-    )
+    metadata = WidgetMetadata.clean(body.get("metadata"), request)
+    try:
+        ticket, session = guest_access.consume(
+            body["verification_id"],
+            body["verification_code"],
+            email,
+            "chat",
+            lambda: session_service.start_chat(
+                name=name,
+                email=email,
+                department=department,
+                subject=subject or None,
+                metadata=metadata,
+            ),
+        )
+    except guest_access.InvalidCode as exc:
+        if contract:
+            return None, None, contract_validation_error({"verification_code": str(exc)})
+        return None, None, JsonResponse({"errors": {"verification_code": str(exc)}}, status=400)
     if message:
         session_service.send_message(session, body=message, sender=None, sender_type="customer")
 

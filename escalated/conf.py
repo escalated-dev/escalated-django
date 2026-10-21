@@ -97,6 +97,15 @@ DEFAULTS = {
         "REPLIES_PER_MINUTE": 10,
         "CACHE": "default",
     },
+    # Verified guest access (docs/guest-access.md): email codes and expiring
+    # grants for guest tickets. TTL_MINUTES is clamped to 5..10080. Leave
+    # LEGACY_TOKENS off: it lets the permanent pre-0.8 guest links keep working.
+    "GUEST_ACCESS": {
+        "TTL_MINUTES": 1440,
+        "CHALLENGES_PER_CLIENT_PER_HOUR": 3,
+        "CHALLENGES_PER_MAILBOX_PER_HOUR": 10,
+        "LEGACY_TOKENS": False,
+    },
     # Host-app authentication callbacks for the general JSON API auth
     # endpoints (consumed by the Flutter app). Each is a callable (or a dotted
     # import path) the host provides; None means the endpoint responds 501.
@@ -177,6 +186,8 @@ def get_setting(name):
 
     if name == "GUEST_RATE_LIMIT" and isinstance(value, dict):
         return {**DEFAULTS["GUEST_RATE_LIMIT"], **value}
+    if name == "GUEST_ACCESS" and isinstance(value, dict):
+        return {**DEFAULTS["GUEST_ACCESS"], **value}
 
     return value
 

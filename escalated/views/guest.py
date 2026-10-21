@@ -1,10 +1,15 @@
-import secrets
+"""
+The browser guest portal: create a ticket after proving the email address,
+then read, reply to and rate it through an expiring grant in the URL.
+See docs/guest-access.md.
+"""
 
 from django.http import HttpResponseForbidden, HttpResponseNotFound
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from escalated import attachment_access, guest_throttle
+from escalated import attachment_access, guest_access, guest_throttle
 from escalated.conf import get_setting
 from escalated.models import Contact, Department, EscalatedSetting, SatisfactionRating, Ticket
 from escalated.rendering import render_page
@@ -15,6 +20,7 @@ from escalated.serializers import (
     ReplySerializer,
     TicketSerializer,
 )
+from escalated.views import guest_verification
 
 
 def _guest_tickets_enabled():
@@ -22,20 +28,39 @@ def _guest_tickets_enabled():
     return EscalatedSetting.guest_tickets_enabled()
 
 
+def _create_props(extra=None):
+    return {
+        "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
+        "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
+        "default_priority": get_setting("DEFAULT_PRIORITY"),
+        # The shared Guest/Create page asks for an email code here before it
+        # submits, and offers a lookup that renews links to existing tickets.
+        "verification_url": reverse("escalated:guest_verification"),
+        "lookup_url": reverse("escalated:guest_lookup"),
+        **(extra or {}),
+    }
+
+
+def _private(response):
+    return guest_verification.private(response)
+
+
 def ticket_create(request):
     """Show the guest ticket creation form."""
     if not _guest_tickets_enabled():
         return HttpResponseNotFound(_("Guest tickets are not enabled."))
 
-    return render_page(
-        request,
-        "Escalated/Guest/Create",
-        props={
-            "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
-            "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
-            "default_priority": get_setting("DEFAULT_PRIORITY"),
-        },
-    )
+    return render_page(request, "Escalated/Guest/Create", props=_create_props())
+
+
+def verification(request):
+    """POST guest/verification: email a code (purpose ticket, chat or lookup)."""
+    return guest_verification.verification(request)
+
+
+def lookup(request):
+    """POST guest/lookup: renew links to the caller's tickets by reference and proven email."""
+    return guest_verification.lookup(request)
 
 
 def ticket_store(request):
@@ -50,116 +75,143 @@ def ticket_store(request):
     if retry_after is not None:
         return guest_throttle.too_many_requests(retry_after)
 
-    name = request_data(request).get("name", "").strip()
-    email = request_data(request).get("email", "").strip()
-    subject = request_data(request).get("subject", "").strip()
-    description = request_data(request).get("description", "").strip()
-    priority = request_data(request).get("priority", get_setting("DEFAULT_PRIORITY"))
-    department_id = request_data(request).get("department_id") or None
+    data = request_data(request)
+    # The shared Guest/Create page posts guest_name/guest_email; older forms name/email.
+    name = (data.get("guest_name") or data.get("name") or "").strip()
+    email = (data.get("guest_email") or data.get("email") or "").strip()
+    subject = data.get("subject", "").strip()
+    description = data.get("description", "").strip()
+    priority = data.get("priority", get_setting("DEFAULT_PRIORITY"))
+    department_id = data.get("department_id") or None
+    proof = {
+        "verification_id": (data.get("verification_id") or "").strip(),
+        "verification_code": (data.get("verification_code") or "").strip(),
+    }
 
     # Validate required fields
     errors = {}
     if not name:
-        errors["name"] = _("Name is required.")
+        errors["guest_name"] = _("Name is required.")
     if not email:
-        errors["email"] = _("Email is required.")
+        errors["guest_email"] = _("Email is required.")
     if not subject:
         errors["subject"] = _("Subject is required.")
     if not description:
         errors["description"] = _("Description is required.")
+    errors.update({field: _(message) for field, message in guest_verification.proof_errors(proof).items()})
 
-    if errors:
+    def invalid(errors):
         return render_page(
             request,
             "Escalated/Guest/Create",
-            props={
-                "errors": errors,
-                "old": {
-                    "name": name,
-                    "email": email,
-                    "subject": subject,
-                    "description": description,
-                    "priority": priority,
-                    "department_id": department_id,
-                },
-                "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
-                "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
-                "default_priority": get_setting("DEFAULT_PRIORITY"),
-            },
+            props=_create_props(
+                {
+                    "errors": errors,
+                    "old": {
+                        "guest_name": name,
+                        "guest_email": email,
+                        "subject": subject,
+                        "description": description,
+                        "priority": priority,
+                        "department_id": department_id,
+                    },
+                }
+            ),
         )
 
-    # Generate a unique guest token — always set so the guest-view
-    # redirect below works regardless of whether the ticket also
-    # gets attributed to a host user (guest_user mode).
-    guest_token = secrets.token_hex(32)  # 64-character hex string
+    if errors:
+        return invalid(errors)
 
-    # Dedupe repeat guests by email (Pattern B). Inline guest_* fields
-    # remain set for the backwards-compat dual-read period.
-    contact = Contact.find_or_create_by_email(email, name)
-
-    # Apply the admin-configured guest policy. See
-    # escalated.views.widget._apply_guest_policy for the mode reference.
-    from escalated.views.widget import _apply_guest_policy
-
-    attrs = _apply_guest_policy(
-        {
-            "guest_name": name,
-            "guest_email": email,
-            "guest_token": guest_token,
-            "subject": subject,
-            "description": description,
-            "priority": priority,
-            "department_id": department_id,
-            "contact": contact,
-        }
-    )
-
-    ticket = Ticket.objects.create(**attrs)
-
-    # Handle file attachments
     files = request.FILES.getlist("attachments")
-    if files:
-        from escalated.services.attachment_service import AttachmentService
 
-        for f in files[: get_setting("MAX_ATTACHMENTS")]:
-            try:
-                AttachmentService.attach(ticket, f)
-            except Exception:
-                pass
+    def create():
+        # Dedupe repeat guests by email (Pattern B). Inline guest_* fields
+        # remain set for the backwards-compat dual-read period.
+        contact = Contact.find_or_create_by_email(email, name)
+
+        # Apply the admin-configured guest policy. See
+        # escalated.views.widget._apply_guest_policy for the mode reference.
+        from escalated.views.widget import _apply_guest_policy
+
+        attrs = _apply_guest_policy(
+            {
+                "guest_name": name,
+                "guest_email": email,
+                "subject": subject,
+                "description": description,
+                "priority": priority,
+                "department_id": department_id,
+                "contact": contact,
+            }
+        )
+        ticket = Ticket.objects.create(**attrs)
+
+        if files:
+            from escalated.services.attachment_service import AttachmentService
+
+            for f in files[: get_setting("MAX_ATTACHMENTS")]:
+                try:
+                    AttachmentService.attach(ticket, f)
+                except Exception:
+                    pass
+
+        guest_access.mark_verified(ticket, email)
+        return ticket, guest_access.issue(ticket)
+
+    # The ticket, its attachments and the code's consumption commit together.
+    try:
+        ticket, token = guest_access.consume(
+            proof["verification_id"], proof["verification_code"], email, "ticket", create
+        )
+    except guest_access.InvalidCode as exc:
+        return invalid({"verification_code": str(exc)})
 
     # SLA, the created activity, notifications, webhooks and workflows hang off this signal.
     from escalated.signals import ticket_created
 
     ticket_created.send(sender=Ticket, ticket=ticket, user=None)
 
-    return redirect("escalated:guest_ticket_show", token=guest_token)
+    return redirect("escalated:guest_ticket_show", token=token)
+
+
+def _ticket_for(token):
+    return guest_access.ticket_for_token(token)
 
 
 def ticket_show(request, token):
-    """Show a guest ticket by its token."""
-    try:
-        ticket = (
-            Ticket.objects.select_related("assigned_to", "department", "sla_policy")
-            .prefetch_related("tags", "replies__author", "replies__attachments", "attachments")
-            .get(guest_token=token)
-        )
-    except Ticket.DoesNotExist:
-        return HttpResponseNotFound(_("Ticket not found."))
+    """Show a guest ticket through its grant."""
+    found = _ticket_for(token)
+    if found is None:
+        return _private(HttpResponseNotFound(_("Ticket not found.")))
+    ticket = (
+        Ticket.unrestricted.select_related("assigned_to", "department", "sla_policy")
+        .prefetch_related("tags", "replies__author", "replies__attachments", "attachments")
+        .get(pk=found.pk)
+    )
 
     # Filter out internal notes for guest users
     replies = ticket.replies.filter(is_deleted=False, is_internal_note=False)
 
-    # The guest's token was just checked, so attachment links on this page may
+    # The guest's grant was just checked, so attachment links on this page may
     # carry a guest download capability bound to it.
     with attachment_access.for_guest(ticket):
+        ticket_data = TicketSerializer.serialize(ticket)
+        # Host-supplied data and agent emails are not for guests.
+        ticket_data.pop("metadata", None)
+        ticket_data.pop("requester", None)
+        if ticket_data.get("assigned_to"):
+            ticket_data["assigned_to"] = {"name": ticket_data["assigned_to"].get("name")}
+        reply_data = ReplySerializer.serialize_list(replies)
+        for reply in reply_data:
+            reply.pop("metadata", None)
         props = {
-            "ticket": TicketSerializer.serialize(ticket),
-            "replies": ReplySerializer.serialize_list(replies),
+            "ticket": ticket_data,
+            "replies": reply_data,
             "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
             "token": token,
             "can_reply": ticket.is_open,
         }
-    return render_page(request, "Escalated/Guest/Show", props=props)
+    return _private(render_page(request, "Escalated/Guest/Show", props=props))
 
 
 def ticket_reply(request, token):
@@ -172,9 +224,8 @@ def ticket_reply(request, token):
     if retry_after is not None:
         return guest_throttle.too_many_requests(retry_after)
 
-    try:
-        ticket = Ticket.objects.get(guest_token=token)
-    except Ticket.DoesNotExist:
+    ticket = _ticket_for(token)
+    if ticket is None:
         return HttpResponseNotFound(_("Ticket not found."))
 
     if not ticket.is_open:
@@ -210,9 +261,8 @@ def ticket_rate(request, token):
     if request.method != "POST":
         return HttpResponseForbidden(_("Method not allowed"))
 
-    try:
-        ticket = Ticket.objects.get(guest_token=token)
-    except Ticket.DoesNotExist:
+    ticket = _ticket_for(token)
+    if ticket is None:
         return HttpResponseNotFound(_("Ticket not found."))
 
     # Only allow rating resolved or closed tickets

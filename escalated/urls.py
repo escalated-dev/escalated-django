@@ -360,6 +360,10 @@ admin_patterns = [
 guest_patterns = [
     path("guest/create/", guest.ticket_create, name="guest_ticket_create"),
     path("guest/store/", guest.ticket_store, name="guest_ticket_store"),
+    # Email codes and link renewal (docs/guest-access.md). No trailing slash,
+    # as the shared Guest/Create page posts JSON to the URLs it is given.
+    path("guest/verification", guest.verification, name="guest_verification"),
+    path("guest/lookup", guest.lookup, name="guest_lookup"),
     path("guest/<str:token>/", guest.ticket_show, name="guest_ticket_show"),
     path("guest/<str:token>/reply/", guest.ticket_reply, name="guest_ticket_reply"),
     path("guest/<str:token>/rate/", guest.ticket_rate, name="guest_ticket_rate"),
@@ -395,6 +399,9 @@ widget_patterns = [
     widget_path("widget/articles", widget.widget_article_search, name="widget_contract_articles"),
     widget_path("widget/articles/<slug:slug>", widget.widget_article_by_slug, name="widget_contract_article"),
     widget_path("widget/tickets", widget.widget_tickets, name="widget_contract_tickets"),
+    widget_path("widget/tickets/<str:reference>", widget.widget_ticket_status, name="widget_contract_ticket_status"),
+    widget_path("widget/verification", widget.widget_verification, name="widget_verification"),
+    widget_path("widget/lookup", widget.widget_lookup, name="widget_lookup"),
 ]
 
 # Widget chat API (no authentication)

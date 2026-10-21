@@ -6,6 +6,7 @@ widget embedded on a customer's website.  Rate limiting is applied via
 Django's cache framework to prevent abuse.
 """
 
+import hmac
 import json
 import time
 
@@ -15,10 +16,11 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.utils.http import parse_etags
 from django.views.decorators.http import require_GET, require_POST, require_safe
 
-from escalated import guest_throttle, kb_guards
+from escalated import guest_access, guest_throttle, kb_guards
 from escalated.conf import get_setting
 from escalated.models import Article, Contact, Department, EscalatedSetting, Ticket
 from escalated.signals import ticket_created
+from escalated.views import guest_verification
 from escalated.widget_embed import WidgetMetadata, embed_script
 
 # ---------------------------------------------------------------------------
@@ -168,9 +170,11 @@ def widget_config(request):
             "chat_enabled": chat_enabled(),
             # Ticket create and chat start store the host page's `metadata`.
             "accepts_metadata": True,
-            # There is no mailbox-verified status lookup, so the widget hides its
-            # Status tab: a claimed email address never unlocks a ticket.
-            "status_lookup_enabled": False,
+            # Ticket creation, chat and status lookup need an emailed code
+            # (POST verification); lookup returns expiring grants, never a
+            # ticket for a claimed address alone. See docs/guest-access.md.
+            "guest_verification_required": True,
+            "status_lookup_enabled": True,
         }
     )
 
@@ -300,37 +304,49 @@ def _create_ticket(request, contract):
     if metadata_error:
         errors["metadata"] = metadata_error
 
+    errors.update(guest_verification.proof_errors(body))
+
     if errors:
         if contract:
             return None, contract_validation_error(errors)
         return None, JsonResponse({"errors": errors}, status=400)
 
-    import secrets
-
-    guest_token = secrets.token_hex(32)
     priority = body.get("priority", get_setting("DEFAULT_PRIORITY"))
+    metadata = WidgetMetadata.clean(body.get("metadata"), request)
 
-    # Dedupe repeat guests by email (Pattern B).
-    contact = Contact.find_or_create_by_email(email, name)
+    def create():
+        # Dedupe repeat guests by email (Pattern B).
+        contact = Contact.find_or_create_by_email(email, name)
 
-    attrs = _apply_guest_policy(
-        {
-            "guest_name": name,
-            "guest_email": email,
-            "guest_token": guest_token,
-            "subject": subject,
-            "description": description,
-            "priority": priority,
-            "channel": "widget",
-            "contact": contact,
-            "department": department,
-            "metadata": WidgetMetadata.clean(body.get("metadata"), request),
-        }
-    )
+        attrs = _apply_guest_policy(
+            {
+                "guest_name": name,
+                "guest_email": email,
+                "subject": subject,
+                "description": description,
+                "priority": priority,
+                "channel": "widget",
+                "contact": contact,
+                "department": department,
+                "metadata": metadata,
+            }
+        )
+        ticket = Ticket.objects.create(**attrs)
+        guest_access.mark_verified(ticket, email)
+        return ticket, guest_access.issue(ticket)
 
-    ticket = Ticket.objects.create(**attrs)
+    try:
+        ticket, token = guest_access.consume(
+            body["verification_id"], body["verification_code"], email, "ticket", create
+        )
+    except guest_access.InvalidCode as exc:
+        if contract:
+            return None, contract_validation_error({"verification_code": str(exc)})
+        return None, JsonResponse({"errors": {"verification_code": str(exc)}}, status=400)
+
     # SLA, the created activity, notifications, webhooks and workflows hang off this signal.
     ticket_created.send(sender=Ticket, ticket=ticket, user=None)
+    ticket.guest_access_token = token
     return ticket, None
 
 
@@ -346,7 +362,9 @@ def widget_create_ticket(request):
             "success": True,
             "ticket": {
                 "reference": ticket.reference,
-                "guest_token": ticket.guest_token,
+                # An expiring grant now (it used to be the permanent token).
+                "guest_token": ticket.guest_access_token,
+                "expires_at": ticket.guest_access_expires_at.isoformat(),
             },
         }
     )
@@ -359,15 +377,79 @@ def widget_tickets(request):
     if error is not None:
         return error
 
-    return JsonResponse(
-        {
-            "message": "Ticket created.",
-            "reference": ticket.reference,
-            # Opens the guest ticket page (guest/<token>/), as the original route's guest_token does.
-            "guest_access_token": ticket.guest_token,
-        },
-        status=201,
+    return guest_verification.private(
+        JsonResponse(
+            {
+                "message": "Ticket created.",
+                "reference": ticket.reference,
+                # An expiring grant: the bearer for GET widget/tickets/<reference>
+                # and the token in the guest ticket page's URL (guest/<token>/).
+                "guest_access_token": ticket.guest_access_token,
+                "expires_at": ticket.guest_access_expires_at.isoformat(),
+            },
+            status=201,
+        )
     )
+
+
+def widget_verification(request):
+    """POST widget/verification: email a code (purpose ticket, chat or lookup)."""
+    return guest_verification.verification(request, surface_enabled=_widget_enabled)
+
+
+def widget_lookup(request):
+    """POST widget/lookup: the caller's tickets by reference and proven email, with fresh grants."""
+    return guest_verification.lookup(request, surface_enabled=_widget_enabled)
+
+
+@require_GET
+def widget_ticket_status(request, reference):
+    """GET widget/tickets/<reference> with ``Authorization: Bearer <grant>``."""
+    if not _widget_enabled():
+        return JsonResponse({"error": "Widget is disabled", "message": "Widget is disabled"}, status=403)
+
+    not_found = guest_verification.private(JsonResponse({"message": "Ticket not found."}, status=404))
+    header = request.META.get("HTTP_AUTHORIZATION", "")
+    if not header.startswith("Bearer "):
+        return not_found
+    ticket = guest_access.resolve(header[7:].strip())
+    if ticket is None or not hmac.compare_digest(str(ticket.reference), str(reference)):
+        return not_found
+
+    replies = (
+        ticket.replies.filter(is_internal_note=False, is_deleted=False)
+        .select_related("author")
+        .order_by("-created_at")[:20]
+    )
+    return guest_verification.private(
+        JsonResponse(
+            {
+                "reference": ticket.reference,
+                "subject": ticket.subject,
+                "status": ticket.status,
+                "status_label": ticket.get_status_display(),
+                "created_at": ticket.created_at.isoformat(),
+                "department": ticket.department.name if ticket.department_id else None,
+                "replies": [
+                    {
+                        "body": reply.body,
+                        "author": _author_name(reply, ticket),
+                        "is_agent": reply.author_id is not None,
+                        "created_at": reply.created_at.isoformat(),
+                    }
+                    for reply in replies
+                ],
+            }
+        )
+    )
+
+
+def _author_name(reply, ticket):
+    author = reply.author
+    if author is None:
+        return ticket.guest_name or "You"
+    name = getattr(author, "get_full_name", lambda: "")()
+    return name or "Support"
 
 
 @require_safe

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Security
+- Verified guest access, as in escalated-laravel (`docs/guest-access.md`).
+  Guest tickets (browser and widget), widget live chats and ticket lookup now
+  need an eight-digit code emailed to the guest (10-minute expiry, five
+  guesses, single use; at most 3 codes per mailbox per client IP and 10 per
+  mailbox per hour). `POST verification` and `POST lookup` are served under
+  `guest/`, `widget/` and `<API_PREFIX>/mobile/guest/`. New tickets get an
+  expiring grant (default 24 hours, `GUEST_ACCESS["TTL_MINUTES"]`) whose nonce
+  is stored only as a hash, instead of the permanent `guest_token`.
+  `/widget/config` sends `guest_verification_required: true` and
+  `status_lookup_enabled: true`, and `GET widget/tickets/<reference>` returns
+  the ticket's status for a matching `Authorization: Bearer <grant>`.
+  `Guest/Create` receives `verification_url` and `lookup_url`, and the guest
+  ticket page no longer carries ticket or reply `metadata`, the requester
+  record or agent emails.
 - Attachments are delivered privately, as in escalated-laravel. Serialized
   attachments (`AttachmentSerializer`, `ApiAttachmentSerializer`) no longer
   carry the file's MEDIA URL. Their `url` is a signed link to the new
@@ -12,8 +26,8 @@ All notable changes to this project will be documented in this file.
   for `ATTACHMENT_DOWNLOAD_TTL_MINUTES` (default 10). The view checks current
   ticket access: agents and admins who can view the ticket, the requester for
   attachments on the ticket and its public replies, and guests holding a link
-  issued by their guest page (bound to the ticket's guest token, so rotating
-  the token revokes it). Internal-note attachments are only served to agents
+  issued by their guest page (bound to the ticket's active guest grant, so
+  renewing or revoking the grant revokes them). Internal-note attachments are only served to agents
   and admins. Responses are `Content-Disposition: attachment` with a safe
   filename, `application/octet-stream` except for a few inert types,
   `X-Content-Type-Options: nosniff` and `Cache-Control: private, no-store`.
@@ -28,6 +42,16 @@ All notable changes to this project will be documented in this file.
   `escalated/event_names.py`.
 
 ### Upgrade notes
+- Run the migrations (`0032_verified_guest_access`) and configure outbound
+  email. Use a shared cache across workers for the code budgets.
+- Existing permanent guest links (`guest/<guest_token>/`, the widget's old
+  `guest_token`) stop working. Guests renew them with the lookup form (email
+  code plus ticket reference). `ESCALATED["GUEST_ACCESS"]["LEGACY_TOKENS"] =
+  True` keeps the old links working during a transition.
+- Clients that do not send `verification_id` and `verification_code` can no
+  longer create guest tickets or start widget chats. The widget's create
+  responses now carry the grant (with `expires_at`) where they carried the
+  permanent token.
 - The new URL does not make files already in MEDIA private. Stop your web
   server or CDN from serving `MEDIA_ROOT/escalated/attachments/` publicly; see
   `docs/private-attachments.md`. Links expire, so clients that cached

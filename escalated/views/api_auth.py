@@ -14,6 +14,7 @@ import json
 
 from django.http import JsonResponse
 from django.utils.module_loading import import_string
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from escalated.conf import get_setting
@@ -107,3 +108,23 @@ def api_auth_me(request):
             }
         }
     )
+
+
+# Mobile guests (docs/guest-access.md). Proof comes from the emailed code, not
+# from a session, so these carry no CSRF check and no API token.
+@csrf_exempt
+@public_api
+@require_POST
+def mobile_guest_verification(request):
+    from escalated.views import guest_verification
+
+    return guest_verification.verification(request)
+
+
+@csrf_exempt
+@public_api
+@require_POST
+def mobile_guest_lookup(request):
+    from escalated.views import guest_verification
+
+    return guest_verification.lookup(request)

@@ -20,6 +20,9 @@ api_patterns = [
     path("auth/refresh/", api_auth.api_auth_refresh, name="auth_refresh"),
     path("auth/me/", api_auth.api_auth_me, name="auth_me"),
     path("auth/profile/", api_auth.api_auth_profile, name="auth_profile"),
+    # Mobile guests: email codes and link renewal (docs/guest-access.md)
+    path("mobile/guest/verification", api_auth.mobile_guest_verification, name="mobile_guest_verification"),
+    path("mobile/guest/lookup", api_auth.mobile_guest_lookup, name="mobile_guest_lookup"),
     # Dashboard
     path("dashboard/", api.dashboard, name="dashboard"),
     # Tickets - list & create

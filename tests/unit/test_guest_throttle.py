@@ -16,6 +16,7 @@ from django.test import override_settings
 
 from escalated.models import Ticket
 from tests.factories import TicketFactory
+from tests.guest_proof import grant, with_proof
 
 pytestmark = pytest.mark.usefixtures("widget_on")
 
@@ -30,12 +31,13 @@ def _guest_rate_limit(**overrides):
 
 def _widget_ticket(client, ip="203.0.113.1"):
     payload = {"name": "Guest", "email": "guest@example.com", "subject": "Help", "description": "It broke"}
+    payload = with_proof(WIDGET_CREATE, payload)
     return client.post(WIDGET_CREATE, data=json.dumps(payload), content_type="application/json", REMOTE_ADDR=ip)
 
 
 def _guest_ticket(client, ip="203.0.113.1"):
     payload = {"name": "Guest", "email": "guest@example.com", "subject": "Help", "description": "It broke"}
-    return client.post(GUEST_STORE, data=payload, REMOTE_ADDR=ip)
+    return client.post(GUEST_STORE, data=with_proof(GUEST_STORE, payload), REMOTE_ADDR=ip)
 
 
 def _guest_reply(client, token, ip="203.0.113.1"):
@@ -52,7 +54,9 @@ def _pinned_clock():
 
 @pytest.fixture
 def guest_ticket(db):
-    return TicketFactory(guest_token="a" * 64, guest_email="guest@example.com", status="open")
+    ticket = TicketFactory(guest_email="guest@example.com", status="open")
+    ticket.guest_token = grant(ticket)
+    return ticket
 
 
 @pytest.mark.django_db

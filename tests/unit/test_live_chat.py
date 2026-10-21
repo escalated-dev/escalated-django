@@ -15,6 +15,7 @@ from escalated.services.chat_availability_service import ChatAvailabilityService
 from escalated.services.chat_routing_service import ChatRoutingService
 from escalated.services.chat_session_service import ChatSessionService
 from tests.factories import DepartmentFactory, UserFactory
+from tests.guest_proof import proven
 
 pytestmark = pytest.mark.usefixtures("widget_on")
 
@@ -463,7 +464,7 @@ class TestWidgetChatViews:
     def test_start_chat(self, client):
         response = client.post(
             "/support/widget/chat/start/",
-            data=json.dumps({"name": "Visitor", "email": "visitor@example.com"}),
+            data=json.dumps(proven({"name": "Visitor", "email": "visitor@example.com"}, "chat")),
             content_type="application/json",
         )
         assert response.status_code == 200
