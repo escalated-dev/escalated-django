@@ -8,6 +8,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
+from escalated.event_names import canonical_event
 from escalated.permissions import is_admin
 from escalated.rendering import render_page
 from escalated.services.workflow_engine import ACTION_TYPES, OPERATORS, WorkflowEngine
@@ -31,7 +32,7 @@ def _workflow_json(w):
     return {
         "id": w.id,
         "name": w.name,
-        "trigger_event": w.trigger_event,
+        "trigger_event": w.trigger,
         "trigger": w.trigger,
         "conditions": w.conditions,
         "actions": w.actions,
@@ -118,10 +119,10 @@ def _clean(data):
 
     trigger_event = data.get("trigger_event")
     trigger_event = trigger_event.strip() if isinstance(trigger_event, str) else ""
-    known_triggers = {value for value, _label in Workflow.TRIGGER_EVENTS} | set(Workflow.LEGACY_TRIGGER_EVENTS)
+    known_triggers = {value for value, _label in Workflow.TRIGGER_EVENTS}
     if not trigger_event:
         errors["trigger_event"] = _("The trigger event field is required.")
-    elif trigger_event not in known_triggers:
+    elif canonical_event(trigger_event) not in known_triggers:
         errors["trigger_event"] = _("The selected trigger event is invalid.")
 
     actions = data.get("actions")
@@ -136,7 +137,7 @@ def _clean(data):
 
     fields = {
         "name": name,
-        "trigger_event": trigger_event,
+        "trigger_event": canonical_event(trigger_event),
         "conditions": conditions,
         "actions": actions,
     }

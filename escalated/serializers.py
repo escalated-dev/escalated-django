@@ -775,11 +775,11 @@ class WebhookSerializer:
         "ticket.priority_changed",
         "ticket.department_changed",
         "reply.created",
-        "internal_note.added",
+        "note.created",
         "sla.breached",
         "sla.warning",
-        "tag.added",
-        "tag.removed",
+        "ticket.tag_added",
+        "ticket.tag_removed",
     ]
 
     @staticmethod
@@ -787,7 +787,9 @@ class WebhookSerializer:
         data = {
             "id": webhook.pk,
             "url": webhook.url,
-            "events": webhook.events,
+            # A subscription saved under a legacy name is shown under its
+            # canonical name, so the form ticks it and saving keeps it.
+            "events": webhook.subscribed_events(),
             "secret": bool(webhook.secret),
             "active": webhook.active,
             "created_at": _format_dt(webhook.created_at),

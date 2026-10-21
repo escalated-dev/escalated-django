@@ -4,6 +4,7 @@ from django.db import models
 from django.utils import timezone
 
 from escalated.conf import get_table_name
+from escalated.event_names import LEGACY_EVENT_NAMES, canonical_event
 
 
 class Workflow(models.Model):
@@ -22,9 +23,10 @@ class Workflow(models.Model):
         ("sla.breached", "SLA Breached"),
     ]
 
-    # Trigger names earlier releases fired, mapped to the event that fires in
-    # their place. Workflows already stored under them keep running.
-    LEGACY_TRIGGER_EVENTS = {"ticket.replied": "reply.created"}
+    # Trigger names earlier releases stored, mapped to the canonical event that
+    # fires in their place (ADR 2026-10-21). Workflows already stored under
+    # them keep running.
+    LEGACY_TRIGGER_EVENTS = LEGACY_EVENT_NAMES
 
     name = models.CharField(max_length=255)
     trigger_event = models.CharField(max_length=100, choices=TRIGGER_EVENTS)
@@ -44,8 +46,11 @@ class Workflow(models.Model):
 
     @property
     def trigger(self):
-        """Alias for frontend compatibility: the frontend uses `trigger` instead of `trigger_event`."""
-        return self.trigger_event
+        """Alias for frontend compatibility: the frontend uses `trigger` instead of `trigger_event`.
+
+        A trigger stored under a legacy name reads as its canonical name.
+        """
+        return canonical_event(self.trigger_event)
 
 
 class WorkflowLog(models.Model):

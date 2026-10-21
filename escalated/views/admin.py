@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
 
+from escalated.event_names import canonical_events
 from escalated.kb_guards import require_kb_enabled
 from escalated.models import (
     AgentCapacity,
@@ -3717,7 +3718,7 @@ def webhooks_create(request):
             events = []
         Webhook.objects.create(
             url=url,
-            events=events,
+            events=canonical_events(events),
             secret=request_data(request).get("secret", "") or None,
             active=request_data(request).get("active", "true") == "true",
         )
@@ -3739,7 +3740,7 @@ def webhooks_edit(request, webhook_id):
     if request.method == "POST":
         webhook.url = request_data(request).get("url", webhook.url)
         try:
-            webhook.events = json.loads(request_data(request).get("events", "[]"))
+            webhook.events = canonical_events(json.loads(request_data(request).get("events", "[]")))
         except (json.JSONDecodeError, TypeError):
             pass
         secret = request_data(request).get("secret")

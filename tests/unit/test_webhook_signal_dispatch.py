@@ -41,11 +41,11 @@ OFFERED_EVENT_SIGNALS = {
     "ticket.priority_changed": "ticket_priority_changed",
     "ticket.department_changed": "department_changed",
     "reply.created": "reply_created",
-    "internal_note.added": "internal_note_added",
+    "note.created": "internal_note_added",
     "sla.breached": "sla_breached",
     "sla.warning": "sla_warning",
-    "tag.added": "tag_added",
-    "tag.removed": "tag_removed",
+    "ticket.tag_added": "tag_added",
+    "ticket.tag_removed": "tag_removed",
 }
 
 
@@ -122,11 +122,11 @@ EMITTERS = {
     "ticket.priority_changed": lambda s, t, a: s.change_priority(t, a, Ticket.Priority.URGENT),
     "ticket.department_changed": lambda s, t, a: s.change_department(t, a, DepartmentFactory()),
     "reply.created": lambda s, t, a: s.reply(t, a, {"body": "On it"}),
-    "internal_note.added": lambda s, t, a: s.add_note(t, a, "Checked the logs"),
+    "note.created": lambda s, t, a: s.add_note(t, a, "Checked the logs"),
     "sla.breached": _breach_sla,
     "sla.warning": _warn_sla,
-    "tag.added": lambda s, t, a: s.add_tags(t, a, [TagFactory().pk]),
-    "tag.removed": _remove_tag,
+    "ticket.tag_added": lambda s, t, a: s.add_tags(t, a, [TagFactory().pk]),
+    "ticket.tag_removed": _remove_tag,
 }
 
 
@@ -150,7 +150,7 @@ def test_offered_event_reaches_the_dispatcher(event):
     payload = next(call.args[1] for call in dispatch.call_args_list if call.args[0] == event)
     # WebhookDispatcher.send() json.dumps the payload and stores it in a JSONField.
     json.dumps(payload)
-    if event.startswith(("ticket.", "reply.", "internal_note.", "sla.", "tag.")):
+    if event.startswith(("ticket.", "reply.", "note.", "sla.")):
         assert payload["ticket_id"] is not None
 
 

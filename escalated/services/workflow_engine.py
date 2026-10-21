@@ -6,6 +6,7 @@ import requests
 from django.utils import timezone
 from django.utils.text import slugify
 
+from escalated.event_names import aliases_of, canonical_event
 from escalated.outbound_security import validate_outbound_webhook_url
 from escalated.user_keys import user_pk
 
@@ -47,7 +48,8 @@ class WorkflowEngine:
     def process_event(self, event_name, ticket, context=None):
         from escalated.workflow_models import Workflow
 
-        names = [event_name] + [old for old, new in Workflow.LEGACY_TRIGGER_EVENTS.items() if new == event_name]
+        event_name = canonical_event(event_name)
+        names = aliases_of(event_name)
         workflows = Workflow.objects.filter(trigger_event__in=names, is_active=True).order_by("position")
         for workflow in workflows:
             self._process_workflow(workflow, ticket, event_name, context or {})
