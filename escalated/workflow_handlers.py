@@ -21,6 +21,11 @@ import logging
 from django.dispatch import receiver
 
 from escalated.signals import (
+    chat_assigned,
+    chat_ended,
+    chat_message_sent,
+    chat_started,
+    chat_transferred,
     reply_created,
     sla_breached,
     sla_warning,
@@ -113,3 +118,30 @@ def _workflow_sla_warning(sender, ticket, warning_type=None, remaining=None, **k
         warning_type=warning_type,
         remaining=remaining,
     )
+
+
+# Live chat. Each chat has a ticket, which the workflow's conditions and
+# actions apply to.
+@receiver(chat_started)
+def _workflow_chat_started(sender, session, ticket=None, **kwargs):
+    _process("chat.started", ticket or session.ticket, session=session)
+
+
+@receiver(chat_assigned)
+def _workflow_chat_assigned(sender, session, ticket=None, agent=None, **kwargs):
+    _process("chat.assigned", ticket or session.ticket, session=session, agent=agent)
+
+
+@receiver(chat_transferred)
+def _workflow_chat_transferred(sender, session, ticket=None, from_agent=None, to_agent=None, **kwargs):
+    _process("chat.transferred", ticket or session.ticket, session=session, from_agent=from_agent, to_agent=to_agent)
+
+
+@receiver(chat_message_sent)
+def _workflow_chat_message(sender, session, ticket=None, message=None, **kwargs):
+    _process("chat.message", ticket or session.ticket, session=session, reply=message)
+
+
+@receiver(chat_ended)
+def _workflow_chat_ended(sender, session, ticket=None, ended_by=None, **kwargs):
+    _process("chat.ended", ticket or session.ticket, session=session)
