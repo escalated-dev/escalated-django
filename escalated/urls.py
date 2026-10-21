@@ -8,6 +8,7 @@ from escalated.views import (
     admin_plugins,
     advanced_reports,
     agent,
+    attachments,
     chat,
     cloud_webhook,
     customer,
@@ -427,8 +428,20 @@ cloud_webhook_patterns = [
     path("cloud/webhook/", cloud_webhook.cloud_webhook, name="cloud_webhook"),
 ]
 
+# Access-checked attachment downloads (always registered, like the widget):
+# serialized attachments link here, so API and guest clients need it too.
+attachment_patterns = [
+    path("attachments/<int:attachment_id>/", attachments.attachment_download, name="attachment_download"),
+]
+
 # Core routes (always registered)
-urlpatterns = list(inbound_patterns) + list(cloud_webhook_patterns) + list(widget_patterns) + list(widget_chat_patterns)
+urlpatterns = (
+    list(attachment_patterns)
+    + list(inbound_patterns)
+    + list(cloud_webhook_patterns)
+    + list(widget_patterns)
+    + list(widget_chat_patterns)
+)
 
 from escalated.newsletter_urls import (  # noqa: E402
     admin_newsletter_patterns,

@@ -31,6 +31,9 @@ DEFAULTS = {
     "AUTO_CLOSE_RESOLVED_AFTER_DAYS": 7,
     "MAX_ATTACHMENTS": 5,
     "MAX_ATTACHMENT_SIZE_KB": 10240,
+    # Minutes a serialized attachment download link stays valid (1 to 60).
+    # See docs/private-attachments.md.
+    "ATTACHMENT_DOWNLOAD_TTL_MINUTES": 10,
     "DEFAULT_PRIORITY": "medium",
     # Host-defined custom ticket actions. A list of action config dicts:
     #   {"key", "label", "variant", "visible", "enabled", "confirmation", "metadata"}
