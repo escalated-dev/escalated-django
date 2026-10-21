@@ -21,6 +21,11 @@ class Workflow(models.Model):
         ("reply.created", "Reply Created"),
         ("sla.warning", "SLA Warning"),
         ("sla.breached", "SLA Breached"),
+        ("chat.started", "Chat Started"),
+        ("chat.assigned", "Chat Assigned"),
+        ("chat.transferred", "Chat Transferred"),
+        ("chat.message", "Chat Message"),
+        ("chat.ended", "Chat Ended"),
     ]
 
     # Trigger names earlier releases stored, mapped to the canonical event that

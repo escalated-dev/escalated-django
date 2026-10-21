@@ -17,6 +17,10 @@ the event. Nothing is sent while an import is running.
 
 Payloads carry ids and plain values only: WebhookDispatcher.send() serialises
 them with json.dumps and stores them in WebhookDelivery.payload.
+
+Live chat events carry ``{"chat": {...}}`` (see ``_chat``). They never include
+the visitor's chat token (``customer_session_id``), the visitor's email or a
+message body.
 """
 
 import logging
@@ -24,6 +28,11 @@ import logging
 from django.dispatch import receiver
 
 from escalated.signals import (
+    chat_assigned,
+    chat_ended,
+    chat_message_sent,
+    chat_started,
+    chat_transferred,
     department_changed,
     internal_note_added,
     reply_created,
@@ -169,3 +178,47 @@ def _webhook_tag_added(sender, tag, ticket, user=None, **kwargs):
 @receiver(tag_removed)
 def _webhook_tag_removed(sender, tag, ticket, user=None, **kwargs):
     _dispatch("ticket.tag_removed", _ticket(ticket, user, tag_id=tag.pk, tag_name=tag.name))
+
+
+def _chat(session, ticket=None, **extra):
+    """The chat fields that leave the process. Never the token, email or body."""
+    ticket = ticket or session.ticket
+    return {
+        "chat": {
+            "session_id": session.pk,
+            "ticket_id": ticket.pk,
+            "status": session.status,
+            "agent_id": _id(session.agent),
+            "department_id": ticket.department_id,
+            **extra,
+        }
+    }
+
+
+@receiver(chat_started)
+def _webhook_chat_started(sender, session, ticket=None, **kwargs):
+    _dispatch("chat.started", _chat(session, ticket))
+
+
+@receiver(chat_assigned)
+def _webhook_chat_assigned(sender, session, ticket=None, **kwargs):
+    _dispatch("chat.assigned", _chat(session, ticket))
+
+
+@receiver(chat_transferred)
+def _webhook_chat_transferred(sender, session, ticket=None, from_agent=None, to_agent=None, **kwargs):
+    _dispatch(
+        "chat.transferred",
+        _chat(session, ticket, from_agent_id=_id(from_agent), to_agent_id=_id(to_agent), to_department_id=None),
+    )
+
+
+@receiver(chat_message_sent)
+def _webhook_chat_message(sender, session, ticket=None, message=None, sender_type="customer", **kwargs):
+    author_type = "agent" if sender_type == "agent" else "visitor"
+    _dispatch("chat.message", _chat(session, ticket, reply_id=_id(message), author_type=author_type))
+
+
+@receiver(chat_ended)
+def _webhook_chat_ended(sender, session, ticket=None, ended_by=None, **kwargs):
+    _dispatch("chat.ended", _chat(session, ticket, ended_by="agent" if ended_by is not None else "customer"))

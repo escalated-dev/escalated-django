@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from escalated.models import ChatSession, Reply, Ticket
 from escalated.signals import (
+    chat_assigned,
     chat_ended,
     chat_message_sent,
     chat_rated,
@@ -73,6 +74,8 @@ class ChatSessionService:
         ticket.assigned_to = agent
         ticket.status = Ticket.Status.IN_PROGRESS
         ticket.save(update_fields=["assigned_to", "status", "updated_at"])
+
+        chat_assigned.send(sender=ChatSession, session=session, ticket=ticket, agent=agent)
 
         return session
 

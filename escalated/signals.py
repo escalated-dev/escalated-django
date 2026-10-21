@@ -32,6 +32,7 @@ custom_action_triggered = django.dispatch.Signal()  # sender=Ticket, ticket, use
 
 # Live Chat signals
 chat_started = django.dispatch.Signal()  # sender=ChatSession, session, ticket
+chat_assigned = django.dispatch.Signal()  # sender=ChatSession, session, ticket, agent
 chat_message_sent = django.dispatch.Signal()  # sender=ChatSession, session, ticket, message, sender_type
 chat_ended = django.dispatch.Signal()  # sender=ChatSession, session, ticket, ended_by
 chat_transferred = django.dispatch.Signal()  # sender=ChatSession, session, ticket, from_agent, to_agent

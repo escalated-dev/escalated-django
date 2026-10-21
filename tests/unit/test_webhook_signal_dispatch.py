@@ -18,8 +18,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from django.utils import timezone
 
-from escalated.models import Ticket, WebhookDelivery
+from escalated.models import ChatSession, Ticket, WebhookDelivery
 from escalated.serializers import WebhookSerializer
+from escalated.services.chat_session_service import ChatSessionService
 from escalated.services.sla_service import SlaService
 from escalated.services.ticket_service import TicketService
 from escalated.services.webhook_dispatcher import WebhookDispatcher
@@ -46,6 +47,11 @@ OFFERED_EVENT_SIGNALS = {
     "sla.warning": "sla_warning",
     "ticket.tag_added": "tag_added",
     "ticket.tag_removed": "tag_removed",
+    "chat.started": "chat_started",
+    "chat.assigned": "chat_assigned",
+    "chat.transferred": "chat_transferred",
+    "chat.message": "chat_message_sent",
+    "chat.ended": "chat_ended",
 }
 
 
@@ -108,6 +114,16 @@ def _warn_sla(service, ticket, actor):
     assert SlaService.check_warning(ticket)
 
 
+def _chat(ticket):
+    return ChatSession.objects.create(
+        ticket=ticket, customer_session_id=f"token-{ticket.pk}", status=ChatSession.Status.ACTIVE
+    )
+
+
+def _staff():
+    return UserFactory(is_staff=True, is_superuser=True)
+
+
 # How each offered event is produced in the running application.
 EMITTERS = {
     "ticket.created": _create,
@@ -127,6 +143,11 @@ EMITTERS = {
     "sla.warning": _warn_sla,
     "ticket.tag_added": lambda s, t, a: s.add_tags(t, a, [TagFactory().pk]),
     "ticket.tag_removed": _remove_tag,
+    "chat.started": lambda s, t, a: ChatSessionService().start_chat(name="Visitor", email="visitor@example.com"),
+    "chat.assigned": lambda s, t, a: ChatSessionService().assign_agent(_chat(t), _staff()),
+    "chat.transferred": lambda s, t, a: ChatSessionService().transfer_chat(_chat(t), a, _staff()),
+    "chat.message": lambda s, t, a: ChatSessionService().send_message(_chat(t), body="Hello"),
+    "chat.ended": lambda s, t, a: ChatSessionService().end_chat(_chat(t)),
 }
 
 

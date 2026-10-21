@@ -362,6 +362,11 @@ def fired_trigger_events():
             (workflow_handlers._workflow_reply_created, {"reply": None}),
             (workflow_handlers._workflow_sla_breached, {}),
             (workflow_handlers._workflow_sla_warning, {}),
+            (workflow_handlers._workflow_chat_started, {"session": None}),
+            (workflow_handlers._workflow_chat_assigned, {"session": None}),
+            (workflow_handlers._workflow_chat_transferred, {"session": None}),
+            (workflow_handlers._workflow_chat_message, {"session": None}),
+            (workflow_handlers._workflow_chat_ended, {"session": None}),
         ]:
             handler(sender=Ticket, ticket=ticket, **kwargs)
     return {c.args[0] for c in engine.process_event.call_args_list}
