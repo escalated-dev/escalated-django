@@ -3,6 +3,7 @@ Dict-based serializers for the REST API, producing JSON-compatible output that
 matches the Laravel API response format.
 """
 
+from escalated.attachment_access import download_url
 from escalated.serializers import _format_dt, _human_dt
 from escalated.ticket_access import serialize_account
 
@@ -238,7 +239,7 @@ class ApiAttachmentSerializer:
             "filename": attachment.original_filename,
             "mime_type": attachment.mime_type,
             "size": attachment.size,
-            "url": attachment.file.url if attachment.file else None,
+            "url": download_url(attachment),
         }
 
 

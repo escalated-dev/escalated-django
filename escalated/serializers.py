@@ -5,6 +5,7 @@ suitable for Inertia.js props. No DRF dependency required.
 
 from django.utils.timesince import timesince
 
+from escalated.attachment_access import download_url
 from escalated.ticket_access import serialize_account
 
 
@@ -324,7 +325,8 @@ class AttachmentSerializer:
             "mime_type": attachment.mime_type,
             "size": attachment.size,
             "size_kb": attachment.size_kb,
-            "url": attachment.file.url if attachment.file else None,
+            # A signed, expiring, access-checked link; never the MEDIA URL.
+            "url": download_url(attachment),
             "created_at": _format_dt(attachment.created_at),
         }
 

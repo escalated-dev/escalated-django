@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+- Attachments are delivered privately, as in escalated-laravel. Serialized
+  attachments (`AttachmentSerializer`, `ApiAttachmentSerializer`) no longer
+  carry the file's MEDIA URL. Their `url` is a signed link to the new
+  `escalated:attachment_download` view (`<prefix>/attachments/<id>/`), valid
+  for `ATTACHMENT_DOWNLOAD_TTL_MINUTES` (default 10). The view checks current
+  ticket access: agents and admins who can view the ticket, the requester for
+  attachments on the ticket and its public replies, and guests holding a link
+  issued by their guest page (bound to the ticket's guest token, so rotating
+  the token revokes it). Internal-note attachments are only served to agents
+  and admins. Responses are `Content-Disposition: attachment` with a safe
+  filename, `application/octet-stream` except for a few inert types,
+  `X-Content-Type-Options: nosniff` and `Cache-Control: private, no-store`.
+  API clients send their Escalated bearer token with the download.
+
 ### Changed
 - Webhooks use the shared event vocabulary (escalated-developer-context ADR
   2026-10-21): internal notes go out as `note.created` (was
@@ -13,6 +28,10 @@ All notable changes to this project will be documented in this file.
   `escalated/event_names.py`.
 
 ### Upgrade notes
+- The new URL does not make files already in MEDIA private. Stop your web
+  server or CDN from serving `MEDIA_ROOT/escalated/attachments/` publicly; see
+  `docs/private-attachments.md`. Links expire, so clients that cached
+  attachment URLs must refetch the ticket.
 - Webhooks saved under the old names keep receiving those events, now under
   the new names in the delivery's `event` field and `X-Escalated-Event`
   header. Receivers that switch on the event name should accept the new

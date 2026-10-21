@@ -4,7 +4,7 @@ from django.http import HttpResponseForbidden, HttpResponseNotFound
 from django.shortcuts import redirect
 from django.utils.translation import gettext as _
 
-from escalated import guest_throttle
+from escalated import attachment_access, guest_throttle
 from escalated.conf import get_setting
 from escalated.models import Contact, Department, EscalatedSetting, SatisfactionRating, Ticket
 from escalated.rendering import render_page
@@ -149,17 +149,17 @@ def ticket_show(request, token):
     # Filter out internal notes for guest users
     replies = ticket.replies.filter(is_deleted=False, is_internal_note=False)
 
-    return render_page(
-        request,
-        "Escalated/Guest/Show",
-        props={
+    # The guest's token was just checked, so attachment links on this page may
+    # carry a guest download capability bound to it.
+    with attachment_access.for_guest(ticket):
+        props = {
             "ticket": TicketSerializer.serialize(ticket),
             "replies": ReplySerializer.serialize_list(replies),
             "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
             "token": token,
             "can_reply": ticket.is_open,
-        },
-    )
+        }
+    return render_page(request, "Escalated/Guest/Show", props=props)
 
 
 def ticket_reply(request, token):
