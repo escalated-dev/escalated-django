@@ -6,6 +6,9 @@ to it and records a WebhookDelivery for each attempt. Until this module it had
 no caller outside the manual "retry delivery" view, so a webhook saved on the
 admin Webhooks page never received anything.
 
+Events go out under the canonical names of the shared vocabulary
+(escalated/event_names.py); a webhook saved under a legacy name still matches.
+
 There is one receiver for every event WebhookSerializer.AVAILABLE_EVENTS
 offers. Delivery runs inside the signal, as NotificationService._fire_webhook
 does for ESCALATED["WEBHOOK_URL"]. A dispatcher error is logged and swallowed,
@@ -144,7 +147,7 @@ def _webhook_reply_created(sender, reply, ticket, user=None, **kwargs):
 
 @receiver(internal_note_added)
 def _webhook_internal_note_added(sender, reply, ticket, user=None, **kwargs):
-    _dispatch("internal_note.added", _ticket(ticket, user, reply_id=reply.pk))
+    _dispatch("note.created", _ticket(ticket, user, reply_id=reply.pk))
 
 
 @receiver(sla_breached)
@@ -160,9 +163,9 @@ def _webhook_sla_warning(sender, ticket, warning_type=None, remaining=None, **kw
 
 @receiver(tag_added)
 def _webhook_tag_added(sender, tag, ticket, user=None, **kwargs):
-    _dispatch("tag.added", _ticket(ticket, user, tag_id=tag.pk, tag_name=tag.name))
+    _dispatch("ticket.tag_added", _ticket(ticket, user, tag_id=tag.pk, tag_name=tag.name))
 
 
 @receiver(tag_removed)
 def _webhook_tag_removed(sender, tag, ticket, user=None, **kwargs):
-    _dispatch("tag.removed", _ticket(ticket, user, tag_id=tag.pk, tag_name=tag.name))
+    _dispatch("ticket.tag_removed", _ticket(ticket, user, tag_id=tag.pk, tag_name=tag.name))

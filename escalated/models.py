@@ -1996,8 +1996,16 @@ class Webhook(models.Model):
     def __str__(self):
         return self.url
 
+    def subscribed_events(self) -> list:
+        """The subscribed events, with legacy names read as their canonical names."""
+        from escalated.event_names import canonical_events
+
+        return canonical_events(self.events)
+
     def subscribed_to(self, event: str) -> bool:
-        return event in (self.events or [])
+        from escalated.event_names import canonical_event
+
+        return canonical_event(event) in self.subscribed_events()
 
 
 class WebhookDelivery(models.Model):

@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- Webhooks use the shared event vocabulary (escalated-developer-context ADR
+  2026-10-21): internal notes go out as `note.created` (was
+  `internal_note.added`) and tag changes as `ticket.tag_added` /
+  `ticket.tag_removed` (were `tag.added` / `tag.removed`). The admin Webhooks
+  form offers only the canonical names. The names live in
+  `escalated/event_names.py`.
+
+### Upgrade notes
+- Webhooks saved under the old names keep receiving those events, now under
+  the new names in the delivery's `event` field and `X-Escalated-Event`
+  header. Receivers that switch on the event name should accept the new
+  names. The edit form shows (and saving stores) the canonical names.
+- Stored names are read as aliases, not rewritten: `ticket.replied`,
+  `internal_note.added`, `internal_note.created`, `tag.added`,
+  `ticket.tagged`, `tag.removed`, `ticket.untagged`, `chat.session_started`
+  and `chat.session_ended`. A workflow saved with the `ticket.replied`
+  trigger is stored and shown as `reply.created` and keeps firing on replies.
+
 ## [0.7.3] - 2026-10-20
 
 ### Fixed
