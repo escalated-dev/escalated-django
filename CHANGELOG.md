@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-10-22
+
 ### Added
 - The basic report sub-screens, at escalated-laravel's paths: `Admin/Reports/AgentMetrics`
   (`admin/reports/agents/`), `Admin/Reports/SlaReport` (`admin/reports/sla/`) and
