@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-10-22
+
+### Upgrading
+- Retention settings default to `never`, so `purge_expired_data` removes
+  nothing new until an admin chooses a period. When one is set, closed tickets
+  past it are deleted permanently (no soft delete in this package) with their
+  replies, attachments and stored files; schedule the command daily.
+- A CSAT or guest-policy save with an invalid value is now rejected instead of
+  being coerced to a default.
+- Run the migrations (`0034_import_job_user` adds a nullable `user` column).
+- `POST admin/import/<id>/run/` now queues the run instead of running it inside
+  the request. `admin/import/create/` shows the Index screen.
+- Saving a webhook with the secret field left blank (or not sent) now keeps
+  the stored secret, because the form no longer receives it. Send
+  `clear_secret: true` to remove it. The webhook pages read `has_secret`
+  instead of `secret`.
+- The SSO settings page posts the mask (`********`) back for a secret the
+  admin did not change, and it is ignored; any other value replaces the stored
+  secret, as before. The older `abc*****` mask is still recognised, here and on
+  the general Settings page.
+
 ### Added
 - Admin Settings sub-pages render the shared `Escalated/Admin/Settings/*`
   screens with escalated-laravel's props and validation:
@@ -51,25 +72,6 @@ All notable changes to this project will be documented in this file.
   escalation rules and automations, as escalated-laravel's ImportContext does.
 - The Index, Mapping and Progress screens were sent props the shared pages do
   not read; they now get Laravel's.
-
-### Upgrading
-- Retention settings default to `never`, so `purge_expired_data` removes
-  nothing new until an admin chooses a period. When one is set, closed tickets
-  past it are deleted permanently (no soft delete in this package) with their
-  replies, attachments and stored files; schedule the command daily.
-- A CSAT or guest-policy save with an invalid value is now rejected instead of
-  being coerced to a default.
-- Run the migrations (`0034_import_job_user` adds a nullable `user` column).
-- `POST admin/import/<id>/run/` now queues the run instead of running it inside
-  the request. `admin/import/create/` shows the Index screen.
-- Saving a webhook with the secret field left blank (or not sent) now keeps
-  the stored secret, because the form no longer receives it. Send
-  `clear_secret: true` to remove it. The webhook pages read `has_secret`
-  instead of `secret`.
-- The SSO settings page posts the mask (`********`) back for a secret the
-  admin did not change, and it is ignored; any other value replaces the stored
-  secret, as before. The older `abc*****` mask is still recognised, here and on
-  the general Settings page.
 
 ### Security
 - **Stored secrets are no longer sent to admin pages.** The SSO settings page
