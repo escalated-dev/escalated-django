@@ -6,6 +6,7 @@ from escalated.ticket_access import path, ticket_access_view
 from escalated.views import (
     admin,
     admin_plugins,
+    admin_settings_pages,
     advanced_reports,
     agent,
     attachments,
@@ -253,13 +254,40 @@ admin_patterns = [
     path("admin/automations/create/", admin.automations_create, name="admin_automations_create"),
     path("admin/automations/<int:automation_id>/edit/", admin.automations_edit, name="admin_automations_edit"),
     path("admin/automations/<int:automation_id>/delete/", admin.automations_delete, name="admin_automations_delete"),
-    # Settings - CSAT, SSO, 2FA
-    path("admin/settings/csat/", admin.settings_csat, name="admin_settings_csat"),
+    # Settings sub-pages. Each page and its save share one path; the second
+    # name matches the "<page>.update" route the shared frontend calls.
+    path("admin/settings/csat/", admin_settings_pages.settings_csat, name="admin_settings_csat"),
+    path("admin/settings/csat/", admin_settings_pages.settings_csat, name="admin_settings_csat_update"),
     path(
         "admin/settings/public-tickets/",
-        admin.settings_public_tickets,
+        admin_settings_pages.settings_public_tickets,
         name="admin_settings_public_tickets",
     ),
+    path(
+        "admin/settings/public-tickets/",
+        admin_settings_pages.settings_public_tickets,
+        name="admin_settings_public_tickets_update",
+    ),
+    path(
+        "admin/settings/data-retention/",
+        admin_settings_pages.settings_data_retention,
+        name="admin_settings_data_retention",
+    ),
+    path(
+        "admin/settings/data-retention/",
+        admin_settings_pages.settings_data_retention,
+        name="admin_settings_data_retention_update",
+    ),
+    path("admin/settings/database/", admin_settings_pages.settings_database, name="admin_settings_database"),
+    path("admin/settings/database/", admin_settings_pages.settings_database, name="admin_settings_database_update"),
+    path(
+        "admin/settings/database/test/",
+        admin_settings_pages.settings_database_test,
+        name="admin_settings_database_test",
+    ),
+    path("admin/settings/email/", admin_settings_pages.settings_email, name="admin_settings_email"),
+    path("admin/settings/email/", admin_settings_pages.settings_email, name="admin_settings_email_update"),
+    # Settings - SSO, 2FA
     path("admin/settings/sso/", admin.settings_sso, name="admin_settings_sso"),
     path("admin/settings/two-factor/", admin.settings_two_factor, name="admin_settings_two_factor"),
     path("admin/settings/two-factor/setup/", admin.two_factor_setup, name="admin_two_factor_setup"),

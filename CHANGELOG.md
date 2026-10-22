@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Admin Settings sub-pages render the shared `Escalated/Admin/Settings/*`
+  screens with escalated-laravel's props and validation:
+  - `DataRetention` (`admin/settings/data-retention/`): retention for closed
+    tickets, attachments and audit logs, the GDPR flag, and a purge preview.
+  - `DatabaseConnection` (`admin/settings/database/`): read-only status of
+    every `settings.DATABASES` alias (reachable, migrated, ticket count),
+    marking the one `ESCALATED["DATABASE"]` routes to. Switching is refused;
+    `admin/settings/database/test/` probes one alias as JSON.
+  - `EmailSettings` (`admin/settings/email/`): the email channel's addresses
+    and default reply address (`email_addresses`, `default_reply_address`
+    settings; stored only).
+- `purge_expired_data` applies the Data Retention settings.
+
+### Changed
+- `CsatSettings` and `PublicTickets` validate their input, redirect back to
+  their own page with a success flash (and field errors on a rejected save),
+  and `PublicTickets` also accepts PUT. CSAT `csat_delay_hours` is sent as an
+  integer. Each sub-page also answers its `admin_settings_<page>_update` name.
+
+### Upgrading
+- Retention settings default to `never`, so `purge_expired_data` removes
+  nothing new until an admin chooses a period. When one is set, closed tickets
+  past it are deleted permanently (no soft delete in this package) with their
+  replies, attachments and stored files; schedule the command daily.
+- A CSAT or guest-policy save with an invalid value is now rejected instead of
+  being coerced to a default.
+
 ## [0.7.4] - 2026-10-21
 
 ### Upgrading
