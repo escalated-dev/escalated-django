@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Avg, Count, Max, Q
+from django.db.models import Count, Max, Q
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -120,57 +120,15 @@ _SSO_SECRET_KEYS = ("sso_jwt_secret", "sso_oauth_client_secret")
 
 @login_required
 def reports(request):
-    """Admin reports and analytics dashboard."""
+    """Admin reports overview (``Admin/Reports``), with Laravel's props."""
     check = _require_admin(request)
     if check:
         return check
 
-    now = timezone.now()
-    thirty_days_ago = now - timezone.timedelta(days=30)
+    from escalated.services import report_pages
+    from escalated.views.advanced_reports import _days
 
-    total_tickets = Ticket.objects.count()
-    open_tickets = Ticket.objects.open().count()
-    resolved_last_30 = Ticket.objects.filter(resolved_at__gte=thirty_days_ago).count()
-    created_last_30 = Ticket.objects.filter(created_at__gte=thirty_days_ago).count()
-    sla_breaches = Ticket.objects.breached_sla().count()
-
-    by_department = list(
-        Department.objects.filter(is_active=True).annotate(ticket_count=Count("tickets")).values("name", "ticket_count")
-    )
-
-    by_priority = {p.value: Ticket.objects.filter(priority=p.value).count() for p in Ticket.Priority}
-
-    by_status = {s.value: Ticket.objects.filter(status=s.value).count() for s in Ticket.Status}
-
-    # CSAT stats
-    csat_ratings = SatisfactionRating.objects.filter(created_at__gte=thirty_days_ago)
-    avg_csat = csat_ratings.aggregate(avg_rating=Avg("rating"))["avg_rating"]
-    total_ratings = csat_ratings.count()
-    csat_breakdown = {}
-    for r in range(1, 6):
-        csat_breakdown[str(r)] = csat_ratings.filter(rating=r).count()
-
-    return render_page(
-        request,
-        "Escalated/Admin/Reports",
-        props={
-            "stats": {
-                "total_tickets": total_tickets,
-                "open_tickets": open_tickets,
-                "resolved_last_30": resolved_last_30,
-                "created_last_30": created_last_30,
-                "sla_breaches": sla_breaches,
-            },
-            "by_department": by_department,
-            "by_priority": by_priority,
-            "by_status": by_status,
-            "csat": {
-                "average": round(avg_csat, 1) if avg_csat else None,
-                "total": total_ratings,
-                "breakdown": csat_breakdown,
-            },
-        },
-    )
+    return render_page(request, "Escalated/Admin/Reports", props=report_pages.overview(_days(request)))
 
 
 # ---------------------------------------------------------------------------
@@ -4217,27 +4175,11 @@ def reports_dashboard(request):
     check = _require_admin(request)
     if check:
         return check
-    from datetime import timedelta
 
-    from django.utils import timezone as tz
+    from escalated.services import report_pages
+    from escalated.views.advanced_reports import _days
 
-    from escalated.services.reporting_service import ReportingService
-
-    service = ReportingService()
-    end = tz.now()
-    start = end - timedelta(days=30)
-    return render_page(
-        request,
-        "Escalated/Admin/Reports/Dashboard",
-        props={
-            "ticket_volume": service.get_ticket_volume_by_date(start, end),
-            "by_status": service.get_tickets_by_status(),
-            "by_priority": service.get_tickets_by_priority(),
-            "avg_response_hours": service.get_average_response_time(start, end),
-            "avg_resolution_hours": service.get_average_resolution_time(start, end),
-            "agent_performance": service.get_agent_performance(start, end),
-        },
-    )
+    return render_page(request, "Escalated/Admin/Reports/Dashboard", props=report_pages.dashboard(_days(request)))
 
 
 # ---------------------------------------------------------------------------

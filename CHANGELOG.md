@@ -24,6 +24,29 @@ All notable changes to this project will be documented in this file.
   404 when `knowledge_base_enabled` is off and 403 to visitors who are not
   signed in unless `knowledge_base_public` is on. Articles shown to readers
   leave out the author.
+- `Admin/Reports/AgentDetail` at `admin/reports/agent/<id>/detail/`
+  (`admin_reports_agent_detail`), admins only, with the props the shared page
+  declares: `period_days`, `agent {id, name, email}`, `total_tickets`,
+  `resolved_tickets`, `avg_frt`, `avg_resolution`, `csat_score` (null without
+  ratings), `response_percentiles {p50..p99}`, `productivity` (per day
+  `{label, value, values: [public replies, resolved]}`), `workload` (tickets
+  created per day), `csat_breakdown` (`N stars` counts), and `prev_*` for the
+  same number of days before. It reads `days` (default 30).
+
+### Fixed
+- **The reports overview and dashboard show figures.** `Admin/Reports` was sent
+  `stats`, `by_department` and `csat.breakdown` keyed 1..5, and
+  `Admin/Reports/Dashboard` was sent `ticket_volume` and `{status, count}` /
+  `{priority, count}` rows; the shared screens read none of those, so both
+  rendered zeroes and empty charts. They now carry escalated-laravel's
+  `Admin\ReportController` props and read `days` (default 30): the overview
+  sends `period_days`, `total_tickets`, `resolved_tickets`,
+  `avg_first_response_hours`, `sla_breach_count`, `by_status` / `by_priority`
+  maps and `csat {average, total, breakdown}`; the dashboard sends
+  `period_days`, `volume`, `by_status`, `by_priority` (`{label, value}` rows),
+  `avg_response_hours`, `avg_resolution_hours` (from `first_response_at` and
+  `resolved_at`), `sla_compliance` (from the breach flags), `csat_average`
+  and `agent_performance`. `ReportingService` itself is unchanged.
 
 ## [0.7.5] - 2026-10-22
 

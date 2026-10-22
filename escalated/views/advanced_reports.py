@@ -293,3 +293,14 @@ def csat_report(request):
         return _forbidden()
 
     return render_page(request, "Escalated/Admin/Reports/CsatReport", report_pages.csat_report(_days(request)))
+
+
+@login_required
+def agent_detail(request, agent_id):
+    """One agent's report, with the props ``Reports/AgentDetail`` declares."""
+    if not is_admin(request.user):
+        return _forbidden()
+
+    return render_page(
+        request, "Escalated/Admin/Reports/AgentDetail", report_pages.agent_detail(agent_id, _days(request))
+    )

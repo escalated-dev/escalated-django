@@ -35,9 +35,6 @@ KNOWN_BLANK: set[str] = set()
 # of what is left. Rendering one means taking it off this list, and the test
 # below fails until that happens, so the list stays exact.
 NOT_YET_RENDERED = {
-    # Laravel's props for it (agent_id, metrics, percentiles) are not what the
-    # component reads; the NestJS reference does not render it either.
-    "Escalated/Admin/Reports/AgentDetail",
     # Laravel itself does not render or enforce these.
     "Escalated/Admin/Settings/Sandbox",
     "Escalated/Admin/Workflows/Builder",
