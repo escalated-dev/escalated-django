@@ -80,8 +80,9 @@ def _iso(value):
 def job_json(job):
     """The job as the screens read it.
 
-    Laravel sends the model as is. Its credentials are left out here: they are
-    a secret, and no screen reads them.
+    Built from an explicit field list, so a column added later is not sent
+    to the browser by default. The credentials are never included: the import
+    run reads them server-side.
     """
     return {
         "id": str(job.id),
@@ -90,7 +91,7 @@ def job_json(job):
         "status": job.status,
         "field_mappings": job.field_mappings or {},
         "progress": job.progress or {},
-        "error_log": job.error_log or [],
+        "error_log": (job.error_log or [])[-50:],
         "started_at": _iso(job.started_at),
         "completed_at": _iso(job.completed_at),
         "created_at": _iso(job.created_at),

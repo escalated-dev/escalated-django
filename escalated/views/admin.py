@@ -86,6 +86,7 @@ from escalated.serializers import (
     ticket_detail,
 )
 from escalated.services.ticket_service import TicketService
+from escalated.support import secret_mask
 from escalated.user_keys import user_pk
 from escalated.widget_embed import WidgetOrigins
 
@@ -101,28 +102,15 @@ def _require_admin(request):
     return None
 
 
-# Keys whose values should be masked in the settings response
+# Inbound email secrets the Settings page edits; it sees them only as a mask.
 _SENSITIVE_SETTING_KEYS = {
     "mailgun_signing_key",
     "postmark_inbound_token",
     "imap_password",
 }
 
-
-def _mask_secret(value: str) -> str:
-    """Mask a secret value, showing only the first 3 characters."""
-    if not value:
-        return ""
-    if len(value) <= 6:
-        return "*" * len(value)
-    return value[:3] + "*" * min(len(value) - 3, 12)
-
-
-def _is_masked_value(value: str | None) -> bool:
-    """Return True if the value looks like a masked secret (e.g. 'abc************')."""
-    if not value:
-        return False
-    return bool(re_module.match(r"^.{0,3}\*{3,}$", value))
+# SSO secrets the SSO page edits; it sees them only as a mask.
+_SSO_SECRET_KEYS = ("sso_jwt_secret", "sso_oauth_client_secret")
 
 
 # ---------------------------------------------------------------------------
@@ -1209,10 +1197,11 @@ def settings_index(request):
         except (KeyError, TypeError, ValueError):
             pass
 
-    # Mask sensitive values before sending to frontend
-    for key in _SENSITIVE_SETTING_KEYS:
-        if key in settings_dict and settings_dict[key]:
-            settings_dict[key] = _mask_secret(settings_dict[key])
+    # Stored secrets reach the page only as a mask. The SSO secrets live in
+    # the same table but belong to the SSO page; this page masks them too.
+    for key in (*_SENSITIVE_SETTING_KEYS, *_SSO_SECRET_KEYS):
+        if key in settings_dict:
+            settings_dict[key] = secret_mask.mask(settings_dict[key])
 
     return render_page(
         request,
@@ -1440,7 +1429,7 @@ def settings_update(request):
         if raw is not None:
             stripped = raw.strip()
             # Skip saving sensitive fields that still contain masked values
-            if key in _SENSITIVE_SETTING_KEYS and _is_masked_value(stripped):
+            if key in _SENSITIVE_SETTING_KEYS and secret_mask.is_masked(stripped):
                 continue
             EscalatedSetting.set(key, stripped)
 
@@ -3743,9 +3732,13 @@ def webhooks_edit(request, webhook_id):
             webhook.events = canonical_events(json.loads(request_data(request).get("events", "[]")))
         except (json.JSONDecodeError, TypeError):
             pass
+        # The form never receives the stored secret, so a blank or missing one
+        # means "leave it as it is". ``clear_secret`` removes it.
         secret = request_data(request).get("secret")
-        if secret is not None:
-            webhook.secret = secret or None
+        if _truthy(request_data(request).get("clear_secret", "")):
+            webhook.secret = None
+        elif secret and secret.strip():
+            webhook.secret = secret
         webhook.active = request_data(request).get("active", "true") == "true"
         webhook.save()
         return redirect("escalated:admin_webhooks_index")
@@ -3966,9 +3959,19 @@ def settings_sso(request):
 
     sso = SsoService()
     if request.method == "POST":
-        sso.save_config(request_data(request).dict())
+        data = request_data(request).dict()
+        # The page posts the mask back for a secret the admin did not change.
+        for key in _SSO_SECRET_KEYS:
+            if secret_mask.is_masked(data.get(key)):
+                data.pop(key)
+        sso.save_config(data)
         return redirect("escalated:admin_settings")
-    return render_page(request, "Escalated/Admin/Settings/SsoSettings", props={"settings": sso.get_config()})
+
+    settings = sso.get_config()
+    for key in _SSO_SECRET_KEYS:
+        if key in settings:
+            settings[key] = secret_mask.mask(settings[key])
+    return render_page(request, "Escalated/Admin/Settings/SsoSettings", props={"settings": settings})
 
 
 @login_required

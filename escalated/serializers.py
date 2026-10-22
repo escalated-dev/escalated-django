@@ -797,7 +797,9 @@ class WebhookSerializer:
             # A subscription saved under a legacy name is shown under its
             # canonical name, so the form ticks it and saving keeps it.
             "events": webhook.subscribed_events(),
-            "secret": bool(webhook.secret),
+            # The signing secret signs deliveries and is never sent; the page
+            # learns only whether one is set.
+            "has_secret": bool(webhook.secret),
             "active": webhook.active,
             "created_at": _format_dt(webhook.created_at),
             "updated_at": _format_dt(webhook.updated_at),
