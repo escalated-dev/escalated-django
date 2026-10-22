@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Admin Settings sub-pages render the shared `Escalated/Admin/Settings/*`
+  screens with escalated-laravel's props and validation:
+  - `DataRetention` (`admin/settings/data-retention/`): retention for closed
+    tickets, attachments and audit logs, the GDPR flag, and a purge preview.
+  - `DatabaseConnection` (`admin/settings/database/`): read-only status of
+    every `settings.DATABASES` alias (reachable, migrated, ticket count),
+    marking the one `ESCALATED["DATABASE"]` routes to. Switching is refused;
+    `admin/settings/database/test/` probes one alias as JSON.
+  - `EmailSettings` (`admin/settings/email/`): the email channel's addresses
+    and default reply address (`email_addresses`, `default_reply_address`
+    settings; stored only).
+- `purge_expired_data` applies the Data Retention settings.
 - The admin Import wizard, on escalated-laravel's paths and props:
   `Admin/Import/Index` (`admin/import/`), `Connect`
   (`admin/import/<platform>/connect/`, with `POST .../test-connection/`
@@ -19,6 +31,12 @@ All notable changes to this project will be documented in this file.
   thread by default, or through your task queue by registering the
   `import.run_async` action and calling `escalated.services.import_runner.run_job`.
 - Import jobs record the admin who started them (`ImportJob.user`).
+
+### Changed
+- `CsatSettings` and `PublicTickets` validate their input, redirect back to
+  their own page with a success flash (and field errors on a rejected save),
+  and `PublicTickets` also accepts PUT. CSAT `csat_delay_hours` is sent as an
+  integer. Each sub-page also answers its `admin_settings_<page>_update` name.
 
 ### Fixed
 - Imports wrote no tickets. Contacts failed on any user model without a `name`
@@ -35,6 +53,12 @@ All notable changes to this project will be documented in this file.
   not read; they now get Laravel's.
 
 ### Upgrading
+- Retention settings default to `never`, so `purge_expired_data` removes
+  nothing new until an admin chooses a period. When one is set, closed tickets
+  past it are deleted permanently (no soft delete in this package) with their
+  replies, attachments and stored files; schedule the command daily.
+- A CSAT or guest-policy save with an invalid value is now rejected instead of
+  being coerced to a default.
 - Run the migrations (`0034_import_job_user` adds a nullable `user` column).
 - `POST admin/import/<id>/run/` now queues the run instead of running it inside
   the request. `admin/import/create/` shows the Index screen.

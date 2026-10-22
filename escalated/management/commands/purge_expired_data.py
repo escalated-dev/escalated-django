@@ -4,10 +4,15 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from escalated.models import ApiToken, GuestVerification, ImportJob, WebhookDelivery
+from escalated.services import data_retention
 
 
 class Command(BaseCommand):
-    help = "Purge expired API tokens, old webhook deliveries, and stale import jobs."
+    help = (
+        "Purge expired API tokens, old webhook deliveries, stale import jobs and expired guest codes, "
+        "and apply the Data Retention settings (closed tickets, attachments, audit logs). "
+        "Run it daily from cron, Celery beat or similar."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -49,6 +54,9 @@ class Command(BaseCommand):
         expired_codes = GuestVerification.objects.filter(expires_at__lt=now)
         code_count = expired_codes.count()
 
+        # 5. Data Retention settings (all "never" by default: nothing happens)
+        retention = data_retention.purge(dry_run=dry_run, write=self.stdout.write, now=now)
+
         if dry_run:
             self.stdout.write(
                 f"[DRY RUN] Would purge: "
@@ -78,6 +86,8 @@ class Command(BaseCommand):
             deleted, _ = expired_codes.delete()
             total_purged += deleted
             self.stdout.write(f"Purged {deleted} expired guest verification codes.")
+
+        total_purged += sum(retention.values())
 
         if total_purged == 0:
             self.stdout.write("No expired data to purge.")

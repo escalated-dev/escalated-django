@@ -404,7 +404,15 @@ python manage.py close_resolved --days 7
 
 # Purge old activity logs
 python manage.py purge_activities --days 90
+
+# Purge expired tokens/codes and apply the Data Retention settings
+# (Admin > Settings > Data Retention; every setting defaults to "never")
+python manage.py purge_expired_data [--dry-run]
 ```
+
+Data retention deletes closed tickets outright (this package has no soft
+delete), together with their replies, attachments and stored files. Run
+`purge_expired_data` daily.
 
 Schedule these with cron, Celery Beat, or django-crontab for automated enforcement.
 
