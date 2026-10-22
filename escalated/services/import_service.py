@@ -27,7 +27,9 @@ from collections.abc import Callable
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.utils.text import slugify
 
 from escalated.hooks import apply_filters, do_action
@@ -264,10 +266,28 @@ class ImportService:
 
     def _persist_contact(self, record: dict, mappings: dict):
         User = get_user_model()
-        user, _ = User.objects.get_or_create(
-            email=record["email"],
-            defaults={"name": record.get("name", record["email"])},
-        )
+        email = record["email"]
+        email_field = User.get_email_field_name()
+        user = User.objects.filter(**{f"{email_field}__iexact": email}).first()
+        if user:
+            return user.pk
+
+        # Fill what this user model has: hosts differ (auth.User has a
+        # username and first_name, custom models often a single name).
+        fields = {f.name: f for f in User._meta.get_fields() if getattr(f, "concrete", False)}
+        name = record.get("name") or email
+        values = {email_field: email}
+        username_field = User.USERNAME_FIELD
+        if username_field != email_field and username_field in fields:
+            values[username_field] = email[: fields[username_field].max_length or None]
+        if "name" in fields:
+            values["name"] = name
+        elif "first_name" in fields:
+            values["first_name"] = name[: fields["first_name"].max_length or None]
+
+        user = User(**values)
+        user.set_unusable_password()
+        user.save()
         return user.pk
 
     def _persist_department(self, record: dict, mappings: dict):
@@ -305,32 +325,30 @@ class ImportService:
         if record.get("department_source_id"):
             department_id = ImportSourceMap.resolve(job.id, "departments", record["department_source_id"])
 
+        subject = record.get("title") or record.get("subject") or "Imported ticket"
+        # As Laravel's TicketStatus::tryFrom / TicketPriority::tryFrom: a value
+        # this model does not know falls back to the default.
+        status = record.get("status")
+        priority = record.get("priority")
         ticket = Ticket(
-            subject=record.get("title") or record.get("subject") or "Imported ticket",
-            status=record.get("status", "open"),
-            priority=record.get("priority", "medium"),
+            subject=subject,
+            description=record.get("description") or record.get("body") or subject,
+            status=status if status in Ticket.Status.values else Ticket.Status.OPEN,
+            priority=priority if priority in Ticket.Priority.values else Ticket.Priority.MEDIUM,
             assigned_to_id=assignee_id,
             department_id=department_id,
-            requester_id=requester_id,
             metadata=record.get("metadata"),
         )
 
-        # Preserve original timestamps
-        if record.get("created_at"):
-            ticket.created_at = record["created_at"]
-        if record.get("updated_at"):
-            ticket.updated_at = record["updated_at"]
+        if requester_id:
+            User = get_user_model()
+            ticket.requester_content_type = ContentType.objects.get_for_model(User)
+            ticket.requester_object_id = str(requester_id)
 
-        # Bypass auto_now fields by using update_fields trickery after save
         ticket.save()
 
-        if record.get("created_at") or record.get("updated_at"):
-            update_fields = ["updated_at"]
-            if record.get("created_at"):
-                update_fields.append("created_at")
-            Ticket.objects.filter(pk=ticket.pk).update(
-                **{k: record[k[:-3] if k.endswith("_at") else k] for k in update_fields if record.get(k)}
-            )
+        # created_at/updated_at are auto_now fields: keep the source's times.
+        self._keep_timestamps(Ticket, ticket.pk, record)
 
         # Attach tags
         if record.get("tag_source_ids"):
@@ -362,20 +380,25 @@ class ImportService:
             author_id=author_id,
         )
         reply.save()
-
-        if record.get("created_at") or record.get("updated_at"):
-            update = {}
-            if record.get("created_at"):
-                update["created_at"] = record["created_at"]
-            if record.get("updated_at"):
-                update["updated_at"] = record["updated_at"]
-            Reply.objects.filter(pk=reply.pk).update(**update)
+        self._keep_timestamps(Reply, reply.pk, record)
 
         return reply.pk
 
+    @staticmethod
+    def _keep_timestamps(model, pk, record: dict) -> None:
+        """Write the source's created_at/updated_at over the auto_now values."""
+        update = {}
+        for key in ("created_at", "updated_at"):
+            value = record.get(key)
+            if value:
+                parsed = parse_datetime(value) if isinstance(value, str) else value
+                if parsed is not None:
+                    update[key] = parsed
+        if update:
+            model.objects.filter(pk=pk).update(**update)
+
     def _persist_attachment(self, job: ImportJob, record: dict, mappings: dict):
         Attachment = apps.get_model("escalated", "Attachment")
-        from django.contrib.contenttypes.models import ContentType
 
         parent_type = record.get("parent_type", "reply")
         parent_source_id = record.get("parent_source_id", "")
@@ -394,11 +417,10 @@ class ImportService:
         attachment = Attachment.objects.create(
             content_type=ct,
             object_id=parent_id,
-            filename=record.get("filename", "unknown"),
-            mime_type=record.get("mime_type", "application/octet-stream"),
-            size=record.get("size", 0),
-            path=record.get("path", ""),
-            disk=record.get("disk", "local"),
+            file=record.get("path", ""),
+            original_filename=record.get("filename") or "unknown",
+            mime_type=record.get("mime_type") or "application/octet-stream",
+            size=record.get("size") or 0,
         )
         return attachment.pk
 

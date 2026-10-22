@@ -354,6 +354,27 @@ admin_patterns = [
     path("admin/import/<uuid:job_uuid>/pause/", import_views.import_pause, name="admin_import_pause"),
     path("admin/import/<uuid:job_uuid>/progress/", import_views.import_progress, name="admin_import_progress"),
     path("admin/import/<uuid:job_uuid>/delete/", import_views.import_delete, name="admin_import_delete"),
+    # Import wizard, on escalated-laravel's paths (escalated.admin.import.*)
+    path(
+        "admin/import/progress/<uuid:job_uuid>/", import_views.import_progress_page, name="admin_import_progress_page"
+    ),
+    path("admin/import/status/<uuid:job_uuid>/", import_views.import_status, name="admin_import_status"),
+    path("admin/import/pause/<uuid:job_uuid>/", import_views.import_pause_job, name="admin_import_pause_job"),
+    path("admin/import/resume/<uuid:job_uuid>/", import_views.import_resume, name="admin_import_resume"),
+    path("admin/import/cancel/<uuid:job_uuid>/", import_views.import_cancel, name="admin_import_cancel"),
+    path("admin/import/<str:platform>/connect/", import_views.import_connect, name="admin_import_connect"),
+    path(
+        "admin/import/<str:platform>/test-connection/",
+        import_views.import_test_connection,
+        name="admin_import_test_connection",
+    ),
+    path(
+        "admin/import/<str:platform>/mapping/",
+        import_views.import_platform_mapping,
+        name="admin_import_platform_mapping",
+    ),
+    path("admin/import/<str:platform>/review/", import_views.import_review, name="admin_import_review"),
+    path("admin/import/<str:platform>/start/", import_views.import_start, name="admin_import_start"),
 ]
 
 # Guest-facing URLs (no authentication required)
