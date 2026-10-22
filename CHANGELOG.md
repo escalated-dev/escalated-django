@@ -62,6 +62,28 @@ All notable changes to this project will be documented in this file.
 - Run the migrations (`0034_import_job_user` adds a nullable `user` column).
 - `POST admin/import/<id>/run/` now queues the run instead of running it inside
   the request. `admin/import/create/` shows the Index screen.
+- Saving a webhook with the secret field left blank (or not sent) now keeps
+  the stored secret, because the form no longer receives it. Send
+  `clear_secret: true` to remove it. The webhook pages read `has_secret`
+  instead of `secret`.
+- The SSO settings page posts the mask (`********`) back for a secret the
+  admin did not change, and it is ignored; any other value replaces the stored
+  secret, as before. The older `abc*****` mask is still recognised, here and on
+  the general Settings page.
+
+### Security
+- **Stored secrets are no longer sent to admin pages.** The SSO settings page
+  received `sso_jwt_secret` in plain text, and the general Settings page, which
+  sends every stored setting, carried the SSO secrets in plain text too; both
+  now show `********` (an empty string when unset). The general Settings page
+  also showed the first three characters of the Mailgun signing key, Postmark
+  inbound token and IMAP password; they are now masked completely. Saving a
+  webhook with the secret left blank silently removed the stored signing
+  secret; it now keeps it, and the webhook pages get `has_secret` instead of
+  `secret`. Import job pages already left credentials out; they are now built
+  from an explicit field list with the last 50 errors. 2FA secrets, recovery
+  codes and API token hashes were already kept out of every page; a test now
+  guards all of these surfaces.
 
 ## [0.7.4] - 2026-10-21
 
