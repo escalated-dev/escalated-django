@@ -14,6 +14,16 @@ All notable changes to this project will be documented in this file.
   per-agent ratings and daily averages. They read `days` (default 30).
 - `tests/test_page_name_parity.py` keeps a `NOT_YET_RENDERED` ledger of the
   shipped pages this package does not render yet.
+- The customer knowledge base pages, as escalated-laravel's
+  `Customer/KnowledgeBaseController`: `Customer/KnowledgeBase/Index` at `kb/`
+  (published articles, newest first, 15 a page, `search` and `category`
+  filters, root categories with their published article counts) and
+  `Customer/KnowledgeBase/Article` at `kb/<slug>/` (counts the view, up to five
+  related articles), with helpful / not helpful feedback posted to
+  `kb/<slug>/feedback/` (404 when feedback is off). The knowledge base answers
+  404 when `knowledge_base_enabled` is off and 403 to visitors who are not
+  signed in unless `knowledge_base_public` is on. Articles shown to readers
+  leave out the author.
 
 ## [0.7.5] - 2026-10-22
 
