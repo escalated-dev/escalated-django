@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- The basic report sub-screens, at escalated-laravel's paths: `Admin/Reports/AgentMetrics`
+  (`admin/reports/agents/`), `Admin/Reports/SlaReport` (`admin/reports/sla/`) and
+  `Admin/Reports/CsatReport` (`admin/reports/csat/`), with the props its
+  `Admin\ReportController` passes: per-agent tickets, resolved and average
+  first response and resolution hours; SLA compliance overall and per active
+  policy with the latest 100 breaches; and the CSAT average, response rate,
+  per-agent ratings and daily averages. They read `days` (default 30).
+- `tests/test_page_name_parity.py` keeps a `NOT_YET_RENDERED` ledger of the
+  shipped pages this package does not render yet.
+
 ## [0.7.5] - 2026-10-22
 
 ### Upgrading

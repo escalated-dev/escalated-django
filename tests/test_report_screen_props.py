@@ -33,6 +33,9 @@ SCREENS = [
     ("escalated:admin_reports_agent_ranking", "Escalated/Admin/Reports/AgentRanking"),
     ("escalated:admin_reports_cohorts", "Escalated/Admin/Reports/Cohorts"),
     ("escalated:admin_reports_comparison", "Escalated/Admin/Reports/Comparison"),
+    ("escalated:admin_reports_agents", "Escalated/Admin/Reports/AgentMetrics"),
+    ("escalated:admin_reports_sla", "Escalated/Admin/Reports/SlaReport"),
+    ("escalated:admin_reports_csat", "Escalated/Admin/Reports/CsatReport"),
 ]
 
 REDIRECTS = [
