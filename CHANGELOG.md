@@ -17,12 +17,40 @@ All notable changes to this project will be documented in this file.
     and default reply address (`email_addresses`, `default_reply_address`
     settings; stored only).
 - `purge_expired_data` applies the Data Retention settings.
+- The admin Import wizard, on escalated-laravel's paths and props:
+  `Admin/Import/Index` (`admin/import/`), `Connect`
+  (`admin/import/<platform>/connect/`, with `POST .../test-connection/`
+  answering `{success[, error]}`), `Mapping` (`.../mapping/`), `Review`
+  (`POST .../review/`, which writes nothing), `start` (`POST .../start/`) and
+  `Progress` (`admin/import/progress/<id>/`, polled through
+  `admin/import/status/<id>/`, with `POST admin/import/{pause,resume,cancel}/<id>/`).
+  Sources are still the adapters registered on the `import.adapters` filter;
+  core ships none. Tested credentials wait in the session, encrypted, until the
+  import starts, and are never sent to the browser.
+- Imports run in the background: after the starting transaction commits, in a
+  thread by default, or through your task queue by registering the
+  `import.run_async` action and calling `escalated.services.import_runner.run_job`.
+- Import jobs record the admin who started them (`ImportJob.user`).
 
 ### Changed
 - `CsatSettings` and `PublicTickets` validate their input, redirect back to
   their own page with a success flash (and field errors on a rejected save),
   and `PublicTickets` also accepts PUT. CSAT `csat_delay_hours` is sent as an
   integer. Each sub-page also answers its `admin_settings_<page>_update` name.
+
+### Fixed
+- Imports wrote no tickets. Contacts failed on any user model without a `name`
+  field, which includes Django's own; every ticket failed on a `requester_id`
+  the ticket has no field for; a source timestamp broke the save; and an
+  attachment was written to fields the model does not have. Replies then had
+  no ticket to attach to.
+- An imported ticket's status or priority this package does not know is now
+  saved as open / medium, as escalated-laravel does, and a ticket with no
+  description takes its subject.
+- Import mode now also holds back SLA policy attachment and breach checks,
+  escalation rules and automations, as escalated-laravel's ImportContext does.
+- The Index, Mapping and Progress screens were sent props the shared pages do
+  not read; they now get Laravel's.
 
 ### Upgrading
 - Retention settings default to `never`, so `purge_expired_data` removes
@@ -31,6 +59,9 @@ All notable changes to this project will be documented in this file.
   replies, attachments and stored files; schedule the command daily.
 - A CSAT or guest-policy save with an invalid value is now rejected instead of
   being coerced to a default.
+- Run the migrations (`0034_import_job_user` adds a nullable `user` column).
+- `POST admin/import/<id>/run/` now queues the run instead of running it inside
+  the request. `admin/import/create/` shows the Index screen.
 
 ## [0.7.4] - 2026-10-21
 

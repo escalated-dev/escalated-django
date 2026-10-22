@@ -2232,6 +2232,16 @@ class ImportJob(models.Model):
     }
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # The admin who started the import, as escalated-laravel records it.
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="escalated_import_jobs",
+    )
     platform = models.CharField(max_length=100)
     status = models.CharField(
         max_length=20,

@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from escalated.models import EscalationRule, Ticket, TicketActivity
 from escalated.signals import department_changed, ticket_assigned, ticket_escalated, ticket_priority_changed
+from escalated.support.import_context import ImportContext
 
 logger = logging.getLogger("escalated")
 
@@ -23,6 +24,9 @@ class EscalationService:
         Evaluate all active escalation rules against all open tickets.
         Called by the evaluate_escalations management command.
         """
+        if ImportContext.is_importing():
+            return 0
+
         rules = EscalationRule.objects.filter(is_active=True).order_by("order")
         open_tickets = Ticket.objects.open().select_related("assigned_to", "department", "sla_policy")
 
@@ -38,6 +42,9 @@ class EscalationService:
     @staticmethod
     def evaluate_ticket(ticket):
         """Evaluate escalation rules for a single ticket."""
+        if ImportContext.is_importing():
+            return 0
+
         rules = EscalationRule.objects.filter(is_active=True).order_by("order")
         actions_taken = 0
 
