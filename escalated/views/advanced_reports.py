@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from escalated.permissions import is_admin
 from escalated.rendering import render_page
+from escalated.services import report_pages
 from escalated.services.advanced_reporting_service import AdvancedReportingService
 from escalated.services.export_service import ExportService
 from escalated.services.report_screen_metrics import ReportScreenMetrics
@@ -256,3 +257,39 @@ def export(request):
     response = HttpResponse(content, content_type=content_type)
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+# -- the basic report sub-screens ------------------------------------------
+
+
+def _days(request):
+    """Laravel's report links send ``days`` (``period`` wins); 30 by default."""
+    raw = request.GET.get("period") or request.GET.get("days") or 30
+    try:
+        return max(int(raw), 1)
+    except (TypeError, ValueError):
+        return 30
+
+
+@login_required
+def agent_metrics(request):
+    if not is_admin(request.user):
+        return _forbidden()
+
+    return render_page(request, "Escalated/Admin/Reports/AgentMetrics", report_pages.agent_metrics(_days(request)))
+
+
+@login_required
+def sla_report(request):
+    if not is_admin(request.user):
+        return _forbidden()
+
+    return render_page(request, "Escalated/Admin/Reports/SlaReport", report_pages.sla_report(_days(request)))
+
+
+@login_required
+def csat_report(request):
+    if not is_admin(request.user):
+        return _forbidden()
+
+    return render_page(request, "Escalated/Admin/Reports/CsatReport", report_pages.csat_report(_days(request)))

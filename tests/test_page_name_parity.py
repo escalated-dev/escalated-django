@@ -31,6 +31,23 @@ MANIFEST = Path(__file__).resolve().parent / "fixtures" / "escalated-pages.json"
 # This list may shrink. It must never grow.
 KNOWN_BLANK: set[str] = set()
 
+# Pages the frontend ships that this package does not render yet: the ledger
+# of what is left. Rendering one means taking it off this list, and the test
+# below fails until that happens, so the list stays exact.
+NOT_YET_RENDERED = {
+    # Laravel's props for it (agent_id, metrics, percentiles) are not what the
+    # component reads; the NestJS reference does not render it either.
+    "Escalated/Admin/Reports/AgentDetail",
+    # Laravel itself does not render or enforce these.
+    "Escalated/Admin/Settings/Sandbox",
+    "Escalated/Admin/Workflows/Builder",
+    "Escalated/Auth/TwoFactorChallenge",
+    "Escalated/Error",
+    # The customer knowledge base: models and settings exist, views not yet.
+    "Escalated/Customer/KnowledgeBase/Article",
+    "Escalated/Customer/KnowledgeBase/Index",
+}
+
 PAGE_NAME = re.compile(r'"(Escalated/[A-Za-z0-9/_]+)"')
 
 
@@ -97,4 +114,15 @@ def test_does_not_keep_excusing_names_that_have_been_fixed():
     assert stale == [], (
         "these names are on the blank-screen exception list but no longer need to be, remove them:\n  "
         + "\n  ".join(stale)
+    )
+
+
+def test_the_not_yet_rendered_list_is_exact():
+    rendered = rendered_pages()
+    unrendered = {name for name in shipped_pages() if name not in rendered}
+
+    assert unrendered == NOT_YET_RENDERED, (
+        "NOT_YET_RENDERED must name exactly the shipped pages nothing renders.\n"
+        f"  rendered now, take off the list: {sorted(NOT_YET_RENDERED - unrendered)}\n"
+        f"  not rendered, add to the list: {sorted(unrendered - NOT_YET_RENDERED)}"
     )
