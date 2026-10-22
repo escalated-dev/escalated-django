@@ -328,6 +328,11 @@ admin_patterns = [
     path("admin/reports/agents/", advanced_reports.agent_metrics, name="admin_reports_agents"),
     path("admin/reports/sla/", advanced_reports.sla_report, name="admin_reports_sla"),
     path("admin/reports/csat/", advanced_reports.csat_report, name="admin_reports_csat"),
+    path(
+        "admin/reports/agent/<int:agent_id>/detail/",
+        advanced_reports.agent_detail,
+        name="admin_reports_agent_detail",
+    ),
     # Users management
     path("admin/users/", admin.users_index, name="admin_users_index"),
     path("admin/users/<int:user_id>/role/", admin.users_role, name="admin_users_role"),
