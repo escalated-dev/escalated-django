@@ -13,6 +13,7 @@ from escalated.views import (
     chat,
     cloud_webhook,
     customer,
+    customer_kb,
     guest,
     import_views,
     inbound,
@@ -35,6 +36,10 @@ customer_patterns = [
     path("tickets/<int:ticket_id>/close/", customer.ticket_close, name="customer_ticket_close"),
     path("tickets/<int:ticket_id>/reopen/", customer.ticket_reopen, name="customer_ticket_reopen"),
     path("tickets/<int:ticket_id>/rate/", customer.ticket_rate, name="customer_ticket_rate"),
+    # Knowledge base (Customer/KnowledgeBase/*): public when the setting allows.
+    path("kb/", customer_kb.index, name="customer_kb_index"),
+    path("kb/<slug:slug>/", customer_kb.show, name="customer_kb_show"),
+    path("kb/<slug:slug>/feedback/", customer_kb.feedback, name="customer_kb_feedback"),
 ]
 
 # Agent-facing URLs

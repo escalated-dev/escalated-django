@@ -43,9 +43,6 @@ NOT_YET_RENDERED = {
     "Escalated/Admin/Workflows/Builder",
     "Escalated/Auth/TwoFactorChallenge",
     "Escalated/Error",
-    # The customer knowledge base: models and settings exist, views not yet.
-    "Escalated/Customer/KnowledgeBase/Article",
-    "Escalated/Customer/KnowledgeBase/Index",
 }
 
 PAGE_NAME = re.compile(r'"(Escalated/[A-Za-z0-9/_]+)"')
