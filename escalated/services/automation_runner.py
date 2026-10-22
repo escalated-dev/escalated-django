@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from escalated.support.import_context import ImportContext
 from escalated.user_keys import user_pk
 
 logger = logging.getLogger(__name__)
@@ -11,6 +12,9 @@ logger = logging.getLogger(__name__)
 class AutomationRunner:
     def run(self):
         """Run all active automations against open tickets. Returns count of affected tickets."""
+        if ImportContext.is_importing():
+            return 0
+
         from escalated.models import Automation
 
         automations = Automation.objects.active()

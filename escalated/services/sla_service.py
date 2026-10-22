@@ -7,6 +7,7 @@ from django.utils import timezone
 from escalated.conf import get_setting
 from escalated.models import SlaPolicy, Ticket
 from escalated.signals import sla_breached, sla_warning
+from escalated.support.import_context import ImportContext
 
 logger = logging.getLogger("escalated")
 
@@ -47,6 +48,8 @@ class SlaService:
     def attach_default_policy(ticket):
         """Explicitly select again; department/type changes alone preserve deadlines."""
         if not get_setting("SLA").get("ENABLED", True):
+            return
+        if ImportContext.is_importing():
             return
         policy = SlaService.select_policy(ticket)
         if policy:
@@ -182,6 +185,9 @@ class SlaService:
         Check SLA breaches and warnings for all open tickets.
         Called by the check_sla management command.
         """
+        if ImportContext.is_importing():
+            return 0, 0
+
         open_tickets = Ticket.objects.open().filter(sla_policy__isnull=False).select_related("sla_policy")
 
         breached_count = 0
