@@ -46,7 +46,9 @@ def seeded(db):
     DepartmentFactory().agents.add(agent)
     policy = SlaPolicyFactory(is_active=True)
     now = timezone.now()
-    created = (now - timedelta(days=2)).replace(minute=0, second=0, microsecond=0)
+    # 10:00 local two days ago, so the reply and the resolution (up to four
+    # hours later) land on the same day whatever time the suite runs.
+    created = timezone.localtime(now - timedelta(days=2)).replace(hour=10, minute=0, second=0, microsecond=0)
 
     answered = TicketFactory(subject="Answered", priority="high")
     waiting = TicketFactory(subject="Waiting", priority="low")
