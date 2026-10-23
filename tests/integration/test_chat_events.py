@@ -224,3 +224,85 @@ def test_a_stored_legacy_chat_trigger_still_fires(client):
     )
     _token, session = _start(client)
     assert list(WorkflowLog.objects.values_list("trigger_event", flat=True)) == ["chat.started"]
+
+
+# Transfer body: escalated-laravel's ChatController::transfer reads agent_id
+# and/or department_id, which the shared ChatActionBar posts. The older
+# {"type", "id"} body is still read.
+
+
+def _accepted(client, username="xfer_agent"):
+    department = DepartmentFactory()
+    _token, session = _start(client, department)
+    agent = _agent(username, department)
+    agent_client = Client()
+    agent_client.force_login(agent)
+    assert agent_client.post(f"/support/agent/chat/{session.pk}/accept/").status_code == 200
+    return agent_client, agent, session
+
+
+def _transfer(agent_client, session, body):
+    return agent_client.post(
+        f"/support/agent/chat/{session.pk}/transfer/",
+        data=json.dumps(body),
+        content_type="application/json",
+    )
+
+
+@pytest.mark.django_db
+def test_a_department_transfer_moves_the_ticket_and_requeues_the_chat(client, deliveries):
+    WebhookFactory(events=["chat.transferred"], active=True)
+    agent_client, agent, session = _accepted(client)
+    billing = DepartmentFactory()
+
+    response = _transfer(agent_client, session, {"department_id": billing.pk})
+
+    assert response.status_code == 200, response.content
+    session.refresh_from_db()
+    session.ticket.refresh_from_db()
+    assert session.status == ChatSession.Status.WAITING
+    assert session.agent_id is None
+    assert session.ticket.department_id == billing.pk
+    assert session.ticket.assigned_to_id is None
+    chat = _only(deliveries, "chat.transferred")["payload"]["chat"]
+    assert chat["from_agent_id"] == agent.pk
+    assert chat["to_agent_id"] is None
+    assert chat["to_department_id"] == billing.pk
+
+
+@pytest.mark.django_db
+def test_a_transfer_to_an_agent_and_a_department_does_both(client):
+    agent_client, _agent_user, session = _accepted(client)
+    billing = DepartmentFactory()
+    other = _agent("xfer_both_other", billing)
+
+    response = _transfer(agent_client, session, {"agent_id": other.pk, "department_id": billing.pk})
+
+    assert response.status_code == 200, response.content
+    session.refresh_from_db()
+    session.ticket.refresh_from_db()
+    assert session.agent_id == other.pk
+    assert session.status == ChatSession.Status.ACTIVE
+    assert session.ticket.department_id == billing.pk
+    assert session.ticket.assigned_to_id == other.pk
+
+
+@pytest.mark.django_db
+def test_the_type_and_id_transfer_body_is_still_read(client):
+    agent_client, _agent_user, session = _accepted(client)
+    billing = DepartmentFactory()
+
+    assert _transfer(agent_client, session, {"type": "department", "id": billing.pk}).status_code == 200
+    session.ticket.refresh_from_db()
+    assert session.ticket.department_id == billing.pk
+
+
+@pytest.mark.django_db
+def test_a_transfer_needs_a_known_target(client):
+    agent_client, agent, session = _accepted(client)
+
+    assert _transfer(agent_client, session, {}).status_code == 400
+    assert _transfer(agent_client, session, {"department_id": 999999}).status_code == 404
+    session.refresh_from_db()
+    assert session.agent_id == agent.pk
+    assert session.status == ChatSession.Status.ACTIVE
