@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **`escalated.middleware.EscalatedCsrfMiddleware`.** The shared pages send
+  the CSRF token as `X-XSRF-TOKEN` (Inertia visits, read from an `XSRF-TOKEN`
+  cookie) or `X-CSRF-TOKEN` (`fetch` calls such as the chat bar, reply
+  composer and saved views, read from a `csrf-token` meta tag). Django's
+  `CsrfViewMiddleware` reads only `X-CSRFToken` by default, so on a default
+  host every such POST was refused with 403; setting
+  `CSRF_HEADER_NAME`/`CSRF_COOKIE_NAME` the inertia-django way fixed Inertia
+  visits but still refused the `fetch` calls. The new middleware accepts
+  either header in place of `CSRF_HEADER_NAME` (only when that header is
+  absent) and sets a JavaScript-readable `XSRF-TOKEN` cookie; a missing or
+  wrong token is still refused. It is opt-in. Upgrade: add it to
+  `MIDDLEWARE` directly after `django.middleware.csrf.CsrfViewMiddleware`,
+  and add `<meta name="csrf-token" content="{{ csrf_token }}">` to your
+  `INERTIA_LAYOUT` template (see the README's CSRF section).
+
 ## [0.7.7] - 2026-10-22
 
 ### Fixed

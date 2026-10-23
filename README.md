@@ -143,6 +143,32 @@ createInertiaApp({
 })
 ```
 
+### CSRF
+
+The shared pages send the CSRF token as `X-XSRF-TOKEN` (Inertia visits, from
+an `XSRF-TOKEN` cookie) or `X-CSRF-TOKEN` (`fetch` calls such as the chat bar,
+from a `csrf-token` meta tag). Django reads neither by default, so add
+`EscalatedCsrfMiddleware` right after `CsrfViewMiddleware` and put the meta tag
+in your `INERTIA_LAYOUT` template:
+
+```python
+MIDDLEWARE = [
+    # ...
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "escalated.middleware.EscalatedCsrfMiddleware",
+    # ...
+]
+```
+
+```html
+<meta name="csrf-token" content="{{ csrf_token }}">
+```
+
+The middleware accepts either header in place of `X-CSRFToken` and sets the
+`XSRF-TOKEN` cookie; a missing or wrong token is still refused. Setting
+`CSRF_HEADER_NAME`/`CSRF_COOKIE_NAME` alone covers Inertia visits but not the
+`fetch` calls.
+
 ### Theming (Optional)
 
 Register the `EscalatedPlugin` to render Escalated pages inside your app's layout — no page duplication needed:
