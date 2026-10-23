@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-10-22
+
 ### Added
 - **`escalated.middleware.EscalatedCsrfMiddleware`.** The shared pages send
   the CSRF token as `X-XSRF-TOKEN` (Inertia visits, read from an `XSRF-TOKEN`
