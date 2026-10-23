@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-10-22
+
 ### Fixed
 - **Chat transfer reads `department_id`.** `POST
   /agent/chat/<id>/transfer/` took only `agent_id`, so the shared ticket
