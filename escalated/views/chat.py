@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
-from escalated.models import AgentProfile, ChatSession
+from escalated.models import AgentProfile, ChatSession, Department
 from escalated.permissions import is_admin, is_agent
 from escalated.services.chat_session_service import ChatSessionService
 
@@ -120,19 +120,31 @@ def end_chat(request, session_id):
 @login_required
 @require_POST
 def transfer_chat(request, session_id):
-    """Transfer a chat to another agent."""
+    """Transfer a chat to another agent and/or department.
+
+    The body is ``{"agent_id", "department_id"}`` (either or both), as
+    escalated-laravel's ``ChatController::transfer`` reads it. The older
+    ``{"type": "agent" | "department", "id"}`` body is read too.
+    """
     error = _require_agent(request)
     if error:
         return error
 
     try:
-        body = json.loads(request.body)
+        body = json.loads(request.body or b"{}")
     except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    if not isinstance(body, dict):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     agent_id = body.get("agent_id")
-    if not agent_id:
-        return JsonResponse({"error": "agent_id is required"}, status=400)
+    department_id = body.get("department_id")
+    if body.get("type") == "agent" and not agent_id:
+        agent_id = body.get("id")
+    elif body.get("type") == "department" and not department_id:
+        department_id = body.get("id")
+    if not agent_id and not department_id:
+        return JsonResponse({"error": "Provide an agent_id or department_id."}, status=400)
 
     try:
         session = ChatSession.objects.select_related("ticket").get(pk=session_id)
@@ -142,13 +154,22 @@ def transfer_chat(request, session_id):
     if session.status != ChatSession.Status.ACTIVE:
         return JsonResponse({"error": "Chat is not active"}, status=400)
 
-    try:
-        to_agent = User.objects.get(pk=agent_id)
-    except User.DoesNotExist:
-        return JsonResponse({"error": "Target agent not found"}, status=404)
+    to_agent = None
+    if agent_id:
+        try:
+            to_agent = User.objects.get(pk=agent_id)
+        except (User.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({"error": "Target agent not found"}, status=404)
+
+    to_department = None
+    if department_id:
+        try:
+            to_department = Department.objects.get(pk=department_id)
+        except (Department.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({"error": "Target department not found"}, status=404)
 
     service = ChatSessionService()
-    session = service.transfer_chat(session, from_agent=request.user, to_agent=to_agent)
+    session = service.transfer_chat(session, from_agent=request.user, to_agent=to_agent, to_department=to_department)
 
     return JsonResponse({"chat": _serialize_session(session)})
 

@@ -206,10 +206,18 @@ def _webhook_chat_assigned(sender, session, ticket=None, **kwargs):
 
 
 @receiver(chat_transferred)
-def _webhook_chat_transferred(sender, session, ticket=None, from_agent=None, to_agent=None, **kwargs):
+def _webhook_chat_transferred(
+    sender, session, ticket=None, from_agent=None, to_agent=None, to_department=None, **kwargs
+):
     _dispatch(
         "chat.transferred",
-        _chat(session, ticket, from_agent_id=_id(from_agent), to_agent_id=_id(to_agent), to_department_id=None),
+        _chat(
+            session,
+            ticket,
+            from_agent_id=_id(from_agent),
+            to_agent_id=_id(to_agent),
+            to_department_id=_id(to_department),
+        ),
     )
 
 

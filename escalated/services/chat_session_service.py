@@ -105,9 +105,14 @@ class ChatSessionService:
 
         return session
 
-    def transfer_chat(self, session, from_agent, to_agent):
+    def transfer_chat(self, session, from_agent, to_agent=None, to_department=None):
         """
-        Transfer a chat session from one agent to another.
+        Transfer a chat session to another agent and/or department.
+
+        As escalated-laravel's ``ChatSessionService::transferChat``: an agent
+        takes the chat and its ticket; a department takes the ticket, and
+        without an agent the chat goes back to the queue (unassigned, waiting)
+        and routing runs again for the new department.
 
         Returns:
             ChatSession: The updated session.
@@ -116,14 +121,28 @@ class ChatSessionService:
 
         from escalated.ticket_access import allows_ticket
 
-        if not allows_ticket(to_agent, session.ticket):
+        if to_agent is None and to_department is None:
+            raise ValidationError("Provide an agent or a department.")
+        if to_agent is not None and not allows_ticket(to_agent, session.ticket):
             raise ValidationError("The agent cannot access this ticket.")
-        session.agent = to_agent
-        session.save(update_fields=["agent", "updated_at"])
 
         ticket = session.ticket
-        ticket.assigned_to = to_agent
-        ticket.save(update_fields=["assigned_to", "updated_at"])
+        ticket_fields = ["updated_at"]
+        if to_department is not None:
+            ticket.department = to_department
+            ticket_fields.append("department")
+        if to_agent is not None:
+            session.agent = to_agent
+            ticket.assigned_to = to_agent
+            session.save(update_fields=["agent", "updated_at"])
+            ticket_fields.append("assigned_to")
+        else:
+            session.agent = None
+            session.status = ChatSession.Status.WAITING
+            ticket.assigned_to = None
+            session.save(update_fields=["agent", "status", "updated_at"])
+            ticket_fields.append("assigned_to")
+        ticket.save(update_fields=ticket_fields)
 
         chat_transferred.send(
             sender=ChatSession,
@@ -131,7 +150,16 @@ class ChatSessionService:
             ticket=ticket,
             from_agent=from_agent,
             to_agent=to_agent,
+            to_department=to_department,
         )
+
+        if to_agent is None:
+            from escalated.services.chat_routing_service import ChatRoutingService
+
+            agent = ChatRoutingService().find_available_agent(department=to_department, ticket=ticket)
+            if agent is not None:
+                self.assign_agent(session, agent)
+                session.refresh_from_db()
 
         return session
 

@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Chat transfer reads `department_id`.** `POST
+  /agent/chat/<id>/transfer/` took only `agent_id`, so the shared ticket
+  view's Transfer menu (which offers departments and posts
+  `{"department_id"}`) was refused with 400. It now reads `agent_id` and/or
+  `department_id`, as escalated-laravel does: a department takes the ticket,
+  and without an agent the chat goes back to the queue (unassigned, waiting)
+  and routing runs again for that department. The older `{"type", "id"}` body
+  is read too, and `agent_id` alone behaves as before. An unknown department
+  is a 404. `chat.transferred` now carries `to_department_id`, and the
+  `chat_transferred` signal sends a `to_department` keyword (receivers taking
+  `**kwargs` are unaffected).
+
 ## [0.7.6] - 2026-10-22
 
 ### Added
