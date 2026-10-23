@@ -85,8 +85,9 @@ Only those requests skip Django's CSRF check: they carry no session cookie
 and run as a guest, so there is no token to send and nothing to protect.
 Requests from any other origin, and same-origin requests, go through the
 host's `CsrfViewMiddleware` like any other view (a same-origin page sends its
-token as `X-CSRF-TOKEN`, so set `CSRF_HEADER_NAME = "HTTP_X_CSRF_TOKEN"` or
-embed from a listed origin) and get no CORS headers. A preflight from an origin
+token as `X-CSRF-TOKEN`, so add `escalated.middleware.EscalatedCsrfMiddleware`
+after `CsrfViewMiddleware`, as the README's CSRF section describes, or embed
+from a listed origin) and get no CORS headers. A preflight from an origin
 that is not listed gets `204` with no `Access-Control-Allow-Origin`, so the
 browser blocks the request.
 

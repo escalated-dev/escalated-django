@@ -102,3 +102,66 @@ class EscalatedInertiaShareMiddleware:
             pass
 
         return None
+
+
+class EscalatedCsrfMiddleware:
+    """
+    Lets the shared frontend's POSTs pass Django's CSRF check.
+
+    The shared pages send the token as ``X-XSRF-TOKEN`` (Inertia visits, from
+    an ``XSRF-TOKEN`` cookie) or ``X-CSRF-TOKEN`` (``fetch`` calls, from a
+    ``<meta name="csrf-token">`` tag). Django reads only
+    ``settings.CSRF_HEADER_NAME`` (``X-CSRFToken`` by default), so this
+    middleware:
+
+    * copies the first non-empty of those headers into
+      ``CSRF_HEADER_NAME`` when the request does not already carry it, so
+      ``CsrfViewMiddleware`` checks it exactly as it checks its own header
+      (a missing or wrong token is still refused); and
+    * sets a JavaScript-readable ``XSRF-TOKEN`` cookie holding the CSRF token
+      whenever the token is new or changed, unless ``CSRF_COOKIE_NAME`` is
+      already ``XSRF-TOKEN``.
+
+    Add it to ``MIDDLEWARE`` directly after
+    ``django.middleware.csrf.CsrfViewMiddleware``.
+    """
+
+    HEADERS = ("HTTP_X_CSRF_TOKEN", "HTTP_X_XSRF_TOKEN")
+    COOKIE_NAME = "XSRF-TOKEN"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.conf import settings
+
+        header = settings.CSRF_HEADER_NAME
+        if not request.META.get(header):
+            for name in self.HEADERS:
+                value = request.META.get(name)
+                if value:
+                    request.META[header] = value
+                    break
+
+        response = self.get_response(request)
+        self._set_xsrf_cookie(request, response)
+        return response
+
+    def _set_xsrf_cookie(self, request, response):
+        from django.conf import settings
+        from django.middleware.csrf import get_token
+
+        if settings.CSRF_COOKIE_NAME == self.COOKIE_NAME or not request.META.get("CSRF_COOKIE"):
+            return
+        if self.COOKIE_NAME in request.COOKIES and not request.META.get("CSRF_COOKIE_NEEDS_UPDATE"):
+            return
+        response.set_cookie(
+            self.COOKIE_NAME,
+            get_token(request),
+            max_age=settings.CSRF_COOKIE_AGE,
+            domain=settings.CSRF_COOKIE_DOMAIN,
+            path=settings.CSRF_COOKIE_PATH,
+            secure=settings.CSRF_COOKIE_SECURE,
+            httponly=False,
+            samesite=settings.CSRF_COOKIE_SAMESITE,
+        )

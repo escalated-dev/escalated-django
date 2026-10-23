@@ -41,8 +41,9 @@ conversation), so turn it off again once your guests have renewed.
 
 Browser `verification` and `lookup` keep Django's CSRF protection. The shared
 pages send the token as `X-XSRF-TOKEN` (from an `XSRF-TOKEN` cookie) or
-`X-CSRF-TOKEN` (from a `csrf-token` meta tag), so set `CSRF_HEADER_NAME` and
-`CSRF_COOKIE_NAME` to match, as Inertia hosts usually do already. Widget
+`X-CSRF-TOKEN` (from a `csrf-token` meta tag), which Django does not read by
+default: add `escalated.middleware.EscalatedCsrfMiddleware` after
+`CsrfViewMiddleware` (see the README's CSRF section). Widget
 requests follow the widget's CORS/CSRF rules (see
 [embedding the widget](embedding-the-widget.md)); the mobile endpoints are
 exempt, since they act on the emailed code only.
