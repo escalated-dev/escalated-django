@@ -110,21 +110,19 @@ def api_auth_me(request):
     )
 
 
-# Mobile guests (docs/guest-access.md). Proof comes from the emailed code, not
-# from a session, so these carry no CSRF check and no API token.
-@csrf_exempt
-@public_api
-@require_POST
+# Mobile guests: kept for hosts that import these names. The routes now live in
+# escalated.views.mobile_guest (docs/guest-access.md).
 def mobile_guest_verification(request):
-    from escalated.views import guest_verification
+    from escalated.views import mobile_guest
 
-    return guest_verification.verification(request)
+    return mobile_guest.verification(request)
 
 
-@csrf_exempt
-@public_api
-@require_POST
 def mobile_guest_lookup(request):
-    from escalated.views import guest_verification
+    from escalated.views import mobile_guest
 
-    return guest_verification.lookup(request)
+    return mobile_guest.lookup(request)
+
+
+mobile_guest_verification = csrf_exempt(public_api(mobile_guest_verification))
+mobile_guest_lookup = csrf_exempt(public_api(mobile_guest_lookup))

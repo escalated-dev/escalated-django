@@ -46,7 +46,7 @@ default: add `escalated.middleware.EscalatedCsrfMiddleware` after
 `CsrfViewMiddleware` (see the README's CSRF section). Widget
 requests follow the widget's CORS/CSRF rules (see
 [embedding the widget](embedding-the-widget.md)); the mobile endpoints are
-exempt, since they act on the emailed code only.
+exempt, since they act on the emailed code and the grant only.
 
 Older clients that do not send a code can no longer create guest tickets or
 start chats.
@@ -108,6 +108,9 @@ kept as `SECRET_KEY`-keyed HMAC digests.
 - Widget status: `GET widget/tickets/<reference>` with
   `Authorization: Bearer <grant>`; the grant must belong to that reference. An
   email query parameter authorizes nothing.
+- Mobile: `POST <API_PREFIX>/mobile/guest/tickets` returns
+  `data.guest_access_token` and `data.guest_access_expires_at` (see
+  [Mobile guest API](#mobile-guest-api)).
 
 The grant is an opaque signed token: do not parse it or assume a length. It
 expires after `TTL_MINUTES` (default 24 hours). The ticket stores only the
@@ -130,10 +133,69 @@ each match has `reference`, `subject`, `guest_access_token` and `expires_at`
 match the proven address. The result may be empty, and the code is used either
 way.
 
+## Mobile guest API
+
+The canonical contract is
+[mobile-guest-api.md](https://github.com/escalated-dev/escalated-developer-context/blob/main/domain-model/mobile-guest-api.md)
+in escalated-developer-context. The routes are registered with the rest of the
+REST API, only when `ESCALATED["API_ENABLED"]` is on (default off), under
+`<API_PREFIX>/mobile/guest/` (default `support/api/v1/mobile/guest/`):
+
+| Method | Path | Guest bucket |
+| --- | --- | --- |
+| POST | `verification` | tickets |
+| POST | `lookup` | replies |
+| POST | `tickets` | tickets |
+| GET | `tickets/<grant>` | requests only |
+| POST | `tickets/<grant>/replies` | replies |
+
+`<grant>` is the guest grant itself, not the ticket reference. The routes need
+no API token and no session, and carry no CSRF check. They use the same codes,
+grants, guest identity policy and attachment links as the browser and widget:
+a grant from any surface opens the others. A bad, expired, rotated, over-long
+or non-ticket grant is `404 {"message": "Ticket not found."}`; legacy
+permanent tokens are never accepted here, even with `LEGACY_TOKENS` on.
+
+- `POST tickets` (JSON or `multipart/form-data`): `name`, `email`, `subject`,
+  `description`, `verification_id`, `verification_code`, optional `priority`
+  (default `DEFAULT_PRIORITY`), `department_id` and `attachments`. Guest
+  tickets off is `403 {"message": "Guest tickets are not enabled."}`; then
+  field validation (422); then the proof (422 on `verification_code`, nothing
+  created). The contact, ticket (channel `web`, normalized `guest_email`),
+  attachments, grant and the spent code commit together; `ticket_created`
+  fires afterwards. `metadata`, `external_reference`, status and assignee are
+  ignored. `201 {"data": <mobile ticket>, "message": "Ticket created."}`.
+- `GET tickets/<grant>`: `200 {"data": <mobile ticket>}` with public replies,
+  newest first.
+- `POST tickets/<grant>/replies` with `email` and `body` (plus optional
+  `attachments`): a closed ticket is `422 {"message": "This ticket is
+  closed."}`; an `email` that does not match the ticket's guest email
+  (case-insensitively) is `403`. `201 {"message": "Reply sent."}`.
+
+The mobile ticket object is allow-listed: `metadata` is always `{}`, staff
+appear by display name only (`id` 0, empty `email`), internal notes and
+deleted replies never appear, and each reply attachment's `url` is the
+grant-bound guest download link. Validation errors use the same
+`{"message", "errors": {field: [...]}}` shape as the widget.
+
+Every answer, errors included, carries `Cache-Control: private, no-store` and
+`Referrer-Policy: no-referrer`. Redact the `tickets/<grant>` path segment from
+access logs.
+
+Rate limits: every mobile guest request counts against
+`GUEST_RATE_LIMIT["REQUESTS_PER_MINUTE"]` (default 60 per IP), and the routes
+above also count against the shared `TICKETS_PER_MINUTE` (5) or
+`REPLIES_PER_MINUTE` (10) buckets, the same per-IP budgets the browser and
+widget use. Over a limit: `429` with `Retry-After`. If the host installs
+`escalated.api_middleware.ApiRateLimit` (with `AuthenticateApiToken`, which
+lets these public routes through), its per-IP `API_RATE_LIMIT` applies here
+too, with `X-RateLimit-Limit`/`X-RateLimit-Remaining` headers.
+
 ## Not covered yet
 
-- There are no mobile guest ticket routes (create, read, reply) in this
-  package, only mobile `verification` and `lookup`; the grants they return open
-  the browser guest page.
 - Lookup matches the Escalated reference only; there is no
   `external_reference` column yet.
+- The `REQUESTS_PER_MINUTE` budget is applied to the mobile guest routes
+  only; the browser and widget guest routes do not count against it yet.
+- Mobile attachments are limited by `MAX_ATTACHMENTS` (default 5) and
+  `MAX_ATTACHMENT_SIZE_KB`, not the contract's fixed 10 files.

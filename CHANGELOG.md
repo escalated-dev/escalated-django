@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Mobile guest ticket routes.** With `API_ENABLED`, the REST API now serves
+  `POST <API_PREFIX>/mobile/guest/tickets`,
+  `GET <API_PREFIX>/mobile/guest/tickets/<grant>` and
+  `POST <API_PREFIX>/mobile/guest/tickets/<grant>/replies` beside the existing
+  mobile `verification` and `lookup`, per the shared contract
+  (escalated-developer-context `domain-model/mobile-guest-api.md`). They reuse
+  the emailed codes, expiring grants, guest identity policy, attachment links
+  and per-IP guest budgets of the browser and widget routes, so a grant from
+  any surface opens the others; a bad or expired grant is a 404. See
+  docs/guest-access.md.
+- **`GUEST_RATE_LIMIT["REQUESTS_PER_MINUTE"]`** (default 60): every mobile
+  guest request counts against it, on top of the ticket or reply bucket.
+
+### Changed
+- Guest answers now send `Cache-Control: private, no-store` (was
+  `no-store, private`; same meaning). The five mobile guest routes send it and
+  `Referrer-Policy: no-referrer` on every answer, errors included.
+
 ### Upgrading
 - Run `python manage.py migrate escalated`: migration `0035_chat_token_expiry`
   adds a nullable `ChatSession.customer_token_expires_at`. Chats already in

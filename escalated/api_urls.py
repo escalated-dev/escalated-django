@@ -6,7 +6,7 @@ Authentication and rate limiting are handled by middleware.
 """
 
 from escalated.ticket_access import path
-from escalated.views import admin_api_tokens, api, api_auth
+from escalated.views import admin_api_tokens, api, api_auth, mobile_guest
 
 app_name = "escalated_api"
 
@@ -20,9 +20,13 @@ api_patterns = [
     path("auth/refresh/", api_auth.api_auth_refresh, name="auth_refresh"),
     path("auth/me/", api_auth.api_auth_me, name="auth_me"),
     path("auth/profile/", api_auth.api_auth_profile, name="auth_profile"),
-    # Mobile guests: email codes and link renewal (docs/guest-access.md)
-    path("mobile/guest/verification", api_auth.mobile_guest_verification, name="mobile_guest_verification"),
-    path("mobile/guest/lookup", api_auth.mobile_guest_lookup, name="mobile_guest_lookup"),
+    # Mobile guests (docs/guest-access.md; contract: escalated-developer-context
+    # domain-model/mobile-guest-api.md). <token> is the guest grant.
+    path("mobile/guest/verification", mobile_guest.verification, name="mobile_guest_verification"),
+    path("mobile/guest/lookup", mobile_guest.lookup, name="mobile_guest_lookup"),
+    path("mobile/guest/tickets", mobile_guest.tickets, name="mobile_guest_tickets"),
+    path("mobile/guest/tickets/<str:token>", mobile_guest.ticket_show, name="mobile_guest_ticket_show"),
+    path("mobile/guest/tickets/<str:token>/replies", mobile_guest.ticket_reply, name="mobile_guest_ticket_reply"),
     # Dashboard
     path("dashboard/", api.dashboard, name="dashboard"),
     # Tickets - list & create

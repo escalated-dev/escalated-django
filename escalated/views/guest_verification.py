@@ -35,7 +35,7 @@ def validation_error(errors):
 
 def private(response):
     """Guest answers carry access credentials: never cache them or leak them in a Referer."""
-    response["Cache-Control"] = "no-store, private"
+    response["Cache-Control"] = "private, no-store"
     response["Referrer-Policy"] = "no-referrer"
     return response
 

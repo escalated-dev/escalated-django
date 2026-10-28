@@ -72,7 +72,7 @@ class TestVerification:
         assert code not in response.content.decode()
         stored = GuestVerification.objects.get(pk=data["verification_id"])
         assert code not in stored.code_hash and EMAIL not in stored.email_digest
-        assert response["Cache-Control"].startswith("no-store")
+        assert response["Cache-Control"] == "private, no-store"
 
     def test_invalid_email_and_purpose_are_rejected(self):
         client = Client()
@@ -132,7 +132,7 @@ class TestGuestPortal:
         page = client.get(response["Location"], **INERTIA)
         assert page.status_code == 200
         assert page.json()["props"]["ticket"]["reference"] == ticket.reference
-        assert page["Cache-Control"].startswith("no-store")
+        assert page["Cache-Control"] == "private, no-store"
         assert page["Referrer-Policy"] == "no-referrer"
 
     def test_a_code_works_once_and_for_its_own_email_and_purpose(self):
