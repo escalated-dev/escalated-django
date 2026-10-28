@@ -5,11 +5,14 @@ trailing slash, JSON bodies) and asserts the fields the widget reads.
 """
 
 import json
+from datetime import datetime, timedelta
 
 import pytest
 from django.core.cache import cache
+from django.utils import timezone
 
 from escalated import guest_access
+from escalated.chat_tokens import hash_token
 from escalated.models import ChatSession, EscalatedSetting, Reply, Ticket
 from escalated.services.chat_session_service import ChatSessionService
 from tests.factories import ArticleCategoryFactory, ArticleFactory, DepartmentFactory, UserFactory
@@ -213,7 +216,7 @@ class TestChat:
 
         assert len(data["id"]) >= 32
         assert data["status"] == "waiting"
-        session = ChatSession.objects.get(customer_session_id=data["id"])
+        session = ChatSession.objects.get(customer_session_id=hash_token(data["id"]))
         assert session.ticket.department == dept
         assert [m["body"] for m in data["messages"]] == ["Hi there"]
         assert data["agent"] is None
@@ -228,7 +231,7 @@ class TestChat:
 
         assert api(client, "POST", f"/chat/{chat['id']}/messages", {"body": "Hello"}).status_code == 200
 
-        session = ChatSession.objects.get(customer_session_id=chat["id"])
+        session = ChatSession.objects.get(customer_session_id=hash_token(chat["id"]))
         agent = UserFactory(first_name="Sam", last_name="Agent")
         ChatSessionService().assign_agent(session, agent)
         ChatSessionService().send_message(session, body="How can I help?", sender=agent, sender_type="agent")
@@ -255,7 +258,7 @@ class TestChat:
         chat = start_chat(client)
 
         assert api(client, "POST", f"/chat/{chat['id']}/typing").status_code == 200
-        session = ChatSession.objects.get(customer_session_id=chat["id"])
+        session = ChatSession.objects.get(customer_session_id=hash_token(chat["id"]))
         assert session.customer_typing_at is not None
 
         assert api(client, "POST", f"/chat/{chat['id']}/end").status_code == 200
@@ -279,8 +282,59 @@ class TestChat:
         method = "GET" if suffix == "messages" else "POST"
         assert api(client, method, f"/chat/{unknown}/{suffix}", {"rating": 5}).status_code == 404
         # The numeric primary key is not a valid token either.
-        pk = ChatSession.objects.get(customer_session_id=session["id"]).pk
+        pk = ChatSession.objects.get(customer_session_id=hash_token(session["id"])).pk
         assert api(client, method, f"/chat/{pk}/{suffix}", {"rating": 5}).status_code == 404
+
+    def test_start_issues_an_expiring_token_and_stores_only_its_hash(self, client):
+        before = timezone.now()
+        chat = start_chat(client)
+
+        assert chat["session_id"] == chat["id"]
+        expires_at = datetime.fromisoformat(chat["expires_at"])
+        assert before + timedelta(minutes=1440) - timedelta(seconds=5) <= expires_at
+        assert expires_at <= timezone.now() + timedelta(minutes=1440, seconds=5)
+        assert not ChatSession.objects.filter(customer_session_id=chat["id"]).exists()
+        session = ChatSession.objects.get(customer_session_id=hash_token(chat["id"]))
+        assert session.customer_token_expires_at == expires_at
+
+    def test_the_token_lifetime_follows_the_guest_access_ttl(self, client, settings):
+        settings.ESCALATED = {**settings.ESCALATED, "GUEST_ACCESS": {"TTL_MINUTES": 30}}
+        before = timezone.now()
+        expires_at = datetime.fromisoformat(start_chat(client)["expires_at"])
+        assert before + timedelta(minutes=30) - timedelta(seconds=5) <= expires_at
+        assert expires_at <= timezone.now() + timedelta(minutes=30, seconds=5)
+
+    @pytest.mark.parametrize("suffix", ["messages", "post-messages", "typing", "end", "rate"])
+    def test_an_expired_token_gets_404(self, client, suffix):
+        chat = start_chat(client)
+        ChatSession.objects.filter(customer_session_id=hash_token(chat["id"])).update(
+            customer_token_expires_at=timezone.now() - timedelta(seconds=1)
+        )
+        method = "GET" if suffix == "messages" else "POST"
+        path = f"/chat/{chat['id']}/{suffix.removeprefix('post-')}"
+        assert api(client, method, path, {"rating": 5, "body": "Hi"}).status_code == 404
+
+    def test_a_chat_started_before_tokens_expired_keeps_working(self, client):
+        chat = start_chat(client)
+        # The shape such a chat has after the migration: plain token, no expiry.
+        ChatSession.objects.filter(customer_session_id=hash_token(chat["id"])).update(
+            customer_session_id=chat["id"], customer_token_expires_at=None
+        )
+        before = timezone.now()
+
+        assert api(client, "GET", f"/chat/{chat['id']}/messages").status_code == 200
+
+        session = ChatSession.objects.get(customer_session_id=hash_token(chat["id"]))
+        assert session.customer_token_expires_at >= before + timedelta(minutes=1440) - timedelta(seconds=5)
+        assert api(client, "POST", f"/chat/{chat['id']}/messages", {"body": "Still here"}).status_code == 200
+
+    def test_an_ended_chat_stays_readable_and_rateable_but_closed(self, client):
+        chat = start_chat(client)
+        assert api(client, "POST", f"/chat/{chat['id']}/end").status_code == 200
+        assert api(client, "POST", f"/chat/{chat['id']}/typing").status_code == 422
+        assert api(client, "POST", f"/chat/{chat['id']}/end").status_code == 422
+        assert api(client, "GET", f"/chat/{chat['id']}/messages").json()["ended"] is True
+        assert api(client, "POST", f"/chat/{chat['id']}/rate", {"rating": 4}).status_code == 200
 
     def test_chat_routes_answer_allowed_sites_with_cors(self, client, settings):
         settings.ESCALATED = {**settings.ESCALATED, "WIDGET_ALLOWED_ORIGINS": [SHOP]}

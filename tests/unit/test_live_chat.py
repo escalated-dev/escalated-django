@@ -487,7 +487,7 @@ class TestWidgetChatViews:
 
         response = client.post(
             "/support/widget/chat/message/",
-            data=json.dumps({"session_id": session.customer_session_id, "body": "Hello"}),
+            data=json.dumps({"session_id": session.visitor_token, "body": "Hello"}),
             content_type="application/json",
         )
         assert response.status_code == 200
@@ -499,7 +499,7 @@ class TestWidgetChatViews:
 
         response = client.post(
             "/support/widget/chat/end/",
-            data=json.dumps({"session_id": session.customer_session_id}),
+            data=json.dumps({"session_id": session.visitor_token}),
             content_type="application/json",
         )
         assert response.status_code == 200
@@ -515,7 +515,7 @@ class TestWidgetChatViews:
             "/support/widget/chat/rate/",
             data=json.dumps(
                 {
-                    "session_id": session.customer_session_id,
+                    "session_id": session.visitor_token,
                     "rating": 4,
                     "comment": "Good",
                 }
@@ -535,7 +535,7 @@ class TestWidgetChatViews:
             "/support/widget/chat/rate/",
             data=json.dumps(
                 {
-                    "session_id": session.customer_session_id,
+                    "session_id": session.visitor_token,
                     "rating": 10,
                 }
             ),
@@ -549,7 +549,7 @@ class TestWidgetChatViews:
 
         response = client.post(
             "/support/widget/chat/typing/",
-            data=json.dumps({"session_id": session.customer_session_id, "is_typing": True}),
+            data=json.dumps({"session_id": session.visitor_token, "is_typing": True}),
             content_type="application/json",
         )
         assert response.status_code == 200

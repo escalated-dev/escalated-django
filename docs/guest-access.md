@@ -132,8 +132,6 @@ way.
 
 ## Not covered yet
 
-- Live-chat session tokens (`chat/<token>/...`) are still the per-session
-  random token from `chat/start`; they do not expire with a grant.
 - There are no mobile guest ticket routes (create, read, reply) in this
   package, only mobile `verification` and `lookup`; the grants they return open
   the browser guest page.

@@ -127,7 +127,9 @@ trailing-slash routes and their answer shapes are unchanged.
 | `POST /chat/<id>/typing`, `/end`, `/rate` | typing signal, end the chat, rate an ended chat (`{rating: 1-5, comment?}`) |
 
 `id` is the chat's random session token (256 bits); every chat path needs it,
-and an unknown token gets `404`. Validation errors on these paths are `422`
+and an unknown or expired token gets `404`. Only its SHA-256 is stored, and it
+expires `GUEST_ACCESS["TTL_MINUTES"]` after the chat starts (`expires_at` in
+the start answer). Validation errors on these paths are `422`
 with `{message, errors: {field: [messages]}}`; an unknown or inactive
 `department_id` is a validation error.
 
