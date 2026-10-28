@@ -2442,7 +2442,9 @@ class ChatSessionQuerySet(models.QuerySet):
         return self.filter(agent_id=user_id)
 
     def for_customer(self, session_id):
-        return self.filter(customer_session_id=session_id)
+        from escalated.chat_tokens import hash_token
+
+        return self.filter(customer_session_id__in=[hash_token(session_id), session_id])
 
 
 class ChatSessionManager(models.Manager):
@@ -2473,7 +2475,12 @@ class ChatSession(models.Model):
         ABANDONED = "abandoned", _("Abandoned")
 
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="chat_sessions")
+    # SHA-256 of the visitor's chat token (escalated.chat_tokens); chats started
+    # before tokens were hashed hold the plain token until their next request.
     customer_session_id = models.CharField(max_length=255, db_index=True)
+    # When the visitor's chat token stops working. Null only for chats started
+    # before tokens expired; their next request gives them a full lifetime.
+    customer_token_expires_at = models.DateTimeField(null=True, blank=True)
     agent = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         # Django cannot constrain across databases; see ESCALATED["DATABASE"].

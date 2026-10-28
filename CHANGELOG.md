@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Upgrading
+- Run `python manage.py migrate escalated`: migration `0035_chat_token_expiry`
+  adds a nullable `ChatSession.customer_token_expires_at`. Chats already in
+  progress keep working: the next widget request with their token stores the
+  token's hash in place of the plain value and gives it a full lifetime.
+- Widget chat tokens now expire `ESCALATED["GUEST_ACCESS"]["TTL_MINUTES"]`
+  after the chat starts (default 1440, clamped to 5 minutes .. 7 days), as in
+  escalated-laravel. After that every chat route answers 404 and the visitor
+  starts a new chat.
+- `ChatSession.customer_session_id` now holds the token's SHA-256. Code that
+  started a chat through `ChatSessionService.start_chat` reads the token once
+  from `session.visitor_token`. Agent chat payloads no longer carry the
+  visitor's token.
+
+### Security
+- **Widget chat tokens are stored hashed and expire.** The token returned by
+  `chat/start` (`id`, `session_id`) was stored in plain text and never expired.
+  Only its SHA-256 is stored now, the start answers carry `expires_at`, and an
+  unknown or expired token is a 404 on `chat/<token>/...` and on the older
+  body-`session_id` routes. The guest's websocket chat check uses the same
+  lookup.
+
 ## [0.7.8] - 2026-10-22
 
 ### Added

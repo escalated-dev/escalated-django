@@ -1,7 +1,6 @@
-import secrets
-
 from django.utils import timezone
 
+from escalated import chat_tokens
 from escalated.models import ChatSession, Reply, Ticket
 from escalated.signals import (
     chat_assigned,
@@ -25,8 +24,10 @@ class ChatSessionService:
         Returns:
             tuple: (ticket, session)
         """
-        # The guest's only credential for this chat: an unguessable random token.
-        customer_session_id = secrets.token_hex(32)
+        # The guest's only credential for this chat: an unguessable, expiring
+        # token. Only its hash is stored; it is handed back once, as
+        # ``session.visitor_token``.
+        token, customer_session_id, expires_at = chat_tokens.issue()
 
         ticket = Ticket.objects.create(
             subject=subject or f"Chat from {name}",
@@ -43,9 +44,12 @@ class ChatSessionService:
         session = ChatSession.objects.create(
             ticket=ticket,
             customer_session_id=customer_session_id,
+            customer_token_expires_at=expires_at,
             status=ChatSession.Status.WAITING,
             metadata=metadata or {},
         )
+
+        session.visitor_token = token
 
         # SLA, the created activity, notifications, webhooks and workflows hang off this signal.
         ticket_created.send(sender=Ticket, ticket=ticket, user=None)

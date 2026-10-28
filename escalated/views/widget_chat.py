@@ -20,7 +20,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from escalated import guest_access
+from escalated import chat_tokens, guest_access
 from escalated.models import ChatSession, EscalatedSetting
 from escalated.services.chat_availability_service import ChatAvailabilityService
 from escalated.services.chat_routing_service import ChatRoutingService
@@ -201,7 +201,8 @@ def _start(request, contract):
 
 def _start_payload(ticket, session):
     return {
-        "session_id": session.customer_session_id,
+        "session_id": session.visitor_token,
+        "expires_at": session.customer_token_expires_at.isoformat(),
         "ticket_reference": ticket.reference,
         "status": session.status,
         "queue_position": ChatAvailabilityService().get_queue_position(session),
@@ -228,7 +229,7 @@ def chat_start(request):
         return error
     return JsonResponse(
         {
-            "id": session.customer_session_id,
+            "id": session.visitor_token,
             **_start_payload(ticket, session),
             "messages": _serialize_messages(session),
             "agent": {"name": _agent_name(session.agent)} if session.agent else None,
@@ -243,10 +244,8 @@ def chat_start(request):
 
 
 def _session_for(token):
-    """The chat session the guest's token names, or ``None`` (answered with 404)."""
-    if not token:
-        return None
-    return ChatSession.objects.select_related("ticket", "agent").filter(customer_session_id=token).first()
+    """The chat session the guest's unexpired token unlocks, or ``None`` (answered with 404)."""
+    return chat_tokens.find_session(token, ChatSession.objects.select_related("ticket", "agent"))
 
 
 def _not_found():
@@ -413,9 +412,8 @@ def send_message(request):
     if not message_body:
         return JsonResponse({"error": "Message body is required"}, status=400)
 
-    try:
-        session = ChatSession.objects.select_related("ticket").get(customer_session_id=session_id)
-    except ChatSession.DoesNotExist:
+    session = _session_for(session_id)
+    if session is None:
         return JsonResponse({"error": "Chat session not found"}, status=404)
 
     if session.status not in [ChatSession.Status.ACTIVE, ChatSession.Status.WAITING]:
@@ -454,9 +452,8 @@ def update_typing(request):
     if not session_id:
         return JsonResponse({"error": "session_id is required"}, status=400)
 
-    try:
-        session = ChatSession.objects.get(customer_session_id=session_id)
-    except ChatSession.DoesNotExist:
+    session = _session_for(session_id)
+    if session is None:
         return JsonResponse({"error": "Chat session not found"}, status=404)
 
     service = ChatSessionService()
@@ -483,9 +480,8 @@ def end_chat(request):
     if not session_id:
         return JsonResponse({"error": "session_id is required"}, status=400)
 
-    try:
-        session = ChatSession.objects.select_related("ticket").get(customer_session_id=session_id)
-    except ChatSession.DoesNotExist:
+    session = _session_for(session_id)
+    if session is None:
         return JsonResponse({"error": "Chat session not found"}, status=404)
 
     if session.status not in [ChatSession.Status.ACTIVE, ChatSession.Status.WAITING]:
@@ -520,9 +516,8 @@ def rate_chat(request):
     if rating is None or not isinstance(rating, int) or rating < 1 or rating > 5:
         return JsonResponse({"error": "rating must be an integer between 1 and 5"}, status=400)
 
-    try:
-        session = ChatSession.objects.get(customer_session_id=session_id)
-    except ChatSession.DoesNotExist:
+    session = _session_for(session_id)
+    if session is None:
         return JsonResponse({"error": "Chat session not found"}, status=404)
 
     if session.status != ChatSession.Status.ENDED:

@@ -133,8 +133,7 @@ def can_access_channel(user, channel):
 
 def can_access_chat(user, session_id, guest_session=None):
     """Recheck membership for each WebSocket delivery when restrictions are enabled."""
-    from hmac import compare_digest
-
+    from escalated.chat_tokens import find_session
     from escalated.models import ChatSession
     from escalated.permissions import can_view_ticket
 
@@ -146,11 +145,10 @@ def can_access_chat(user, session_id, guest_session=None):
         return False
     if user and getattr(user, "is_authenticated", False):
         return can_view_ticket(user, session.ticket)
-    return bool(
-        guest_session
-        and session.customer_session_id
-        and compare_digest(str(guest_session), str(session.customer_session_id))
-    )
+    if not guest_session:
+        return False
+    with ticket_access(None):
+        return find_session(str(guest_session), ChatSession.objects.filter(pk=session.pk)) is not None
 
 
 class TicketChildManager(models.Manager):
