@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from django.test import Client, override_settings
 
+from escalated.chat_tokens import hash_token
 from escalated.models import ChatSession, WebhookDelivery
 from escalated.serializers import WebhookSerializer
 from escalated.workflow_models import Workflow, WorkflowLog
@@ -66,7 +67,7 @@ def _start(client, department=None):
     )
     assert response.status_code in (200, 201), response.content
     token = response.json()["id"]
-    return token, ChatSession.objects.get(customer_session_id=token)
+    return token, ChatSession.objects.get(customer_session_id=hash_token(token))
 
 
 def _agent(username, department):

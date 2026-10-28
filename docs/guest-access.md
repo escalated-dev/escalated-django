@@ -193,8 +193,6 @@ too, with `X-RateLimit-Limit`/`X-RateLimit-Remaining` headers.
 
 ## Not covered yet
 
-- Live-chat session tokens (`chat/<token>/...`) are still the per-session
-  random token from `chat/start`; they do not expire with a grant.
 - Lookup matches the Escalated reference only; there is no
   `external_reference` column yet.
 - The `REQUESTS_PER_MINUTE` budget is applied to the mobile guest routes
