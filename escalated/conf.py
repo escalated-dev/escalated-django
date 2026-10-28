@@ -85,7 +85,8 @@ DEFAULTS = {
     # Per-client-IP limits on the unauthenticated guest endpoints (widget and
     # guest-form ticket submission, guest replies). Over the limit: 429 with
     # Retry-After. Tickets and replies are counted separately over a 60s
-    # window. Keys set here are merged over these defaults.
+    # window; the mobile guest API also counts every request against
+    # REQUESTS_PER_MINUTE. Keys set here are merged over these defaults.
     #   ENABLED: set False only when the host already throttles upstream.
     #   CACHE: the django.core.cache alias holding the counters. Use a shared
     #     backend (Redis, Memcached, database) when running several processes.
@@ -95,6 +96,7 @@ DEFAULTS = {
         "ENABLED": True,
         "TICKETS_PER_MINUTE": 5,
         "REPLIES_PER_MINUTE": 10,
+        "REQUESTS_PER_MINUTE": 60,
         "CACHE": "default",
     },
     # Verified guest access (docs/guest-access.md): email codes and expiring

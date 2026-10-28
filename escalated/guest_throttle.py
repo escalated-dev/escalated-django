@@ -31,8 +31,11 @@ WINDOW_SECONDS = 60
 
 TICKET = "ticket"
 REPLY = "reply"
+# Every request to a mobile guest route (docs/guest-access.md), on top of the
+# ticket or reply bucket the route also counts against.
+REQUESTS = "requests"
 
-_LIMIT_KEYS = {TICKET: "TICKETS_PER_MINUTE", REPLY: "REPLIES_PER_MINUTE"}
+_LIMIT_KEYS = {TICKET: "TICKETS_PER_MINUTE", REPLY: "REPLIES_PER_MINUTE", REQUESTS: "REQUESTS_PER_MINUTE"}
 
 
 def client_ip(request):
@@ -41,7 +44,7 @@ def client_ip(request):
 
 def check(request, scope):
     """
-    Count this request against ``scope`` (``"ticket"`` or ``"reply"``) for the
+    Count this request against ``scope`` (``"ticket"``, ``"reply"`` or ``"requests"``) for the
     client IP. Returns ``None`` when it is allowed, or the seconds until the
     window resets when it is over the limit.
 
