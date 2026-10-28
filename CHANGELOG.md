@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-10-28
+
+### Upgrading
+- Clients of `POST widget/chat/start/` that checked for `200`, or for `400` on
+  bad input, should accept `201` and `422`. The answer keeps every field it had
+  (`session_id` included), so code reading those fields needs no change.
+- Run `python manage.py migrate escalated`: migration `0035_chat_token_expiry`
+  adds a nullable `ChatSession.customer_token_expires_at`. Chats already in
+  progress keep working: the next widget request with their token stores the
+  token's hash in place of the plain value and gives it a full lifetime.
+- Widget chat tokens now expire `ESCALATED["GUEST_ACCESS"]["TTL_MINUTES"]`
+  after the chat starts (default 1440, clamped to 5 minutes .. 7 days), as in
+  escalated-laravel. After that every chat route answers 404 and the visitor
+  starts a new chat.
+- `ChatSession.customer_session_id` now holds the token's SHA-256. Code that
+  started a chat through `ChatSessionService.start_chat` reads the token once
+  from `session.visitor_token`. Agent chat payloads no longer carry the
+  visitor's token.
+
 ### Added
 - **Mobile guest ticket routes.** With `API_ENABLED`, the REST API now serves
   `POST <API_PREFIX>/mobile/guest/tickets`,
@@ -29,23 +48,6 @@ All notable changes to this project will be documented in this file.
 - Guest answers now send `Cache-Control: private, no-store` (was
   `no-store, private`; same meaning). The five mobile guest routes send it and
   `Referrer-Policy: no-referrer` on every answer, errors included.
-
-### Upgrading
-- Clients of `POST widget/chat/start/` that checked for `200`, or for `400` on
-  bad input, should accept `201` and `422`. The answer keeps every field it had
-  (`session_id` included), so code reading those fields needs no change.
-- Run `python manage.py migrate escalated`: migration `0035_chat_token_expiry`
-  adds a nullable `ChatSession.customer_token_expires_at`. Chats already in
-  progress keep working: the next widget request with their token stores the
-  token's hash in place of the plain value and gives it a full lifetime.
-- Widget chat tokens now expire `ESCALATED["GUEST_ACCESS"]["TTL_MINUTES"]`
-  after the chat starts (default 1440, clamped to 5 minutes .. 7 days), as in
-  escalated-laravel. After that every chat route answers 404 and the visitor
-  starts a new chat.
-- `ChatSession.customer_session_id` now holds the token's SHA-256. Code that
-  started a chat through `ChatSessionService.start_chat` reads the token once
-  from `session.visitor_token`. Agent chat payloads no longer carry the
-  visitor's token.
 
 ### Security
 - **Widget chat tokens are stored hashed and expire.** The token returned by
