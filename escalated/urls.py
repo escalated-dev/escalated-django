@@ -469,7 +469,7 @@ widget_patterns = [
 # Widget chat API (no authentication)
 widget_chat_patterns = [
     widget_path("widget/chat/availability/", widget_chat.chat_availability, name="widget_chat_availability"),
-    widget_path("widget/chat/start/", widget_chat.start_chat, name="widget_chat_start"),
+    widget_path("widget/chat/start/", widget_chat.chat_start, name="widget_chat_start"),
     widget_path("widget/chat/message/", widget_chat.send_message, name="widget_chat_message"),
     widget_path("widget/chat/typing/", widget_chat.update_typing, name="widget_chat_typing"),
     widget_path("widget/chat/end/", widget_chat.end_chat, name="widget_chat_end"),
