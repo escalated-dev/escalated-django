@@ -5,6 +5,7 @@ import pytest
 from django.core.cache import cache
 from django.utils import timezone
 
+from escalated.chat_tokens import hash_token
 from escalated.models import (
     AgentProfile,
     ChatRoutingRule,
@@ -462,15 +463,40 @@ class TestWidgetChatViews:
         assert response.json()["available"] is True
 
     def test_start_chat(self, client):
+        # The trailing-slash route answers exactly like the widget's chat/start:
+        # 201, with the chat token as both `id` and `session_id`.
         response = client.post(
             "/support/widget/chat/start/",
             data=json.dumps(proven({"name": "Visitor", "email": "visitor@example.com"}, "chat")),
             content_type="application/json",
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
-        assert data["session_id"]
-        assert data["ticket_reference"]
+        assert data["id"]
+        assert data["session_id"] == data["id"]
+        assert data["expires_at"]
+        assert data["status"] == "waiting"
+        assert data["agent_name"] is None
+        assert data["agent"] is None
+        assert data["messages"] == []
+        session = ChatSession.objects.get(customer_session_id=hash_token(data["id"]))
+        assert data["ticket_reference"] == session.ticket.reference
+
+    def test_start_chat_matches_the_widget_route(self, client):
+        def start(path, email):
+            response = client.post(
+                path,
+                data=json.dumps(proven({"name": "Visitor", "email": email, "message": "Hi"}, "chat")),
+                content_type="application/json",
+            )
+            return response.status_code, response.json()
+
+        legacy_status, legacy = start("/support/widget/chat/start/", "legacy@example.com")
+        widget_status, widget = start("/support/widget/chat/start", "widget@example.com")
+
+        assert legacy_status == widget_status == 201
+        assert sorted(legacy) == sorted(widget)
+        assert [m["body"] for m in legacy["messages"]] == ["Hi"]
 
     def test_start_chat_validation(self, client):
         response = client.post(
@@ -478,7 +504,8 @@ class TestWidgetChatViews:
             data=json.dumps({"name": "", "email": ""}),
             content_type="application/json",
         )
-        assert response.status_code == 400
+        assert response.status_code == 422
+        assert isinstance(response.json()["errors"]["email"], list)
 
     def test_send_message(self, client):
         # Start a chat first

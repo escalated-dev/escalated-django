@@ -19,11 +19,21 @@ All notable changes to this project will be documented in this file.
   guest request counts against it, on top of the ticket or reply bucket.
 
 ### Changed
+- **The older `POST widget/chat/start/` (trailing slash) now answers exactly
+  like the widget's `POST widget/chat/start`**, as escalated-laravel does: it
+  is served by the same view and returns `201` with `id` and `session_id`
+  (both the chat token), `expires_at`, `ticket_reference`, `status`,
+  `queue_position`, `agent_name`, `agent` and `messages`. Validation failures
+  and a bad verification code are now `422` with list-valued `errors` (were
+  `400` with string values).
 - Guest answers now send `Cache-Control: private, no-store` (was
   `no-store, private`; same meaning). The five mobile guest routes send it and
   `Referrer-Policy: no-referrer` on every answer, errors included.
 
 ### Upgrading
+- Clients of `POST widget/chat/start/` that checked for `200`, or for `400` on
+  bad input, should accept `201` and `422`. The answer keeps every field it had
+  (`session_id` included), so code reading those fields needs no change.
 - Run `python manage.py migrate escalated`: migration `0035_chat_token_expiry`
   adds a nullable `ChatSession.customer_token_expires_at`. Chats already in
   progress keep working: the next widget request with their token stores the

@@ -314,7 +314,7 @@ class TestChatMetadata:
             origin=SHOP,
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 201
         assert response["Access-Control-Allow-Origin"] == SHOP
         expected = {"page_url": "https://shop.example.com/cart", "cart_total": 129.5, "embedded_on": SHOP}
         ticket = Ticket.objects.get(reference=response.json()["ticket_reference"])
@@ -326,7 +326,7 @@ class TestChatMetadata:
             client, CHAT_START, {"name": "John", "email": "john@example.com", "metadata": "x"}, origin=SHOP
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 422
         assert "metadata" in response.json()["errors"]
         assert not ChatSession.objects.exists()
 

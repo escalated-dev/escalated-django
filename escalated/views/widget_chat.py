@@ -131,7 +131,7 @@ def _serialize_messages(session):
     ]
 
 
-def _start(request, contract):
+def _start(request):
     """Start a chat from a widget request. Returns ``(ticket, session, None)`` or ``(None, None, error)``."""
     if _rate_limited(request, scope="widget_chat_start", limit=5, window=60):
         return None, None, _reject()
@@ -162,9 +162,7 @@ def _start(request, contract):
     # A chat needs an emailed code (purpose "chat"), like a widget ticket.
     errors.update(guest_verification.proof_errors(body))
     if errors:
-        if contract:
-            return None, None, contract_validation_error(errors)
-        return None, None, JsonResponse({"errors": errors}, status=400)
+        return None, None, contract_validation_error(errors)
 
     session_service = ChatSessionService()
     metadata = WidgetMetadata.clean(body.get("metadata"), request)
@@ -183,9 +181,7 @@ def _start(request, contract):
             ),
         )
     except guest_access.InvalidCode as exc:
-        if contract:
-            return None, None, contract_validation_error({"verification_code": str(exc)})
-        return None, None, JsonResponse({"errors": {"verification_code": str(exc)}}, status=400)
+        return None, None, contract_validation_error({"verification_code": str(exc)})
     if message:
         session_service.send_message(session, body=message, sender=None, sender_type="customer")
 
@@ -212,19 +208,12 @@ def _start_payload(ticket, session):
 
 @chat_gated
 @require_POST
-def start_chat(request):
-    """Start a new chat session from the widget. Original route and answer shape."""
-    ticket, session, error = _start(request, contract=False)
-    if error is not None:
-        return error
-    return JsonResponse(_start_payload(ticket, session))
-
-
-@chat_gated
-@require_POST
 def chat_start(request):
-    """Start a chat for the shared widget: 201 with the session token as ``id``."""
-    ticket, session, error = _start(request, contract=True)
+    """Start a chat for the shared widget: 201 with the session token as ``id``.
+
+    Serves both ``widget/chat/start`` and the older ``widget/chat/start/``.
+    """
+    ticket, session, error = _start(request)
     if error is not None:
         return error
     return JsonResponse(
@@ -236,6 +225,10 @@ def chat_start(request):
         },
         status=201,
     )
+
+
+# The older trailing-slash route's view name; it now answers like ``chat_start``.
+start_chat = chat_start
 
 
 # ---------------------------------------------------------------------------
