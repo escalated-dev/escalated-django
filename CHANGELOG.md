@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Upgrading
+- Run `python manage.py migrate escalated`. The `knowledge_base_public`
+  setting now defaults **on**, as in escalated-laravel, so a new install
+  serves its knowledge base (customer pages and widget articles) to guests.
+  Migration `0036_knowledge_base_public_default_on` keeps existing installs
+  as they were: if the install already has Escalated data (any ticket,
+  department, article, article category or chat session, or `0001_initial`
+  applied more than an hour earlier) and no stored `knowledge_base_public`,
+  it stores `0`, so the knowledge base stays private. A value an admin already
+  saved is left alone. To open the knowledge base to guests afterwards, turn
+  on "public knowledge base" in the admin Settings page.
+
+### Changed
+- `knowledge_base_public` defaults on for new installs (was off), and the
+  admin Settings page shows it on when nothing is stored.
+
 ## [0.7.9] - 2026-10-28
 
 ### Upgrading

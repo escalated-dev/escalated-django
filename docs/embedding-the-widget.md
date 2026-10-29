@@ -37,7 +37,8 @@ The widget's switches apply to embedded requests unchanged:
 - `knowledge_base_enabled` and `knowledge_base_public` apply to the widget's
   article search and articles (`404` when the knowledge base is off, `403` when
   it is not public and the visitor is not signed in; a cross-origin visitor is
-  always a guest).
+  always a guest). `knowledge_base_public` is on for a new install; installs
+  that already existed keep a private knowledge base (migration `0036`).
 
 All of them, plus `widget_color`, `widget_position`, `widget_greeting` and
 `widget_departments`, are saved from the admin Settings page.

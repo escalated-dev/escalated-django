@@ -24,7 +24,11 @@ class TestKbSettings:
         EscalatedSetting.set("knowledge_base_enabled", "true")
         assert kb_enabled() is True
 
-    def test_kb_public_default_false(self):
+    def test_kb_public_default_true(self):
+        assert kb_public() is True
+
+    def test_kb_public_set_false(self):
+        EscalatedSetting.set("knowledge_base_public", "0")
         assert kb_public() is False
 
     def test_kb_public_set_true(self):

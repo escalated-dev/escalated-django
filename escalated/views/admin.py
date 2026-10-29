@@ -1178,7 +1178,7 @@ _SETTINGS_BOOL_DEFAULTS = {
     "show_powered_by": True,
     "inbound_email_enabled": False,
     "knowledge_base_enabled": True,
-    "knowledge_base_public": False,
+    "knowledge_base_public": True,
     "knowledge_base_feedback_enabled": True,
     "widget_enabled": False,
     "chat_enabled": False,

@@ -20,7 +20,7 @@ def kb_enabled():
 
 def kb_public():
     """Check if the knowledge base is publicly accessible (no login required)."""
-    return EscalatedSetting.get_bool("knowledge_base_public", default=False)
+    return EscalatedSetting.get_bool("knowledge_base_public", default=True)
 
 
 def kb_feedback_enabled():
