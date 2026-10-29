@@ -166,7 +166,7 @@ def ticket_link(db):
 
 @pytest.fixture
 def widget_on(db):
-    """The widget, its live chat and a public knowledge base, all off by default, switched on."""
+    """The widget and its live chat (off by default) and a public knowledge base, switched on."""
     from escalated.models import EscalatedSetting
 
     for key in ("widget_enabled", "chat_enabled", "knowledge_base_public"):

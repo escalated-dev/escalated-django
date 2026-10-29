@@ -145,11 +145,11 @@ def test_feedback_off(client, user, kb):
 def test_access(client, user, kb):
     index = reverse("escalated:customer_kb_index")
 
-    # Not public by default: guests are refused.
-    assert client.get(index, HTTP_X_INERTIA="true").status_code == 403
-
-    EscalatedSetting.set("knowledge_base_public", "1")
+    # Public by default: guests may read it.
     assert client.get(index, HTTP_X_INERTIA="true").status_code == 200
+
+    EscalatedSetting.set("knowledge_base_public", "0")
+    assert client.get(index, HTTP_X_INERTIA="true").status_code == 403
 
     EscalatedSetting.set("knowledge_base_enabled", "0")
     client.force_login(user)
