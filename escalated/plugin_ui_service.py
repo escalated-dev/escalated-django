@@ -239,6 +239,134 @@ class PluginUIService:
     # Utility
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Shared with every page
+    # ------------------------------------------------------------------
+
+    def shared_extensions(self, is_admin=False, permissions=()):
+        """
+        ``escalated.plugins`` for the shared screens: the shape the frontend's
+        usePluginExtensions() reads (domain-model/plugin-contract.md) --
+        ``menuItems``, ``pageComponents`` (``"page.slot"`` to items) and
+        ``dashboardWidgets`` -- from what active Python plugins registered
+        plus the SDK plugins' manifests. Items whose permission or capability
+        the viewer lacks are left out, and admin menu items go to admins
+        only. ``{}`` when there is nothing to show.
+        """
+        permissions = set(permissions or ())
+
+        def allows(ability):
+            return not ability or is_admin or ability in permissions
+
+        menu_items = []
+        for item in self.get_menu_items():
+            section = item.get("section") or item.get("target") or "admin"
+            if (section == "admin" and not is_admin) or not allows(item.get("permission")):
+                continue
+            menu_items.append(
+                {
+                    "label": item.get("label"),
+                    "route": item.get("url") or item.get("route"),
+                    "icon": item.get("icon"),
+                    "position": item.get("position", 100),
+                    "section": section,
+                    "plugin": item.get("plugin"),
+                    "badge": item.get("badge"),
+                    "submenu": item.get("submenu") or [],
+                }
+            )
+
+        widgets = []
+        for widget in self.get_dashboard_widgets():
+            if (widget.get("target") == "admin" and not is_admin) or not allows(widget.get("permission")):
+                continue
+            widgets.append(
+                {
+                    "id": widget.get("id"),
+                    "title": widget.get("title"),
+                    "component": widget.get("component"),
+                    "plugin": widget.get("plugin"),
+                    "data": widget.get("data") or {},
+                    "position": widget.get("position", 100),
+                    "width": widget.get("width", "full"),
+                }
+            )
+
+        slots = {}
+        for page, by_slot in self._page_components.items():
+            for slot in by_slot:
+                for component in self.get_page_components(page, slot):
+                    if not allows(component.get("permission")):
+                        continue
+                    slots.setdefault(f"{page}.{slot}", []).append(
+                        {
+                            "plugin": component.get("plugin"),
+                            "component": component.get("component"),
+                            "data": component.get("data") or {},
+                            "position": component.get("position", 100),
+                        }
+                    )
+
+        self._add_sdk_extensions(widgets, slots, allows)
+
+        if not menu_items and not widgets and not slots:
+            return {}
+
+        return {
+            "menuItems": sorted(menu_items, key=lambda m: m["position"]),
+            "pageComponents": {key: sorted(items, key=lambda c: c["position"]) for key, items in slots.items()},
+            "dashboardWidgets": sorted(widgets, key=lambda w: w["position"]),
+        }
+
+    @staticmethod
+    def slug(name):
+        """The contract's URL-safe slug: ``@escalated-dev/plugin-slack`` is ``escalated-dev--plugin-slack``."""
+        import re
+
+        return re.sub(r"[^A-Za-z0-9_-]", "-", str(name).removeprefix("@").replace("/", "--"))
+
+    def _add_sdk_extensions(self, widgets, slots, allows):
+        """
+        SDK plugins' widget and slot declarations. Their pages are not mounted
+        by this package yet, so their menu entries are not shared.
+        """
+        try:
+            from escalated.bridge.plugin_bridge import get_bridge
+
+            bridge = get_bridge()
+            manifests = bridge.get_manifests() if bridge.is_booted() else {}
+        except Exception:
+            manifests = {}
+
+        for name, manifest in manifests.items():
+            slug = self.slug(name)
+            for widget in manifest.get("widgets") or []:
+                if not widget.get("component") or not allows(widget.get("capability")):
+                    continue
+                widgets.append(
+                    {
+                        "id": f"{slug}.{widget['component']}",
+                        "title": widget.get("label"),
+                        "component": widget["component"],
+                        "plugin": slug,
+                        "position": widget.get("order", 100),
+                        "width": widget.get("size", "half"),
+                    }
+                )
+            for component in manifest.get("components") or []:
+                if not (component.get("page") and component.get("slot") and component.get("component")):
+                    continue
+                if not allows(component.get("capability")):
+                    continue
+                slots.setdefault(f"{component['page']}.{component['slot']}", []).append(
+                    {
+                        "plugin": slug,
+                        "component": component["component"],
+                        "data": component.get("props") or {},
+                        "position": component.get("order", 100),
+                    }
+                )
+
     def clear(self):
         """Remove all registered UI elements. Useful for testing."""
         self._menu_items.clear()

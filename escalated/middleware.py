@@ -97,7 +97,19 @@ class EscalatedInertiaShareMiddleware:
 
             data["features"] = {"newsletters": bool(get_setting("enable_newsletters"))}
 
-            share(request, "escalated", data)
+            # Plugin menus, slots and widgets, in the shape the shared
+            # frontend's usePluginExtensions() reads (plugin contract).
+            try:
+                from escalated.plugin_ui_service import plugin_ui
+
+                data["plugins"] = plugin_ui.shared_extensions(
+                    is_admin=data["is_admin"], permissions=data["permissions"]
+                )
+            except Exception:
+                data["plugins"] = {}
+
+            # inertia-django takes shared props as keyword arguments.
+            share(request, escalated=data)
         except ImportError:
             pass
 

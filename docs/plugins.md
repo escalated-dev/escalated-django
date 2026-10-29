@@ -149,6 +149,35 @@ add_action("ticket_created", late_handler, priority=20)
 
 ## Available Hooks
 
+### Domain events
+
+Plugins receive the canonical events of the event vocabulary
+(`ticket.created`, `ticket.updated`, `ticket.status_changed`,
+`ticket.resolved`, `ticket.closed`, `ticket.reopened`, `ticket.assigned`,
+`ticket.unassigned`, `ticket.escalated`, `ticket.priority_changed`,
+`ticket.department_changed`, `ticket.tag_added`, `ticket.tag_removed`,
+`reply.created`, `note.created`, `sla.warning`, `sla.breached` and the
+`chat.*` events) once the change commits. Python plugins get them through
+`add_action()` with one argument, the payload; SDK plugins get them in their
+`actions`.
+
+```python
+def on_ticket_created(payload):
+    print(payload["reference"], payload["ticket"]["subject"])
+
+add_action("ticket.created", on_ticket_created)
+```
+
+Ticket events carry the ticket's fields flat (`id`, `reference`, `subject`,
+`title`, `status`, `priority`, `department_id`, `assigned_to`,
+`requester_id`, `metadata`, ...) and the same dict under `ticket`, plus the
+event's extras (`old_status`/`new_status`, `agent_id`,
+`old_priority`/`new_priority`, `old_department_id`/`new_department_id`,
+`tag`, or `type` for SLA events). `reply.created` and `note.created` carry the
+reply flat plus `reply` and `ticket`. Chat events carry `session`, without the
+visitor's token or email. A plugin that raises is logged and never fails the
+change. The Python hook names below still fire for Python plugins.
+
 ### Ticket Hooks
 
 **Actions:**
