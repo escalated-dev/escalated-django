@@ -143,12 +143,16 @@ def test_documented_action_fires_once_with_its_documented_arguments(action, list
 
 
 @pytest.mark.django_db
-def test_sdk_bridge_still_receives_ticket_created_once(listen):
+def test_sdk_bridge_still_receives_ticket_created_once(listen, django_capture_on_commit_callbacks):
     listen("ticket_created")
     bridge = MagicMock()
     bridge.is_booted.return_value = True
 
-    with patch("escalated.bridge.plugin_bridge.get_bridge", return_value=bridge):
+    # Plugins receive canonical events once the change commits.
+    with (
+        patch("escalated.bridge.plugin_bridge.get_bridge", return_value=bridge),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
         TicketService().create(UserFactory(), dict(TICKET_DATA))
 
     hooks = [call.args[0] for call in bridge.dispatch_action.call_args_list]

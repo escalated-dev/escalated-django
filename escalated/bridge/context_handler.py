@@ -16,6 +16,51 @@ import logging
 logger = logging.getLogger("escalated.bridge")
 
 
+# ctx.tickets.query filter keys (plugin contract) and the field each reads.
+# Any other key is an error, never a field name or a lookup.
+TICKET_FILTERS = {
+    "id": "pk",
+    "reference": "reference",
+    "status": "status",
+    "priority": "priority",
+    "channel": "channel",
+    "ticket_type": "ticket_type",
+    "department_id": "department_id",
+    "requester_id": "requester_object_id",
+    "contact_id": "contact_id",
+    "assigned_to": "assigned_to_id",
+}
+
+# ctx.replies.query filter keys and their fields.
+REPLY_FILTERS = {
+    "ticket_id": "ticket_id",
+    "is_internal": "is_internal_note",
+    "type": "type",
+}
+
+# The most rows a ticket or reply query hands back.
+QUERY_LIMIT = 500
+
+
+def _contract_lookups(filter_spec, fields, method):
+    """Equality lookups on whitelisted keys, single values only."""
+    if filter_spec is None:
+        return {}
+    if not isinstance(filter_spec, dict):
+        raise ValueError(f"{method} requires an object filter")
+    lookups = {}
+    for key, value in filter_spec.items():
+        field = fields.get(key)
+        if field is None:
+            raise ValueError(f'{method} cannot filter by "{key}"')
+        if value is not None and not isinstance(value, (str, int, float, bool)):
+            raise ValueError(f'{method} filter "{key}" must be a single value')
+        if field == "requester_object_id" and value is not None:
+            value = str(value)
+        lookups[f"{field}__isnull" if value is None else field] = True if value is None else value
+    return lookups
+
+
 class ContextHandler:
     """
     Dispatch ctx.* method calls from the runtime to the appropriate handler.
@@ -331,8 +376,8 @@ class ContextHandler:
     def _tickets_query(self, params: dict) -> list:
         from escalated.models import Ticket
 
-        filter_spec = params.get("filter") or {}
-        qs = Ticket.objects.filter(**filter_spec)
+        lookups = _contract_lookups(params.get("filter"), TICKET_FILTERS, "ctx.tickets.query")
+        qs = Ticket.objects.filter(**lookups).order_by("pk")[:QUERY_LIMIT]
         return [self._model_to_dict(t) for t in qs]
 
     def _tickets_create(self, params: dict) -> dict:
@@ -378,7 +423,10 @@ class ContextHandler:
         from escalated.models import Reply
 
         filter_spec = params.get("filter") or {}
-        qs = Reply.objects.filter(**filter_spec)
+        if isinstance(filter_spec, dict) and isinstance(filter_spec.get("is_internal"), (str, int)):
+            filter_spec = {**filter_spec, "is_internal": filter_spec["is_internal"] in (1, "1", "true", True)}
+        lookups = _contract_lookups(filter_spec, REPLY_FILTERS, "ctx.replies.query")
+        qs = Reply.objects.filter(**lookups).order_by("pk")[:QUERY_LIMIT]
         return [self._model_to_dict(r) for r in qs]
 
     def _replies_create(self, params: dict) -> dict:
@@ -562,6 +610,12 @@ class ContextHandler:
         if not hook:
             raise ValueError("ctx.emit requires hook")
         if self._bridge is not None:
+            from escalated.plugin_actions import is_reserved_hook
+
+            # A plugin may not impersonate a host event or lifecycle action.
+            if is_reserved_hook(hook):
+                logger.warning("Dropped ctx.emit of reserved hook %s from %s", hook, self.current_plugin)
+                return None
             self._bridge.dispatch_action(hook, data)
         return None
 

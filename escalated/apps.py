@@ -13,6 +13,7 @@ class EscalatedConfig(AppConfig):
 
     def ready(self):
         import escalated.handlers  # noqa: F401 - connects signal handlers
+        import escalated.plugin_actions  # noqa: F401 - delivers the canonical events to plugins
         import escalated.webhook_handlers  # noqa: F401 - delivers admin-configured webhooks
         import escalated.workflow_handlers  # noqa: F401 - connects WorkflowEngine to signals
 

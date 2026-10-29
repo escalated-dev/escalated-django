@@ -15,10 +15,41 @@ All notable changes to this project will be documented in this file.
   it stores `0`, so the knowledge base stays private. A value an admin already
   saved is left alone. To open the knowledge base to guests afterwards, turn
   on "public knowledge base" in the admin Settings page.
+- **Plugin UI extensions are shared as `escalated.plugins`** (`menuItems`,
+  `pageComponents`, `dashboardWidgets`), the shape the shared frontend reads.
+  Before, nothing was shared, so plugin menus, widgets and slots never
+  appeared, and `EscalatedInertiaShareMiddleware` called inertia-django's
+  `share()` with positional arguments, which it refuses. Admin menu items go
+  to admins only, items whose permission the viewer lacks are left out, and
+  SDK plugins' `widgets` and `components` are included. `{}` when there is
+  nothing to show.
+- **Plugins receive the canonical domain events.** `ticket.created`,
+  `reply.created`, `note.created`, `ticket.status_changed` and the rest of
+  the event vocabulary go, once the change commits, to Python plugins
+  (`add_action("ticket.created", lambda payload: ...)`) and SDK plugins, with
+  the plugin contract's payload: the ticket flat and under `ticket`, plus the
+  event's extras; replies flat plus `reply` and `ticket`. SDK plugins used to
+  get only ten of them, with `ticket_id` instead of the ticket. The Python hook
+  names (`ticket_created`, ...) still fire for Python plugins. A failing
+  plugin is logged and never fails the change.
+- **`ctx.tickets.query` and `ctx.replies.query` only accept the plugin
+  contract's filter keys.** Tickets: `id`, `reference`, `status`, `priority`,
+  `channel`, `ticket_type`, `department_id`, `requester_id`, `contact_id`,
+  `assigned_to`. Replies: `ticket_id`, `is_internal`, `type`. Any other key
+  (including Django lookups such as `pk__gt` or `assigned_to__email`), or a
+  non-scalar value, raises instead of reaching `objects.filter()`. Results are
+  capped at 500 rows.
 
 ### Changed
 - `knowledge_base_public` defaults on for new installs (was off), and the
   admin Settings page shows it on when nothing is stored.
+
+### Security
+- Plugin ticket and reply queries passed the filter to `objects.filter()`, so
+  an SDK plugin could filter on any field or follow relations (such as the
+  assignee's password hash). Keys are now whitelisted.
+- `ctx.emit` drops hook names that would impersonate a canonical event, a
+  legacy alias of one, or a plugin lifecycle action.
 
 ## [0.7.9] - 2026-10-28
 
