@@ -165,6 +165,7 @@ Plugins receive the canonical events of the event vocabulary
 def on_ticket_created(payload):
     print(payload["reference"], payload["ticket"]["subject"])
 
+
 add_action("ticket.created", on_ticket_created)
 ```
 
