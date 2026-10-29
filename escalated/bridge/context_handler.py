@@ -73,12 +73,17 @@ class ContextHandler:
     def __init__(self):
         self.current_plugin: str = ""
         self._bridge = None  # set by PluginBridge after construction
+        self._acting_user = None
 
     def set_bridge(self, bridge) -> None:
         self._bridge = bridge
 
     def set_current_plugin(self, plugin: str) -> None:
         self.current_plugin = plugin
+
+    def set_acting_user(self, user) -> None:
+        """The user a host call is served for (a widget badge's viewer), or None."""
+        self._acting_user = user if getattr(user, "is_authenticated", False) else None
 
     # ------------------------------------------------------------------
     # Dispatch
@@ -637,13 +642,17 @@ class ContextHandler:
 
     def _current_user(self, params: dict) -> dict | None:
         """
-        Return the current request user if available.
-
-        Because the bridge operates outside the request/response cycle we
-        cannot reliably access request.user here.  We return None and let
-        the plugin handle the absence gracefully.
+        The user the current host call is served for (the viewer of a widget
+        badge), or None -- outside such a call, and always for cron.
         """
-        return None
+        user = self._acting_user
+        if user is None:
+            return None
+        return {
+            "id": user.pk,
+            "name": (user.get_full_name() if hasattr(user, "get_full_name") else "") or str(user),
+            "email": getattr(user, "email", None),
+        }
 
     # ------------------------------------------------------------------
     # Helpers

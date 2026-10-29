@@ -162,6 +162,87 @@ class PluginBridge:
             self._handle_crash()
             return value
 
+    def run_cron(self, plugin: str, schedule: str) -> bool:
+        """
+        Run one cron schedule of an SDK plugin (``cron {plugin, schedule}``),
+        as no user, within the action timeout. A failure is logged, never
+        raised. Returns whether the runtime took the call.
+        """
+        if not self._ensure_alive():
+            return False
+
+        try:
+            self._context_handler.set_current_plugin(plugin)
+            self._context_handler.set_acting_user(None)
+            self._rpc.call(
+                "cron",
+                {"plugin": plugin, "schedule": schedule},
+                TIMEOUT_ACTION,
+                self._context_handler.handle,
+            )
+            return True
+        except Exception as exc:
+            logger.warning("Escalated PluginBridge: %s cron '%s' failed: %s", plugin, schedule, exc)
+            self._handle_crash()
+            return False
+
+    def run_due_cron(self, now) -> int:
+        """
+        Send ``cron`` for every schedule (manifest ``cronSchedules``) of every
+        SDK plugin the runtime loaded that is due in the minute of *now*
+        (UTC), one after another. An unreadable schedule is logged and
+        skipped; a failing one never stops the others. Returns how many ran.
+        """
+        from escalated.plugin_cron import due
+
+        if not self._ensure_alive():
+            return 0
+
+        ran = 0
+        for name, manifest in self.get_manifests().items():
+            schedules = manifest.get("cronSchedules") if isinstance(manifest, dict) else None
+            for schedule in schedules if isinstance(schedules, list) else []:
+                if not isinstance(schedule, str):
+                    continue
+                try:
+                    is_due = due(schedule, now)
+                except ValueError as exc:
+                    logger.warning("Escalated PluginBridge: %s cron '%s' skipped: %s", name, schedule, exc)
+                    continue
+                if is_due:
+                    self.run_cron(name, schedule)
+                    ran += 1
+        return ran
+
+    def badge(self, plugin: str, component: str, user=None):
+        """
+        Ask an SDK plugin for a widget's badge (``badge {plugin, component}``)
+        as *user*, the viewer, within the filter timeout. A number or a
+        string; ``None`` when the runtime fails or answers anything else.
+        """
+        if not self._ensure_alive():
+            return None
+
+        try:
+            self._context_handler.set_current_plugin(plugin)
+            self._context_handler.set_acting_user(user)
+            answer = self._rpc.call(
+                "badge",
+                {"plugin": plugin, "component": component},
+                TIMEOUT_FILTER,
+                self._context_handler.handle,
+            )
+        except Exception as exc:
+            logger.warning("Escalated PluginBridge: %s badge %s failed: %s", plugin, component, exc)
+            self._handle_crash()
+            return None
+        finally:
+            self._context_handler.set_acting_user(None)
+
+        if isinstance(answer, bool) or not isinstance(answer, (int, float, str)):
+            return None
+        return answer
+
     def call_endpoint(
         self,
         plugin: str,

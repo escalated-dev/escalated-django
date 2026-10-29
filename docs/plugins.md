@@ -258,6 +258,28 @@ register_dashboard_widget(
 )
 ```
 
+#### SDK widget badges
+
+An SDK plugin widget with a `badge` function (manifest `hasBadge: true`) gets
+a live count: while `escalated.plugins.dashboardWidgets` is built for a page,
+the host asks the runtime `badge {plugin, component}` as the viewer
+(`ctx.currentUser` is the signed-in user) and puts the answer, a number or a
+string, on the item as `badge`. A failure or a 5 s timeout is `null`.
+
+### SDK plugin cron
+
+An SDK plugin's `cron` schedules (manifest `cronSchedules`, five-field
+expressions evaluated in UTC, or `@hourly`, `@daily`, ...) run when the host
+runs this every minute:
+
+```bash
+* * * * * python manage.py escalated_plugin_cron
+```
+
+Each due schedule is sent to the runtime as `cron {plugin, schedule}`, as no
+user, within 30 s. A failing schedule is logged and never stops the others;
+one that cannot be read is logged and skipped.
+
 ### Page Components
 
 ```python
