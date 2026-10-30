@@ -1,6 +1,7 @@
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy
 
 from escalated.access import shared_features, shared_permissions
 from escalated.permissions import is_admin, is_agent, user_permissions  # noqa: F401
@@ -50,9 +51,57 @@ class EnsureAdminMiddleware:
         return None
 
 
+# The statuses the shared frontend's Escalated/Error page has wording for, and
+# the generic message each one gets. An exception's or a view's own message
+# never reaches the page.
+ERROR_PAGE = "Escalated/Error"
+ERROR_MESSAGES = {
+    403: gettext_lazy("You are not authorized to perform this action."),
+    404: gettext_lazy("The requested resource was not found."),
+    419: gettext_lazy("Your session has expired. Refresh the page and try again."),
+    429: gettext_lazy("Too many requests. Wait a moment and try again."),
+    500: gettext_lazy("Something went wrong on our end."),
+    503: gettext_lazy("The service is temporarily unavailable. Try again shortly."),
+}
+
+
+def inertia_error_page(request, response):
+    """The Escalated/Error page for an Inertia visit to an Escalated route that
+    ended in one of ERROR_MESSAGES' statuses, or None to keep ``response``.
+
+    Without it the Inertia client gets an HTML (or plain-text, or JSON) error
+    back and can only show it in a modal over the screen the user was on. The
+    props are the ones Rails and Laravel send: ``status`` and a generic
+    ``message``. Left alone: full page loads and JSON clients (no
+    ``X-Inertia``), routes outside the ``escalated`` app, responses that are
+    already Inertia pages, and a 500 while ``DEBUG`` is on, so the technical
+    500 page stays where a developer wants it.
+    """
+    from django.conf import settings
+
+    status = response.status_code
+    if status not in ERROR_MESSAGES or not request.headers.get("X-Inertia"):
+        return None
+    if response.headers.get("X-Inertia"):
+        return None
+    match = getattr(request, "resolver_match", None)
+    if match is None or match.app_name != "escalated":
+        return None
+    if status == 500 and settings.DEBUG:
+        return None
+
+    from escalated.rendering import render_page
+
+    page = render_page(request, ERROR_PAGE, {"status": status, "message": str(ERROR_MESSAGES[status])})
+    page.status_code = status
+    return page
+
+
 class EscalatedInertiaShareMiddleware:
     """
-    Middleware that shares Escalated props with every Inertia request.
+    Middleware that shares Escalated props with every Inertia request, and
+    answers an Inertia visit to an Escalated route that ends in 403, 404, 419,
+    429, 500 or 503 with the shared Escalated/Error page.
     Add to MIDDLEWARE in your Django settings.
     """
 
@@ -62,10 +111,12 @@ class EscalatedInertiaShareMiddleware:
     def __call__(self, request):
         from escalated.conf import get_setting
 
-        if not get_setting("UI_ENABLED"):
-            return self.get_response(request)
+        response = self.get_response(request)
 
-        return self.get_response(request)
+        if not get_setting("UI_ENABLED"):
+            return response
+
+        return inertia_error_page(request, response) or response
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         from escalated.conf import get_setting
