@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [0.7.10] - 2026-10-30
 
 ### Upgrading
+- **`ctx.replies.create`, `ctx.tickets.create`, `ctx.tickets.update`, `ctx.contacts.create` and `ctx.tags.create` only accept the plugin contract's fields** (plugin contract, The plugin context). They passed the plugin's data straight to `objects.create(**data)` / `setattr`, so a plugin could set a reply's author or flags, a ticket's requester, assignee or SLA fields, or create a host user with `is_superuser`/`is_staff`. Any other key is now a `ValueError` naming it. Replies: `ticket_id` (an existing ticket), `body`, `is_internal` (true makes a note); the author is the acting user, or nobody. Tickets: `subject`/`title`, `body`/`description`, `priority`, `status`, `department_id`, `ticket_type`, `metadata`, and on create `channel` (default `api`) and `contact_id` or `requester_email`/`requester_name` (a contact, found or created, also set as the guest name and email); never a requester, assignee, reference or SLA field. Unknown choices, departments and contacts are errors. Contacts: `name`, `email` (the user's username is the email when the user model has one, and `name` goes to `name` or `first_name`). Tags: `name`, `slug` (from the name when absent), `color`. Plugins that sent other keys must drop them.
 - **Single sign-on is an install-level switch, off by default**
   (`ESCALATED["ACCESS"]["sso"]`, env `ESCALATED_SSO`; ADR
   2026-10-29-configurable-access-features). Nothing ever signed anyone in

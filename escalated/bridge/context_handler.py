@@ -41,6 +41,90 @@ REPLY_FILTERS = {
 # The most rows a ticket or reply query hands back.
 QUERY_LIMIT = 500
 
+# The fields each ctx write takes (plugin contract). title and body are the
+# SDK's names for subject and description. Any other key is an error, never
+# an attribute: a plugin never names an author, a requester, an assignee or a
+# reply's flags.
+TICKET_UPDATE_FIELDS = (
+    "subject",
+    "title",
+    "body",
+    "description",
+    "priority",
+    "status",
+    "department_id",
+    "ticket_type",
+    "metadata",
+)
+TICKET_CREATE_FIELDS = (*TICKET_UPDATE_FIELDS, "channel", "contact_id", "requester_email", "requester_name")
+REPLY_CREATE_FIELDS = ("ticket_id", "body", "is_internal")
+CONTACT_CREATE_FIELDS = ("name", "email")
+TAG_CREATE_FIELDS = ("name", "slug", "color")
+
+
+def _contract_fields(data, allowed, method):
+    """The plugin's data, refused when it holds a key outside the contract."""
+    if not isinstance(data, dict):
+        raise ValueError(f"{method} requires a data object")
+    unknown = [str(key) for key in data if key not in allowed]
+    if unknown:
+        raise ValueError(f"{method} does not accept: {', '.join(unknown)}")
+    return data
+
+
+def _optional_text(data, key, method):
+    """A stripped, non-empty string field, or None when absent or blank."""
+    value = data.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        raise ValueError(f"{method}: {key} must be a string")
+    return str(value).strip() or None
+
+
+def _choice(data, key, choices, method):
+    value = _optional_text(data, key, method)
+    if value is not None and value not in choices.values:
+        raise ValueError(f'{method}: unknown {key} "{value}"')
+    return value
+
+
+def _ticket_attributes(data, method):
+    """Ticket fields from the contract fields a plugin sent."""
+    from escalated.models import Department, Ticket
+
+    attributes = {}
+    subject = _optional_text(data, "subject", method) or _optional_text(data, "title", method)
+    if subject is not None:
+        attributes["subject"] = subject
+    if "description" in data or "body" in data:
+        description = data["description"] if "description" in data else data["body"]
+        if description is not None and not isinstance(description, str):
+            raise ValueError(f"{method}: description must be a string")
+        attributes["description"] = description or ""
+    for key, choices in (
+        ("priority", Ticket.Priority),
+        ("status", Ticket.Status),
+        ("ticket_type", Ticket.TicketType),
+    ):
+        value = _choice(data, key, choices, method)
+        if value is not None:
+            attributes[key] = value
+    if "department_id" in data:
+        department_id = data["department_id"]
+        if department_id is None:
+            attributes["department"] = None
+        else:
+            department = Department.objects.filter(pk=department_id).first() if str(department_id).isdigit() else None
+            if department is None:
+                raise ValueError(f"{method}: no such department")
+            attributes["department"] = department
+    if "metadata" in data:
+        if data["metadata"] is not None and not isinstance(data["metadata"], dict):
+            raise ValueError(f"{method}: metadata must be an object")
+        attributes["metadata"] = data["metadata"]
+    return attributes
+
 
 def _contract_lookups(filter_spec, fields, method):
     """Equality lookups on whitelisted keys, single values only."""
@@ -386,26 +470,48 @@ class ContextHandler:
         return [self._model_to_dict(t) for t in qs]
 
     def _tickets_create(self, params: dict) -> dict:
-        from escalated.models import Ticket
+        from escalated.models import Contact, Ticket
 
-        data = params.get("data")
-        if not data:
-            raise ValueError("ctx.tickets.create requires data")
-        ticket = Ticket.objects.create(**data)
+        method = "ctx.tickets.create"
+        data = _contract_fields(params.get("data"), TICKET_CREATE_FIELDS, method)
+        attributes = _ticket_attributes(data, method)
+        if not attributes.get("subject"):
+            raise ValueError(f"{method} requires subject")
+        attributes.setdefault("description", "")
+        attributes["channel"] = _optional_text(data, "channel", method) or "api"
+
+        # The requester is a contact, never a user id the plugin names.
+        contact = None
+        if data.get("contact_id") is not None:
+            contact_id = data["contact_id"]
+            contact = Contact.objects.filter(pk=contact_id).first() if str(contact_id).isdigit() else None
+            if contact is None:
+                raise ValueError(f"{method}: no such contact")
+        else:
+            email = _optional_text(data, "requester_email", method)
+            if email is not None:
+                if "@" not in email:
+                    raise ValueError(f"{method}: requester_email is not an email address")
+                contact = Contact.find_or_create_by_email(email, _optional_text(data, "requester_name", method))
+        if contact is not None:
+            attributes["contact"] = contact
+            attributes["guest_email"] = contact.email
+            attributes["guest_name"] = contact.name or contact.email
+
+        ticket = Ticket.objects.create(**attributes)
         return self._model_to_dict(ticket)
 
     def _tickets_update(self, params: dict) -> dict:
         from escalated.models import Ticket
 
         ticket_id = params.get("id")
-        data = params.get("data")
         if ticket_id is None:
             raise ValueError("ctx.tickets.update requires id")
-        if not data:
-            raise ValueError("ctx.tickets.update requires data")
+        data = _contract_fields(params.get("data"), TICKET_UPDATE_FIELDS, "ctx.tickets.update")
+        attributes = _ticket_attributes(data, "ctx.tickets.update")
 
         ticket = Ticket.objects.get(pk=ticket_id)
-        for field, value in data.items():
+        for field, value in attributes.items():
             setattr(ticket, field, value)
         ticket.save()
         ticket.refresh_from_db()
@@ -435,12 +541,28 @@ class ContextHandler:
         return [self._model_to_dict(r) for r in qs]
 
     def _replies_create(self, params: dict) -> dict:
-        from escalated.models import Reply
+        from escalated.models import Reply, Ticket
 
-        data = params.get("data")
-        if not data:
-            raise ValueError("ctx.replies.create requires data")
-        reply = Reply.objects.create(**data)
+        method = "ctx.replies.create"
+        data = _contract_fields(params.get("data"), REPLY_CREATE_FIELDS, method)
+        ticket_id = data.get("ticket_id")
+        ticket = Ticket.objects.filter(pk=ticket_id).first() if str(ticket_id).isdigit() else None
+        if ticket is None:
+            raise ValueError(f"{method} requires an existing ticket_id")
+        body = _optional_text(data, "body", method)
+        if body is None:
+            raise ValueError(f"{method} requires body")
+        internal = data.get("is_internal") in (True, 1, "1", "true")
+
+        # The author is the acting user (the signed-in user of the request the
+        # plugin is serving), or nobody: a plugin never names it.
+        reply = Reply.objects.create(
+            ticket=ticket,
+            body=body,
+            is_internal_note=internal,
+            type=Reply.Type.NOTE if internal else Reply.Type.REPLY,
+            author=self._acting_user,
+        )
         return self._model_to_dict(reply)
 
     # ------------------------------------------------------------------
@@ -481,10 +603,25 @@ class ContextHandler:
 
     def _contacts_create(self, params: dict) -> dict:
         User = self._get_user_model()
-        data = params.get("data")
-        if not data:
-            raise ValueError("ctx.contacts.create requires data")
-        user = User.objects.create(**data)
+        method = "ctx.contacts.create"
+        data = _contract_fields(params.get("data"), CONTACT_CREATE_FIELDS, method)
+        email = _optional_text(data, "email", method)
+        if email is None or "@" not in email:
+            raise ValueError(f"{method} requires an email address")
+        name = _optional_text(data, "name", method)
+
+        # Only the contract's name and email: never a password, a staff or
+        # superuser flag, or any other field of the host's user model.
+        fields = {field.name for field in User._meta.get_fields()}
+        values = {"email": email}
+        if User.USERNAME_FIELD != "email" and User.USERNAME_FIELD in fields:
+            values[User.USERNAME_FIELD] = email
+        if name is not None:
+            if "name" in fields:
+                values["name"] = name
+            elif "first_name" in fields:
+                values["first_name"] = name
+        user = User.objects.create(**values)
         return self._model_to_dict(user)
 
     # ------------------------------------------------------------------
@@ -497,12 +634,20 @@ class ContextHandler:
         return [self._model_to_dict(t) for t in Tag.objects.all()]
 
     def _tags_create(self, params: dict) -> dict:
+        from django.utils.text import slugify
+
         from escalated.models import Tag
 
-        data = params.get("data")
-        if not data:
-            raise ValueError("ctx.tags.create requires data")
-        tag = Tag.objects.create(**data)
+        method = "ctx.tags.create"
+        data = _contract_fields(params.get("data"), TAG_CREATE_FIELDS, method)
+        name = _optional_text(data, "name", method)
+        if name is None:
+            raise ValueError(f"{method} requires name")
+        values = {"name": name, "slug": _optional_text(data, "slug", method) or slugify(name)}
+        color = _optional_text(data, "color", method)
+        if color is not None:
+            values["color"] = color
+        tag = Tag.objects.create(**values)
         return self._model_to_dict(tag)
 
     # ------------------------------------------------------------------
