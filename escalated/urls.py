@@ -1,9 +1,10 @@
-from django.urls import include
+from django.urls import include, register_converter
 from django.urls import path as django_path
 
 from escalated.access import guard_patterns
 from escalated.conf import get_setting
 from escalated.ticket_access import path, ticket_access_view
+from escalated.url_helpers import TicketConverter, delete, put
 from escalated.views import (
     admin,
     admin_plugins,
@@ -29,16 +30,20 @@ from escalated.widget_embed import widget_cors
 
 app_name = "escalated"
 
+# Tickets by reference or id: the shared pages link them by reference.
+# put()/delete() let POST-only form views take the verbs those pages send.
+register_converter(TicketConverter, "esc_ticket")
+
 # Customer-facing URLs
 customer_patterns = [
     path("tickets/", customer.ticket_list, name="customer_ticket_list"),
     path("tickets/create/", customer.ticket_create, name="customer_ticket_create"),
     path("tickets/store/", customer.ticket_store, name="customer_ticket_store"),
-    path("tickets/<int:ticket_id>/", customer.ticket_show, name="customer_ticket_show"),
-    path("tickets/<int:ticket_id>/reply/", customer.ticket_reply, name="customer_ticket_reply"),
-    path("tickets/<int:ticket_id>/close/", customer.ticket_close, name="customer_ticket_close"),
-    path("tickets/<int:ticket_id>/reopen/", customer.ticket_reopen, name="customer_ticket_reopen"),
-    path("tickets/<int:ticket_id>/rate/", customer.ticket_rate, name="customer_ticket_rate"),
+    path("tickets/<esc_ticket:ticket_id>/", customer.ticket_show, name="customer_ticket_show"),
+    path("tickets/<esc_ticket:ticket_id>/reply/", customer.ticket_reply, name="customer_ticket_reply"),
+    path("tickets/<esc_ticket:ticket_id>/close/", customer.ticket_close, name="customer_ticket_close"),
+    path("tickets/<esc_ticket:ticket_id>/reopen/", customer.ticket_reopen, name="customer_ticket_reopen"),
+    path("tickets/<esc_ticket:ticket_id>/rate/", customer.ticket_rate, name="customer_ticket_rate"),
     # Knowledge base (Customer/KnowledgeBase/*): public when the setting allows.
     path("kb/", customer_kb.index, name="customer_kb_index"),
     path("kb/<slug:slug>/", customer_kb.show, name="customer_kb_show"),
@@ -50,30 +55,34 @@ agent_patterns = [
     path("agent/", agent.dashboard, name="agent_dashboard"),
     path("agent/tickets/", agent.ticket_list, name="agent_ticket_list"),
     path("agent/tickets/bulk/", agent.ticket_bulk_action, name="agent_ticket_bulk"),
-    path("agent/tickets/<int:ticket_id>/", agent.ticket_show, name="agent_ticket_show"),
-    path("agent/tickets/<int:ticket_id>/update/", agent.ticket_update, name="agent_ticket_update"),
-    path("agent/tickets/<int:ticket_id>/reply/", agent.ticket_reply, name="agent_ticket_reply"),
-    path("agent/tickets/<int:ticket_id>/note/", agent.ticket_note, name="agent_ticket_note"),
-    path("agent/tickets/<int:ticket_id>/assign/", agent.ticket_assign, name="agent_ticket_assign"),
-    path("agent/tickets/<int:ticket_id>/status/", agent.ticket_status, name="agent_ticket_status"),
-    path("agent/tickets/<int:ticket_id>/priority/", agent.ticket_priority, name="agent_ticket_priority"),
-    path("agent/tickets/<int:ticket_id>/tags/", agent.ticket_tags, name="agent_ticket_tags"),
-    path("agent/tickets/<int:ticket_id>/subjects/", agent.ticket_subjects_store, name="agent_ticket_subjects_store"),
+    path("agent/tickets/<esc_ticket:ticket_id>/", agent.ticket_show, name="agent_ticket_show"),
+    path("agent/tickets/<esc_ticket:ticket_id>/update/", put(agent.ticket_update), name="agent_ticket_update"),
+    path("agent/tickets/<esc_ticket:ticket_id>/reply/", agent.ticket_reply, name="agent_ticket_reply"),
+    path("agent/tickets/<esc_ticket:ticket_id>/note/", agent.ticket_note, name="agent_ticket_note"),
+    path("agent/tickets/<esc_ticket:ticket_id>/assign/", agent.ticket_assign, name="agent_ticket_assign"),
+    path("agent/tickets/<esc_ticket:ticket_id>/status/", agent.ticket_status, name="agent_ticket_status"),
+    path("agent/tickets/<esc_ticket:ticket_id>/priority/", agent.ticket_priority, name="agent_ticket_priority"),
+    path("agent/tickets/<esc_ticket:ticket_id>/tags/", agent.ticket_tags, name="agent_ticket_tags"),
     path(
-        "agent/tickets/<int:ticket_id>/subjects/<int:subject_id>/",
+        "agent/tickets/<esc_ticket:ticket_id>/subjects/",
+        agent.ticket_subjects_store,
+        name="agent_ticket_subjects_store",
+    ),
+    path(
+        "agent/tickets/<esc_ticket:ticket_id>/subjects/<int:subject_id>/",
         agent.ticket_subjects_destroy,
         name="agent_ticket_subjects_destroy",
     ),
-    path("agent/tickets/<int:ticket_id>/department/", agent.ticket_department, name="agent_ticket_department"),
-    path("agent/tickets/<int:ticket_id>/macro/", agent.ticket_apply_macro, name="agent_ticket_macro"),
+    path("agent/tickets/<esc_ticket:ticket_id>/department/", agent.ticket_department, name="agent_ticket_department"),
+    path("agent/tickets/<esc_ticket:ticket_id>/macro/", agent.ticket_apply_macro, name="agent_ticket_macro"),
     path(
-        "agent/tickets/<int:ticket_id>/actions/<str:action>/",
+        "agent/tickets/<esc_ticket:ticket_id>/actions/<str:action>/",
         agent.ticket_custom_action,
         name="agent_ticket_custom_action",
     ),
-    path("agent/tickets/<int:ticket_id>/follow/", agent.ticket_follow, name="agent_ticket_follow"),
-    path("agent/tickets/<int:ticket_id>/presence/", agent.ticket_presence, name="agent_ticket_presence"),
-    path("agent/tickets/<int:ticket_id>/<int:reply_id>/pin/", agent.ticket_pin_reply, name="agent_ticket_pin"),
+    path("agent/tickets/<esc_ticket:ticket_id>/follow/", agent.ticket_follow, name="agent_ticket_follow"),
+    path("agent/tickets/<esc_ticket:ticket_id>/presence/", agent.ticket_presence, name="agent_ticket_presence"),
+    path("agent/tickets/<esc_ticket:ticket_id>/<int:reply_id>/pin/", agent.ticket_pin_reply, name="agent_ticket_pin"),
     # Mentions
     path("agent/mentions/", mentions.mention_list, name="agent_mentions"),
     path("agent/mentions/mark-read/", mentions.mention_mark_read, name="agent_mentions_mark_read"),
@@ -87,108 +96,126 @@ admin_patterns = [
     path("admin/tickets/", admin.tickets_index, name="admin_tickets_index"),
     path("admin/tickets/bulk/", admin.tickets_bulk_action, name="admin_tickets_bulk"),
     path("admin/tickets/merge-search/", admin.ticket_merge_search, name="admin_ticket_merge_search"),
-    path("admin/tickets/<int:ticket_id>/", admin.tickets_show, name="admin_tickets_show"),
-    path("admin/tickets/<int:ticket_id>/reply/", admin.tickets_reply, name="admin_tickets_reply"),
-    path("admin/tickets/<int:ticket_id>/note/", admin.tickets_note, name="admin_tickets_note"),
-    path("admin/tickets/<int:ticket_id>/assign/", admin.tickets_assign, name="admin_tickets_assign"),
-    path("admin/tickets/<int:ticket_id>/status/", admin.tickets_status, name="admin_tickets_status"),
-    path("admin/tickets/<int:ticket_id>/priority/", admin.tickets_priority, name="admin_tickets_priority"),
-    path("admin/tickets/<int:ticket_id>/tags/", admin.tickets_tags, name="admin_tickets_tags"),
-    path("admin/tickets/<int:ticket_id>/subjects/", admin.tickets_subjects_store, name="admin_tickets_subjects_store"),
+    path("admin/tickets/<esc_ticket:ticket_id>/", admin.tickets_show, name="admin_tickets_show"),
+    path("admin/tickets/<esc_ticket:ticket_id>/reply/", admin.tickets_reply, name="admin_tickets_reply"),
+    path("admin/tickets/<esc_ticket:ticket_id>/note/", admin.tickets_note, name="admin_tickets_note"),
+    path("admin/tickets/<esc_ticket:ticket_id>/assign/", admin.tickets_assign, name="admin_tickets_assign"),
+    path("admin/tickets/<esc_ticket:ticket_id>/status/", admin.tickets_status, name="admin_tickets_status"),
+    path("admin/tickets/<esc_ticket:ticket_id>/priority/", admin.tickets_priority, name="admin_tickets_priority"),
+    path("admin/tickets/<esc_ticket:ticket_id>/tags/", admin.tickets_tags, name="admin_tickets_tags"),
     path(
-        "admin/tickets/<int:ticket_id>/subjects/<int:subject_id>/",
+        "admin/tickets/<esc_ticket:ticket_id>/subjects/",
+        admin.tickets_subjects_store,
+        name="admin_tickets_subjects_store",
+    ),
+    path(
+        "admin/tickets/<esc_ticket:ticket_id>/subjects/<int:subject_id>/",
         admin.tickets_subjects_destroy,
         name="admin_tickets_subjects_destroy",
     ),
-    path("admin/tickets/<int:ticket_id>/department/", admin.tickets_department, name="admin_tickets_department"),
-    path("admin/tickets/<int:ticket_id>/macro/", admin.tickets_apply_macro, name="admin_tickets_macro"),
-    path("admin/tickets/<int:ticket_id>/follow/", admin.tickets_follow, name="admin_tickets_follow"),
-    path("admin/tickets/<int:ticket_id>/presence/", admin.tickets_presence, name="admin_tickets_presence"),
-    path("admin/tickets/<int:ticket_id>/<int:reply_id>/pin/", admin.tickets_pin_reply, name="admin_tickets_pin"),
+    path("admin/tickets/<esc_ticket:ticket_id>/department/", admin.tickets_department, name="admin_tickets_department"),
+    path("admin/tickets/<esc_ticket:ticket_id>/macro/", admin.tickets_apply_macro, name="admin_tickets_macro"),
+    path("admin/tickets/<esc_ticket:ticket_id>/follow/", admin.tickets_follow, name="admin_tickets_follow"),
+    path("admin/tickets/<esc_ticket:ticket_id>/presence/", admin.tickets_presence, name="admin_tickets_presence"),
+    path("admin/tickets/<esc_ticket:ticket_id>/<int:reply_id>/pin/", admin.tickets_pin_reply, name="admin_tickets_pin"),
     # Ticket Links
-    path("admin/tickets/<int:ticket_id>/links/", admin.ticket_links_index, name="admin_ticket_links_index"),
-    path("admin/tickets/<int:ticket_id>/links/store/", admin.ticket_links_store, name="admin_ticket_links_store"),
+    path("admin/tickets/<esc_ticket:ticket_id>/links/", admin.ticket_links_index, name="admin_ticket_links_index"),
     path(
-        "admin/tickets/<int:ticket_id>/links/<int:link_id>/delete/",
-        admin.ticket_links_destroy,
+        "admin/tickets/<esc_ticket:ticket_id>/links/store/", admin.ticket_links_store, name="admin_ticket_links_store"
+    ),
+    path(
+        "admin/tickets/<esc_ticket:ticket_id>/links/<int:link_id>/delete/",
+        delete(admin.ticket_links_destroy),
         name="admin_ticket_links_destroy",
     ),
     # Ticket Merging
-    path("admin/tickets/<int:ticket_id>/merge/", admin.ticket_merge, name="admin_ticket_merge"),
+    path("admin/tickets/<esc_ticket:ticket_id>/merge/", admin.ticket_merge, name="admin_ticket_merge"),
     # Saved Views
     path("admin/saved-views/", admin.saved_views_index, name="admin_saved_views_index"),
     path("admin/saved-views/store/", admin.saved_views_store, name="admin_saved_views_store"),
-    path("admin/saved-views/<int:view_id>/update/", admin.saved_views_update, name="admin_saved_views_update"),
-    path("admin/saved-views/<int:view_id>/delete/", admin.saved_views_delete, name="admin_saved_views_delete"),
+    path("admin/saved-views/<int:view_id>/update/", put(admin.saved_views_update), name="admin_saved_views_update"),
+    path("admin/saved-views/<int:view_id>/delete/", delete(admin.saved_views_delete), name="admin_saved_views_delete"),
     path("admin/saved-views/reorder/", admin.saved_views_reorder, name="admin_saved_views_reorder"),
     # Ticket Snooze
-    path("admin/tickets/<int:ticket_id>/snooze/", admin.ticket_snooze, name="admin_ticket_snooze"),
-    path("admin/tickets/<int:ticket_id>/unsnooze/", admin.ticket_unsnooze, name="admin_ticket_unsnooze"),
+    path("admin/tickets/<esc_ticket:ticket_id>/snooze/", admin.ticket_snooze, name="admin_ticket_snooze"),
+    path("admin/tickets/<esc_ticket:ticket_id>/unsnooze/", admin.ticket_unsnooze, name="admin_ticket_unsnooze"),
     # Ticket Splitting
-    path("admin/tickets/<int:ticket_id>/split/", admin.ticket_split, name="admin_ticket_split"),
+    path("admin/tickets/<esc_ticket:ticket_id>/split/", admin.ticket_split, name="admin_ticket_split"),
     # Side Conversations
     path(
-        "admin/tickets/<int:ticket_id>/side-conversations/",
+        "admin/tickets/<esc_ticket:ticket_id>/side-conversations/",
         admin.side_conversations_index,
         name="admin_side_conversations_index",
     ),
     path(
-        "admin/tickets/<int:ticket_id>/side-conversations/store/",
+        "admin/tickets/<esc_ticket:ticket_id>/side-conversations/store/",
         admin.side_conversations_store,
         name="admin_side_conversations_store",
     ),
     path(
-        "admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/reply/",
+        "admin/tickets/<esc_ticket:ticket_id>/side-conversations/<int:conversation_id>/reply/",
         admin.side_conversations_reply,
         name="admin_side_conversations_reply",
     ),
     path(
-        "admin/tickets/<int:ticket_id>/side-conversations/<int:conversation_id>/close/",
+        "admin/tickets/<esc_ticket:ticket_id>/side-conversations/<int:conversation_id>/close/",
         admin.side_conversations_close,
         name="admin_side_conversations_close",
     ),
     # Departments
     path("admin/departments/", admin.departments_index, name="admin_departments_index"),
     path("admin/departments/create/", admin.departments_create, name="admin_departments_create"),
-    path("admin/departments/<int:department_id>/edit/", admin.departments_edit, name="admin_departments_edit"),
-    path("admin/departments/<int:department_id>/delete/", admin.departments_delete, name="admin_departments_delete"),
+    path("admin/departments/<int:department_id>/edit/", put(admin.departments_edit), name="admin_departments_edit"),
+    path(
+        "admin/departments/<int:department_id>/delete/",
+        delete(admin.departments_delete),
+        name="admin_departments_delete",
+    ),
     # SLA Policies
     path("admin/sla-policies/", admin.sla_policies_index, name="admin_sla_policies_index"),
     path("admin/sla-policies/create/", admin.sla_policies_create, name="admin_sla_policies_create"),
-    path("admin/sla-policies/<int:policy_id>/edit/", admin.sla_policies_edit, name="admin_sla_policies_edit"),
-    path("admin/sla-policies/<int:policy_id>/delete/", admin.sla_policies_delete, name="admin_sla_policies_delete"),
+    path("admin/sla-policies/<int:policy_id>/edit/", put(admin.sla_policies_edit), name="admin_sla_policies_edit"),
+    path(
+        "admin/sla-policies/<int:policy_id>/delete/",
+        delete(admin.sla_policies_delete),
+        name="admin_sla_policies_delete",
+    ),
     # Escalation Rules
     path("admin/escalation-rules/", admin.escalation_rules_index, name="admin_escalation_rules_index"),
     path("admin/escalation-rules/create/", admin.escalation_rules_create, name="admin_escalation_rules_create"),
-    path("admin/escalation-rules/<int:rule_id>/edit/", admin.escalation_rules_edit, name="admin_escalation_rules_edit"),
+    path(
+        "admin/escalation-rules/<int:rule_id>/edit/",
+        put(admin.escalation_rules_edit),
+        name="admin_escalation_rules_edit",
+    ),
     path(
         "admin/escalation-rules/<int:rule_id>/delete/",
-        admin.escalation_rules_delete,
+        delete(admin.escalation_rules_delete),
         name="admin_escalation_rules_delete",
     ),
     # Tags
     path("admin/tags/", admin.tags_index, name="admin_tags_index"),
     path("admin/tags/create/", admin.tags_create, name="admin_tags_create"),
-    path("admin/tags/<int:tag_id>/edit/", admin.tags_edit, name="admin_tags_edit"),
-    path("admin/tags/<int:tag_id>/delete/", admin.tags_delete, name="admin_tags_delete"),
+    path("admin/tags/<int:tag_id>/edit/", put(admin.tags_edit), name="admin_tags_edit"),
+    path("admin/tags/<int:tag_id>/delete/", delete(admin.tags_delete), name="admin_tags_delete"),
     # Canned Responses
     path("admin/canned-responses/", admin.canned_responses_index, name="admin_canned_responses_index"),
     path("admin/canned-responses/create/", admin.canned_responses_create, name="admin_canned_responses_create"),
     path(
         "admin/canned-responses/<int:response_id>/edit/",
-        admin.canned_responses_edit,
+        put(admin.canned_responses_edit),
         name="admin_canned_responses_edit",
     ),
     path(
         "admin/canned-responses/<int:response_id>/delete/",
-        admin.canned_responses_delete,
+        delete(admin.canned_responses_delete),
         name="admin_canned_responses_delete",
     ),
     # Macros
     path("admin/macros/", admin.macros_index, name="admin_macros_index"),
     path("admin/macros/create/", admin.macros_create, name="admin_macros_create"),
-    path("admin/macros/<int:macro_id>/edit/", admin.macros_edit, name="admin_macros_edit"),
-    path("admin/macros/<int:macro_id>/delete/", admin.macros_delete, name="admin_macros_delete"),
+    path("admin/macros/<int:macro_id>/edit/", put(admin.macros_edit), name="admin_macros_edit"),
+    path("admin/macros/<int:macro_id>/delete/", delete(admin.macros_delete), name="admin_macros_delete"),
     # Settings
     path("admin/settings/", admin.settings_index, name="admin_settings"),
     path("admin/settings/update/", admin.settings_update, name="admin_settings_update"),
@@ -197,48 +224,58 @@ admin_patterns = [
     # Statuses
     path("admin/statuses/", admin.statuses_index, name="admin_statuses_index"),
     path("admin/statuses/create/", admin.statuses_create, name="admin_statuses_create"),
-    path("admin/statuses/<int:status_id>/edit/", admin.statuses_edit, name="admin_statuses_edit"),
-    path("admin/statuses/<int:status_id>/delete/", admin.statuses_delete, name="admin_statuses_delete"),
+    path("admin/statuses/<int:status_id>/edit/", put(admin.statuses_edit), name="admin_statuses_edit"),
+    path("admin/statuses/<int:status_id>/delete/", delete(admin.statuses_delete), name="admin_statuses_delete"),
     # Business Hours
     path("admin/business-hours/", admin.business_hours_index, name="admin_business_hours_index"),
     path("admin/business-hours/create/", admin.business_hours_create, name="admin_business_hours_create"),
-    path("admin/business-hours/<int:schedule_id>/edit/", admin.business_hours_edit, name="admin_business_hours_edit"),
+    path(
+        "admin/business-hours/<int:schedule_id>/edit/", put(admin.business_hours_edit), name="admin_business_hours_edit"
+    ),
     path(
         "admin/business-hours/<int:schedule_id>/delete/",
-        admin.business_hours_delete,
+        delete(admin.business_hours_delete),
         name="admin_business_hours_delete",
     ),
     # Roles
     path("admin/roles/", admin.roles_index, name="admin_roles_index"),
     path("admin/roles/create/", admin.roles_create, name="admin_roles_create"),
-    path("admin/roles/<int:role_id>/edit/", admin.roles_edit, name="admin_roles_edit"),
-    path("admin/roles/<int:role_id>/delete/", admin.roles_delete, name="admin_roles_delete"),
+    path("admin/roles/<int:role_id>/edit/", put(admin.roles_edit), name="admin_roles_edit"),
+    path("admin/roles/<int:role_id>/delete/", delete(admin.roles_delete), name="admin_roles_delete"),
     # Custom Fields
     path("admin/custom-fields/", admin.custom_fields_index, name="admin_custom_fields_index"),
     path("admin/custom-fields/create/", admin.custom_fields_create, name="admin_custom_fields_create"),
-    path("admin/custom-fields/<int:field_id>/edit/", admin.custom_fields_edit, name="admin_custom_fields_edit"),
-    path("admin/custom-fields/<int:field_id>/delete/", admin.custom_fields_delete, name="admin_custom_fields_delete"),
+    path("admin/custom-fields/<int:field_id>/edit/", put(admin.custom_fields_edit), name="admin_custom_fields_edit"),
+    path(
+        "admin/custom-fields/<int:field_id>/delete/",
+        delete(admin.custom_fields_delete),
+        name="admin_custom_fields_delete",
+    ),
     path("admin/custom-fields/reorder/", admin.custom_fields_reorder, name="admin_custom_fields_reorder"),
     # Knowledge Base - Articles
     path("admin/kb/articles/", admin.articles_index, name="admin_articles_index"),
     path("admin/kb/articles/create/", admin.articles_create, name="admin_articles_create"),
-    path("admin/kb/articles/<int:article_id>/edit/", admin.articles_edit, name="admin_articles_edit"),
-    path("admin/kb/articles/<int:article_id>/delete/", admin.articles_delete, name="admin_articles_delete"),
+    path("admin/kb/articles/<int:article_id>/edit/", put(admin.articles_edit), name="admin_articles_edit"),
+    path("admin/kb/articles/<int:article_id>/delete/", delete(admin.articles_delete), name="admin_articles_delete"),
     # Knowledge Base - Categories
     path("admin/kb/categories/", admin.kb_categories_index, name="admin_kb_categories_index"),
     path("admin/kb/categories/store/", admin.kb_categories_store, name="admin_kb_categories_store"),
     path(
-        "admin/kb/categories/<int:category_id>/update/", admin.kb_categories_update, name="admin_kb_categories_update"
+        "admin/kb/categories/<int:category_id>/update/",
+        put(admin.kb_categories_update),
+        name="admin_kb_categories_update",
     ),
     path(
-        "admin/kb/categories/<int:category_id>/delete/", admin.kb_categories_delete, name="admin_kb_categories_delete"
+        "admin/kb/categories/<int:category_id>/delete/",
+        delete(admin.kb_categories_delete),
+        name="admin_kb_categories_delete",
     ),
     # Plugins
     path("admin/plugins/", admin_plugins.plugin_list, name="admin_plugins_index"),
     path("admin/plugins/upload/", admin_plugins.plugin_upload, name="admin_plugins_upload"),
     path("admin/plugins/<slug:slug>/activate/", admin_plugins.plugin_activate, name="admin_plugins_activate"),
     path("admin/plugins/<slug:slug>/deactivate/", admin_plugins.plugin_deactivate, name="admin_plugins_deactivate"),
-    path("admin/plugins/<slug:slug>/delete/", admin_plugins.plugin_delete, name="admin_plugins_delete"),
+    path("admin/plugins/<slug:slug>/delete/", delete(admin_plugins.plugin_delete), name="admin_plugins_delete"),
     # Skills
     path("admin/skills/", admin.skills_index, name="admin_skills_index"),
     path("admin/skills/create/", admin.skills_create, name="admin_skills_create"),
@@ -249,19 +286,23 @@ admin_patterns = [
     path("admin/skills/<int:skill_id>/", admin.skills_destroy, name="admin_skills_destroy"),
     # Capacity
     path("admin/capacity/", admin.capacity_index, name="admin_capacity_index"),
-    path("admin/capacity/<int:capacity_id>/update/", admin.capacity_update, name="admin_capacity_update"),
+    path("admin/capacity/<int:capacity_id>/update/", put(admin.capacity_update), name="admin_capacity_update"),
     # Webhooks
     path("admin/webhooks/", admin.webhooks_index, name="admin_webhooks_index"),
     path("admin/webhooks/create/", admin.webhooks_create, name="admin_webhooks_create"),
-    path("admin/webhooks/<int:webhook_id>/edit/", admin.webhooks_edit, name="admin_webhooks_edit"),
-    path("admin/webhooks/<int:webhook_id>/delete/", admin.webhooks_delete, name="admin_webhooks_delete"),
+    path("admin/webhooks/<int:webhook_id>/edit/", put(admin.webhooks_edit), name="admin_webhooks_edit"),
+    path("admin/webhooks/<int:webhook_id>/delete/", delete(admin.webhooks_delete), name="admin_webhooks_delete"),
     path("admin/webhooks/<int:webhook_id>/deliveries/", admin.webhooks_deliveries, name="admin_webhooks_deliveries"),
     path("admin/webhooks/deliveries/<int:delivery_id>/retry/", admin.webhooks_retry, name="admin_webhooks_retry"),
     # Automations
     path("admin/automations/", admin.automations_index, name="admin_automations_index"),
     path("admin/automations/create/", admin.automations_create, name="admin_automations_create"),
-    path("admin/automations/<int:automation_id>/edit/", admin.automations_edit, name="admin_automations_edit"),
-    path("admin/automations/<int:automation_id>/delete/", admin.automations_delete, name="admin_automations_delete"),
+    path("admin/automations/<int:automation_id>/edit/", put(admin.automations_edit), name="admin_automations_edit"),
+    path(
+        "admin/automations/<int:automation_id>/delete/",
+        delete(admin.automations_delete),
+        name="admin_automations_delete",
+    ),
     # Settings sub-pages. Each page and its save share one path; the second
     # name matches the "<page>.update" route the shared frontend calls.
     path("admin/settings/csat/", admin_settings_pages.settings_csat, name="admin_settings_csat"),
@@ -305,9 +346,13 @@ admin_patterns = [
     # Custom Objects
     path("admin/custom-objects/", admin.custom_objects_index, name="admin_custom_objects_index"),
     path("admin/custom-objects/create/", admin.custom_objects_create, name="admin_custom_objects_create"),
-    path("admin/custom-objects/<int:object_id>/edit/", admin.custom_objects_edit, name="admin_custom_objects_edit"),
     path(
-        "admin/custom-objects/<int:object_id>/delete/", admin.custom_objects_delete, name="admin_custom_objects_delete"
+        "admin/custom-objects/<int:object_id>/edit/", put(admin.custom_objects_edit), name="admin_custom_objects_edit"
+    ),
+    path(
+        "admin/custom-objects/<int:object_id>/delete/",
+        delete(admin.custom_objects_delete),
+        name="admin_custom_objects_delete",
     ),
     path(
         "admin/custom-objects/<int:object_id>/records/", admin.custom_object_records, name="admin_custom_object_records"
@@ -319,12 +364,12 @@ admin_patterns = [
     ),
     path(
         "admin/custom-objects/<int:object_id>/records/<int:record_id>/update/",
-        admin.custom_object_records_update,
+        put(admin.custom_object_records_update),
         name="admin_custom_object_records_update",
     ),
     path(
         "admin/custom-objects/<int:object_id>/records/<int:record_id>/delete/",
-        admin.custom_object_records_delete,
+        delete(admin.custom_object_records_delete),
         name="admin_custom_object_records_delete",
     ),
     # Reports

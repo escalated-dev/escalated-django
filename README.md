@@ -170,6 +170,25 @@ The middleware accepts either header in place of `X-CSRFToken` and sets the
 `CSRF_HEADER_NAME`/`CSRF_COOKIE_NAME` alone covers Inertia visits but not the
 `fetch` calls.
 
+### Named routes (`route()`)
+
+The shared pages build their links with Ziggy's `route('escalated....', params)`.
+Escalated shares its own route table as the `ziggy` Inertia prop on every
+Escalated page, with the paths wherever you `include("escalated.urls")`, so
+there is nothing to map by hand. Install the matching `route()` helper in your
+`INERTIA_LAYOUT` template:
+
+```html
+{% load escalated_routes %}
+{% escalated_route_helper %}  {# or {% escalated_route_helper nonce=request.csp_nonce %} #}
+```
+
+It does nothing if the page already has a `window.route` (e.g. ziggy-js), and
+reads `window.Ziggy` before the prop. To change single names, set
+`ESCALATED["ROUTES"]`: a path replaces a name and `None` removes it, e.g.
+`{"login": "/accounts/login/"}` (`login` defaults to `settings.LOGIN_URL`). A
+`ziggy` prop your own middleware shares is merged over Escalated's, name by name.
+
 ### Theming (Optional)
 
 Register the `EscalatedPlugin` to render Escalated pages inside your app's layout — no page duplication needed:
@@ -492,7 +511,8 @@ for auditability.
 
 ## Routes
 
-All routes use the configurable prefix (default: `support`).
+All routes use the configurable prefix (default: `support`). A ticket's `<id>`
+in these paths may also be its reference (`ESC-A1B2C3`), as the shared pages link it.
 
 | Route | Method | Description |
 |-------|--------|-------------|

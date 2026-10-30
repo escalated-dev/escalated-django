@@ -16,6 +16,11 @@ class InertiaRenderer(UiRenderer):
     def render(self, request, component, props=None):
         from inertia import render
 
+        from escalated.route_list import share_ziggy
+
+        # The route() table the shared pages resolve their links with; a
+        # ziggy prop the host shared is merged over it name by name.
+        share_ziggy(request)
         return render(request, component, props=props or {})
 
 
