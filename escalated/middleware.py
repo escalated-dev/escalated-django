@@ -103,7 +103,9 @@ class EscalatedInertiaShareMiddleware:
                 from escalated.plugin_ui_service import plugin_ui
 
                 data["plugins"] = plugin_ui.shared_extensions(
-                    is_admin=data["is_admin"], permissions=data["permissions"]
+                    is_admin=data["is_admin"],
+                    permissions=data["permissions"],
+                    user=request.user if request.user.is_authenticated else None,
                 )
             except Exception:
                 data["plugins"] = {}

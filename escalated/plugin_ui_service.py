@@ -243,7 +243,7 @@ class PluginUIService:
     # Shared with every page
     # ------------------------------------------------------------------
 
-    def shared_extensions(self, is_admin=False, permissions=()):
+    def shared_extensions(self, is_admin=False, permissions=(), user=None):
         """
         ``escalated.plugins`` for the shared screens: the shape the frontend's
         usePluginExtensions() reads (domain-model/plugin-contract.md) --
@@ -252,6 +252,10 @@ class PluginUIService:
         plus the SDK plugins' manifests. Items whose permission or capability
         the viewer lacks are left out, and admin menu items go to admins
         only. ``{}`` when there is nothing to show.
+
+        An SDK widget with a badge function (manifest ``hasBadge``) carries
+        the plugin's ``badge`` answer, asked of the runtime as *user* (the
+        viewer); ``None`` when that fails.
         """
         permissions = set(permissions or ())
 
@@ -307,7 +311,7 @@ class PluginUIService:
                         }
                     )
 
-        self._add_sdk_extensions(widgets, slots, allows)
+        self._add_sdk_extensions(widgets, slots, allows, user)
 
         if not menu_items and not widgets and not slots:
             return {}
@@ -325,7 +329,7 @@ class PluginUIService:
 
         return re.sub(r"[^A-Za-z0-9_-]", "-", str(name).removeprefix("@").replace("/", "--"))
 
-    def _add_sdk_extensions(self, widgets, slots, allows):
+    def _add_sdk_extensions(self, widgets, slots, allows, user=None):
         """
         SDK plugins' widget and slot declarations. Their pages are not mounted
         by this package yet, so their menu entries are not shared.
@@ -343,16 +347,17 @@ class PluginUIService:
             for widget in manifest.get("widgets") or []:
                 if not widget.get("component") or not allows(widget.get("capability")):
                     continue
-                widgets.append(
-                    {
-                        "id": f"{slug}.{widget['component']}",
-                        "title": widget.get("label"),
-                        "component": widget["component"],
-                        "plugin": slug,
-                        "position": widget.get("order", 100),
-                        "width": widget.get("size", "half"),
-                    }
-                )
+                item = {
+                    "id": f"{slug}.{widget['component']}",
+                    "title": widget.get("label"),
+                    "component": widget["component"],
+                    "plugin": slug,
+                    "position": widget.get("order", 100),
+                    "width": widget.get("size", "half"),
+                }
+                if widget.get("hasBadge") is True:
+                    item["badge"] = self._sdk_badge(bridge, name, widget["component"], user)
+                widgets.append(item)
             for component in manifest.get("components") or []:
                 if not (component.get("page") and component.get("slot") and component.get("component")):
                     continue
@@ -366,6 +371,13 @@ class PluginUIService:
                         "position": component.get("order", 100),
                     }
                 )
+
+    @staticmethod
+    def _sdk_badge(bridge, name, component, user):
+        try:
+            return bridge.badge(name, component, user)
+        except Exception:
+            return None
 
     def clear(self):
         """Remove all registered UI elements. Useful for testing."""

@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Upgrading
+- With SDK plugins on (`ESCALATED['SDK_ENABLED']`), run
+  `python manage.py escalated_plugin_cron` every minute (cron, Celery Beat,
+  django-crontab) so SDK plugins' `cron` schedules run. Without it they never
+  run; nothing else changes.
 - Run `python manage.py migrate escalated`. The `knowledge_base_public`
   setting now defaults **on**, as in escalated-laravel, so a new install
   serves its knowledge base (customer pages and widget articles) to guests.
@@ -39,6 +43,21 @@ All notable changes to this project will be documented in this file.
   (including Django lookups such as `pk__gt` or `assigned_to__email`), or a
   non-scalar value, raises instead of reaching `objects.filter()`. Results are
   capped at 500 rows.
+
+### Added
+- **SDK plugin cron schedules run.** `python manage.py escalated_plugin_cron`
+  (every minute; `--at` picks the minute) sends `cron {plugin, schedule}` to
+  the plugin runtime for each schedule in a plugin's manifest `cronSchedules`
+  that is due that minute: five-field expressions in UTC (or `@hourly`,
+  `@daily`, ...). Each runs as no user within 30 s; a failing schedule is
+  logged and never stops the others, and one that cannot be read is logged
+  and skipped. As with actions, every SDK plugin the runtime loaded takes part.
+- **SDK widget badges.** An SDK widget with a `badge` function (manifest
+  `hasBadge: true`) carries `badge` in `escalated.plugins.dashboardWidgets`:
+  the plugin's answer to `badge {plugin, component}`, asked as the viewer
+  (`ctx.currentUser` is the signed-in user during that call) within 5 s; a
+  number or a string, `null` when it fails. Widgets without one carry no
+  `badge` key.
 
 ### Changed
 - `knowledge_base_public` defaults on for new installs (was off), and the

@@ -434,6 +434,9 @@ python manage.py purge_activities --days 90
 # Purge expired tokens/codes and apply the Data Retention settings
 # (Admin > Settings > Data Retention; every setting defaults to "never")
 python manage.py purge_expired_data [--dry-run]
+
+# Run SDK plugins' due cron schedules (every minute, with SDK_ENABLED)
+python manage.py escalated_plugin_cron
 ```
 
 Data retention deletes closed tickets outright (this package has no soft
