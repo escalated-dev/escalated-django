@@ -138,7 +138,9 @@ class TestSsoService:
     def test_is_enabled_false_by_default(self):
         assert self.service.is_enabled() is False
 
-    def test_is_enabled_true(self):
+    def test_is_enabled_true(self, settings):
+        # Only while SSO is switched on (ADR 2026-10-29).
+        settings.ESCALATED = {**settings.ESCALATED, "ACCESS": {"sso": True}}
         self.service.save_config({"sso_provider": "jwt"})
         assert self.service.is_enabled() is True
 

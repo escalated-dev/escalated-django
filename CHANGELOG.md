@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Upgrading
+- **Single sign-on is an install-level switch, off by default**
+  (`ESCALATED["ACCESS"]["sso"]`, env `ESCALATED_SSO`; ADR
+  2026-10-29-configurable-access-features). Nothing ever signed anyone in
+  through SSO, so off is how every install already behaved; while it is off
+  Admin > Settings > SSO and every `/support/sso/*` route answer 404. To turn
+  it on: `python manage.py migrate escalated` (0038), give the IdP the
+  endpoints from the SSO page, make sure a SAML install has the IdP
+  certificate, decide on `ESCALATED["SSO"]["create_users"]` and
+  `["sync_roles"]`, then set the switch. See `docs/access-control.md`.
+- `escalated.services.sso_service.SsoService` is rewritten on `signxml`,
+  `Authlib` and `PyJWT` (new dependencies): `validate_saml_assertion` and
+  `validate_jwt_token` are replaced by `validate_saml_response` and
+  `validate_jwt`, which check far more (see below). The SSO settings page now
+  validates the fields each provider needs and lists the endpoints for the IdP.
 - **Two-factor authentication is now an install-level switch, off by default**
   (`ESCALATED["ACCESS"]["two_factor"]`, env `ESCALATED_TWO_FACTOR`; ADR
   2026-10-29-configurable-access-features). Nothing ever asked for the code, so
@@ -74,6 +88,14 @@ All notable changes to this project will be documented in this file.
   capped at 500 rows.
 
 ### Added
+- **Sign-in through SSO when switched on**, with the provider chosen in Admin >
+  Settings > SSO. SAML checks the assertion signature against the configured
+  certificate, Issuer, Audience, Destination/Recipient, validity windows,
+  InResponseTo against requests issued in the last 10 minutes, and replay;
+  OAuth uses a session-bound state and PKCE; JWT pins the algorithm and
+  requires `exp`, `aud` and a single-use `jti`. Users are matched by email,
+  created only with `create_users`, and given the asserted role only with
+  roles on and `sync_roles`.
 - **Two-factor authentication is enforced when switched on.** A staff user
   with a confirmed enrolment must pass `Auth/TwoFactorChallenge`
   (`/support/two-factor/challenge/`; TOTP code or single-use recovery code;

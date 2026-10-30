@@ -248,6 +248,11 @@ class TestWebhooks:
 
 @pytest.mark.django_db
 class TestSso:
+    @pytest.fixture(autouse=True)
+    def _sso_on(self, settings):
+        # The SSO page exists while SSO is switched on (ADR 2026-10-29).
+        settings.ESCALATED = {**settings.ESCALATED, "ACCESS": {"sso": True}}
+
     def seed(self):
         EscalatedSetting.set("sso_provider", "jwt")
         EscalatedSetting.set("sso_jwt_secret", JWT_SECRET)
@@ -281,7 +286,11 @@ class TestSso:
     def test_a_new_secret_replaces_the_stored_one(self, admin_client):
         self.seed()
         settings = props_of(admin_client.get(f"{BASE}/settings/sso/", **INERTIA))["settings"]
-        post_json(admin_client, f"{BASE}/settings/sso/", {**settings, "sso_jwt_secret": "jwt-secret-rotated"})
+        post_json(
+            admin_client,
+            f"{BASE}/settings/sso/",
+            {**settings, "sso_url": "https://id.example.com/jwt", "sso_jwt_secret": "jwt-secret-rotated"},
+        )
         assert EscalatedSetting.get("sso_jwt_secret") == "jwt-secret-rotated"
 
     def test_the_general_settings_page_does_not_carry_the_sso_secrets(self, admin_client):

@@ -20,6 +20,10 @@ dependencies = [
     "cryptography>=44.0.1",
     # TOTP for two-factor authentication (RFC 6238).
     "pyotp>=2.9",
+    # Single sign-on: XML signatures, OAuth 2 / OIDC with PKCE, and JWT.
+    "signxml>=4.0",
+    "Authlib>=1.3",
+    "PyJWT>=2.8",
     # Central translations: a copy of escalated-locale's gettext catalogues
     # is bundled at escalated/_central_locale/ (see its README). PyPI rejects
     # git-URL dependencies, so escalated-locale itself is only the optional

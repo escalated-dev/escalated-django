@@ -2801,3 +2801,60 @@ class GuestVerification(models.Model):
 
     def __str__(self):
         return f"GuestVerification({self.purpose})"
+
+
+class SsoMessageId(models.Model):
+    """
+    Single-use SSO message IDs (ADR 2026-10-29-configurable-access-features):
+    the SAML requests Escalated issued (``saml_request``) and the SAML
+    assertion IDs (``saml_assertion``) and JWT ``jti``s (``jwt``) it accepted.
+    Kept until ``expires_at`` (Unix seconds); expired rows are pruned on write.
+    """
+
+    kind = models.CharField(max_length=32)
+    message_id = models.CharField(max_length=191)
+    expires_at = models.BigIntegerField(db_index=True)
+
+    class Meta:
+        db_table = get_table_name("sso_message_ids")
+        constraints = [models.UniqueConstraint(fields=["kind", "message_id"], name="escalated_sso_message_id_unique")]
+
+    def __str__(self):
+        return f"{self.kind}:{self.message_id}"
+
+    @classmethod
+    def prune(cls):
+        import time
+
+        cls.objects.filter(expires_at__lte=int(time.time())).delete()
+
+    @classmethod
+    def remember(cls, kind, message_id, expires_at):
+        """Store an ID that a later message must name (an issued request)."""
+        cls.prune()
+        cls.objects.create(kind=kind, message_id=message_id, expires_at=expires_at)
+
+    @classmethod
+    def consume(cls, kind, message_id):
+        """Remove an unexpired remembered ID: True only the first time."""
+        import time
+
+        if not message_id or len(message_id) > 191:
+            return False
+        deleted, _ = cls.objects.filter(kind=kind, message_id=message_id, expires_at__gt=int(time.time())).delete()
+        return deleted == 1
+
+    @classmethod
+    def claim(cls, kind, message_id, expires_at):
+        """Record an ID as used: True the first time, False on a replay."""
+        from django.db import IntegrityError, transaction
+
+        if not message_id or len(message_id) > 191:
+            return False
+        cls.prune()
+        try:
+            with transaction.atomic():
+                cls.objects.create(kind=kind, message_id=message_id, expires_at=expires_at)
+        except IntegrityError:
+            return False
+        return True

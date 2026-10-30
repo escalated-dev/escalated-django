@@ -3912,8 +3912,59 @@ def automations_delete(request, automation_id):
 # ---------------------------------------------------------------------------
 
 
+_SSO_URL_KEYS = [
+    "sso_url",
+    "sso_login_url",
+    "sso_logout_url",
+    "sso_metadata_url",
+    "sso_oauth_authorize_url",
+    "sso_oauth_token_url",
+    "sso_oauth_userinfo_url",
+]
+_SSO_REQUIRED = {
+    "saml": ["sso_entity_id", "sso_login_url"],
+    "jwt": ["sso_url", "sso_jwt_secret"],
+    "oauth": ["sso_oauth_authorize_url", "sso_oauth_token_url", "sso_oauth_userinfo_url", "sso_oauth_client_id"],
+}
+_SSO_FLASH = "escalated_sso_settings_flash"
+
+
+def _sso_errors(data, stored):
+    import re
+
+    from escalated.services.sso_service import SsoService
+
+    errors = {}
+    provider = str(data.get("sso_provider") or "")
+    if provider not in ("none", "saml", "oauth", "jwt"):
+        errors["sso_provider"] = "The selected SSO provider is invalid."
+    for key in _SSO_URL_KEYS:
+        value = str(data.get(key) or "")
+        if value and (len(value) > 500 or not re.match(r"^https?://\S+$", value)):
+            errors[key] = "This must be a valid URL."
+    algorithm = str(data.get("sso_jwt_algorithm") or "")
+    if algorithm and algorithm not in SsoService.JWT_ALGORITHMS:
+        errors["sso_jwt_algorithm"] = "The selected algorithm is invalid."
+    for key in _SSO_REQUIRED.get(provider, []):
+        # A key the post leaves out keeps its stored value.
+        present = (
+            str(data.get(key) or "").strip()
+            or (key not in data and stored.get(key))
+            or (key in _SSO_SECRET_KEYS and stored.get(key))
+        )
+        if not present:
+            errors.setdefault(key, "This field is required.")
+    return errors
+
+
+@feature_required("sso")
 @login_required
 def settings_sso(request):
+    """
+    Admin > Settings > SSO (ADR 2026-10-29-configurable-access-features), 404
+    while SSO is off. Stored secrets reach the page only as a mask; the mask
+    posted back keeps them. The page also lists the endpoints for the IdP.
+    """
     check = _require_admin(request)
     if check:
         return check
@@ -3921,19 +3972,38 @@ def settings_sso(request):
 
     sso = SsoService()
     if request.method == "POST":
-        data = request_data(request).dict()
+        raw = request_data(request)
+        data = {key: raw.get(key) for key in SsoService.CONFIG_KEYS if raw.get(key) is not None}
+        errors = _sso_errors(data, sso.get_config())
+        if errors:
+            request.session[_SSO_FLASH] = {"errors": errors}
+            response = redirect("escalated:admin_settings_sso")
+            response.status_code = 303
+            return response
         # The page posts the mask back for a secret the admin did not change.
         for key in _SSO_SECRET_KEYS:
             if secret_mask.is_masked(data.get(key)):
                 data.pop(key)
         sso.save_config(data)
-        return redirect("escalated:admin_settings")
+        request.session[_SSO_FLASH] = {"flash": {"success": "SSO settings updated."}}
+        response = redirect("escalated:admin_settings_sso")
+        response.status_code = 303
+        return response
 
     settings = sso.get_config()
     for key in _SSO_SECRET_KEYS:
-        if key in settings:
-            settings[key] = secret_mask.mask(settings[key])
-    return render_page(request, "Escalated/Admin/Settings/SsoSettings", props={"settings": settings})
+        settings[key] = secret_mask.mask(settings.get(key))
+    shown = request.session.pop(_SSO_FLASH, {})
+    return render_page(
+        request,
+        "Escalated/Admin/Settings/SsoSettings",
+        props={
+            "settings": settings,
+            "endpoints": sso.endpoints(request),
+            "flash": shown.get("flash", {}),
+            "errors": shown.get("errors", {}),
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
