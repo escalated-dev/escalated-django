@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
 
-from escalated.access import feature_required
+from escalated.access import feature_enabled, feature_required
 from escalated.event_names import canonical_events
 from escalated.kb_guards import require_kb_enabled
 from escalated.models import (
@@ -46,7 +46,6 @@ from escalated.models import (
     Ticket,
     TicketLink,
     TicketStatus,
-    TwoFactor,
     Webhook,
     WebhookDelivery,
 )
@@ -1343,7 +1342,7 @@ def settings_update(request):
             continue
         EscalatedSetting.set(key, "1" if raw is not None and _truthy(raw) else "0")
 
-    for key in _OPTIONAL_BOOL_KEYS:
+    for key in _OPTIONAL_BOOL_KEYS + (["two_factor_required"] if feature_enabled("two_factor") else []):
         raw = data.get(key)
         if raw is not None:
             EscalatedSetting.set(key, "1" if _truthy(raw) else "0")
@@ -3935,80 +3934,6 @@ def settings_sso(request):
         if key in settings:
             settings[key] = secret_mask.mask(settings[key])
     return render_page(request, "Escalated/Admin/Settings/SsoSettings", props={"settings": settings})
-
-
-@login_required
-def settings_two_factor(request):
-    check = _require_admin(request)
-    if check:
-        return check
-    two_factor = TwoFactor.objects.filter(user=request.user).first()
-    return render_page(
-        request,
-        "Escalated/Admin/Settings/TwoFactor",
-        props={
-            "enabled": two_factor.is_confirmed() if two_factor else False,
-            "pending": two_factor is not None and not two_factor.is_confirmed() if two_factor else False,
-        },
-    )
-
-
-@login_required
-def two_factor_setup(request):
-    check = _require_admin(request)
-    if check:
-        return check
-    if request.method != "POST":
-        return HttpResponseForbidden(_("Method not allowed"))
-    from escalated.services.two_factor_service import TwoFactorService
-
-    service = TwoFactorService()
-    TwoFactor.objects.filter(user=request.user, confirmed_at__isnull=True).delete()
-    secret = service.generate_secret()
-    recovery_codes = service.generate_recovery_codes()
-    TwoFactor.objects.create(user=request.user, secret=secret, recovery_codes=recovery_codes)
-    qr_uri = service.generate_qr_uri(secret, request.user.email)
-    return JsonResponse({"qr_uri": qr_uri, "recovery_codes": recovery_codes})
-
-
-@login_required
-def two_factor_confirm(request):
-    check = _require_admin(request)
-    if check:
-        return check
-    if request.method != "POST":
-        return HttpResponseForbidden(_("Method not allowed"))
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-    code = body.get("code", "").strip()
-    if not code or len(code) != 6:
-        return JsonResponse({"error": "Code must be 6 digits"}, status=400)
-    two_factor = TwoFactor.objects.filter(user=request.user, confirmed_at__isnull=True).first()
-    if not two_factor:
-        return JsonResponse({"error": "No pending 2FA setup"}, status=400)
-    from escalated.services.two_factor_service import TwoFactorService
-
-    service = TwoFactorService()
-    if not service.verify(two_factor.secret, code):
-        return JsonResponse({"error": "Invalid code"}, status=400)
-    from django.utils import timezone as tz
-
-    two_factor.confirmed_at = tz.now()
-    two_factor.save(update_fields=["confirmed_at", "updated_at"])
-    return JsonResponse({"success": True})
-
-
-@login_required
-def two_factor_disable(request):
-    check = _require_admin(request)
-    if check:
-        return check
-    if request.method != "POST":
-        return HttpResponseForbidden(_("Method not allowed"))
-    TwoFactor.objects.filter(user=request.user).delete()
-    return JsonResponse({"success": True})
 
 
 # ---------------------------------------------------------------------------

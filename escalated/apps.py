@@ -16,6 +16,10 @@ class EscalatedConfig(AppConfig):
         import escalated.plugin_actions  # noqa: F401 - delivers the canonical events to plugins
         import escalated.webhook_handlers  # noqa: F401 - delivers admin-configured webhooks
         import escalated.workflow_handlers  # noqa: F401 - connects WorkflowEngine to signals
+        from escalated.access import connect_two_factor_signals
+
+        # Two-factor: every login passes the challenge again.
+        connect_two_factor_signals()
 
         # Populate the custom ticket action registry from settings.
         self._load_ticket_actions()

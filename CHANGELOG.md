@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Upgrading
+- **Two-factor authentication is now an install-level switch, off by default**
+  (`ESCALATED["ACCESS"]["two_factor"]`, env `ESCALATED_TWO_FACTOR`; ADR
+  2026-10-29-configurable-access-features). Nothing ever asked for the code, so
+  off is how every install already behaved; while it is off the enrolment
+  screen answers 404. Run `python manage.py migrate escalated` (0037 adds
+  `last_used_step` and stores the secret and recovery codes sealed), then set
+  the switch. Users who enrolled before are challenged from their next visit.
+  Set `ESCALATED_TWO_FACTOR_REQUIRED=true` (or the setting) only after telling
+  staff. See `docs/access-control.md`.
+- The enrolment endpoints (`admin/settings/two-factor/setup|confirm|disable/`)
+  now answer the shared page with a redirect and flash, and JSON to API
+  clients (`Accept: application/json`), as escalated-laravel does; they were
+  JSON only, and admin only.
+- New dependency: `pyotp` (TOTP); the hand-rolled HMAC is gone.
 - **Roles & permissions is now an install-level switch, off by default**
   (`ESCALATED["ACCESS"]["roles_permissions"]`, env
   `ESCALATED_ROLES_PERMISSIONS`; ADR 2026-10-29-configurable-access-features).
@@ -60,6 +74,15 @@ All notable changes to this project will be documented in this file.
   capped at 500 rows.
 
 ### Added
+- **Two-factor authentication is enforced when switched on.** A staff user
+  with a confirmed enrolment must pass `Auth/TwoFactorChallenge`
+  (`/support/two-factor/challenge/`; TOTP code or single-use recovery code;
+  replayed codes refused; 5 attempts per minute) in their session before any
+  admin or agent view; JSON requests get `403 {two_factor_required: true}`.
+  Enrolment is open to agents as well as admins. Admins can require enrolment
+  (`ESCALATED["TWO_FACTOR"]["REQUIRED"]` or the `two_factor_required`
+  setting), and `python manage.py reset_two_factor <user>` clears a lost
+  device. Pages get `escalated.two_factor_required`.
 - **Roles & permissions are enforced when switched on.** Every admin, agent and
   staff API view needs its permission from the user's Escalated roles as well
   as the admin or agent check (map in `escalated/access.py`; unmapped staff URLs

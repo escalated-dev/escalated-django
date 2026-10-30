@@ -1,3 +1,5 @@
+import pyotp
+
 from escalated.services.two_factor_service import TwoFactorService
 
 
@@ -23,7 +25,7 @@ class TestTwoFactorService:
         import time
 
         time_step = int(time.time()) // service.PERIOD
-        code = service._generate_totp(secret, time_step)
+        code = pyotp.TOTP(secret).at(time_step * 30)
         assert service.verify(secret, code) is True
 
     def test_verify_with_wrong_code(self):

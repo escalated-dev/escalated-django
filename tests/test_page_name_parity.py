@@ -35,10 +35,9 @@ KNOWN_BLANK: set[str] = set()
 # of what is left. Rendering one means taking it off this list, and the test
 # below fails until that happens, so the list stays exact.
 NOT_YET_RENDERED = {
-    # Laravel itself does not render or enforce these.
+    # Laravel itself does not render these.
     "Escalated/Admin/Settings/Sandbox",
     "Escalated/Admin/Workflows/Builder",
-    "Escalated/Auth/TwoFactorChallenge",
     "Escalated/Error",
 }
 

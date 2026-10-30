@@ -18,6 +18,8 @@ dependencies = [
     # is the first release clear of the RSA, PKCS12 and bundled-OpenSSL
     # advisories published up to 2025; hosts can and should run newer.
     "cryptography>=44.0.1",
+    # TOTP for two-factor authentication (RFC 6238).
+    "pyotp>=2.9",
     # Central translations: a copy of escalated-locale's gettext catalogues
     # is bundled at escalated/_central_locale/ (see its README). PyPI rejects
     # git-URL dependencies, so escalated-locale itself is only the optional
