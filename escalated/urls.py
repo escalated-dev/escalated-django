@@ -19,6 +19,7 @@ from escalated.views import (
     import_views,
     inbound,
     mentions,
+    sso,
     two_factor,
     widget,
     widget_chat,
@@ -538,6 +539,16 @@ two_factor_patterns = guard_patterns(
     "staff",
 )
 urlpatterns = list(urlpatterns) + two_factor_patterns
+
+# Single sign-on for guests (ADR 2026-10-29); 404 while SSO is off or for a
+# provider other than the chosen one.
+urlpatterns += [
+    django_path("sso/login/", sso.login_view, name="sso_login"),
+    django_path("sso/saml/metadata/", sso.saml_metadata, name="sso_saml_metadata"),
+    django_path("sso/saml/acs/", sso.saml_acs, name="sso_saml_acs"),
+    django_path("sso/oauth/callback/", sso.oauth_callback, name="sso_oauth_callback"),
+    django_path("sso/jwt/callback/", sso.jwt_callback, name="sso_jwt_callback"),
+]
 
 # UI routes (only when UI is enabled)
 if get_setting("UI_ENABLED"):
