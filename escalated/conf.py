@@ -23,6 +23,9 @@ DEFAULTS = {
     "ROUTE_PREFIX": "support",
     "UI_ENABLED": True,
     "UI_RENDERER": None,
+    # Per-name overrides of the route() table shared as the `ziggy` prop
+    # (escalated.route_list): {"login": "/accounts/login/", "<name>": None}.
+    "ROUTES": {},
     "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
     "HOSTED_API_KEY": None,
     # Verifies X-Escalated-Signature on cloud → site webhooks (Synced mode)

@@ -24,7 +24,7 @@ MANIFEST = Path(__file__).resolve().parent / "fixtures" / "escalated-pages.json"
 
 # Inertia shares these with every page; they are not a screen's own business and
 # no component declares them.
-SHARED_PROPS = {"errors", "auth", "current_user", "flash", "escalated", "plugin_ui"}
+SHARED_PROPS = {"errors", "auth", "current_user", "flash", "escalated", "plugin_ui", "ziggy"}
 
 SCREENS = [
     ("escalated:admin_reports_sla_trends", "Escalated/Admin/Reports/SlaTrends"),

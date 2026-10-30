@@ -4,8 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Built-in `route()` table.** Every Escalated page now carries a `ziggy` Inertia prop (`{url, port, defaults, routes: {name: {uri, methods}}, location}`) mapping the names the shared frontend calls (`escalated.agent.tickets.show`, `escalated.admin.departments.update`, ...) to this package's real paths, reversed from `escalated.urls` so they follow your `include()` prefix. `{% load escalated_routes %}{% escalated_route_helper %}` in the Inertia layout installs a matching `window.route()` unless one exists. Names the frontend calls that this backend has no feature for: `escalated.agent.tickets.snooze`, `escalated.agent.tickets.unsnooze`, `escalated.admin.workflows.logs`.
+- `ESCALATED["ROUTES"]` overrides single names (a path, `{"uri", "methods"}`, or `None` to drop one). `login` defaults to `settings.LOGIN_URL`.
+
 ### Upgrading
 - **An Inertia visit to an Escalated route that ends in 403, 404, 419, 429, 500 or 503 now gets the shared `Escalated/Error` page** (props `status` and a generic `message`, as Rails and Laravel send them) instead of Django's or the view's own error body, which the Inertia client could only show in a modal. `EscalatedInertiaShareMiddleware` does it, so installs that already list it need no change; installs that do not list it keep the old behaviour. Full page loads, JSON requests (no `X-Inertia`), responses that are already Inertia pages, unmatched URLs and the host's own routes are untouched. A view's or exception's own message never reaches the page (a refused CSRF check is a 403 here, as Django answers it). While `DEBUG` is on, a 500 is left to Django's technical page. Off while `UI_ENABLED` is false.
+- **No more hand-mapped `window.route` shim.** Hosts that mapped Escalated's names themselves can delete the shim and add `{% escalated_route_helper %}`; if you keep it, it still wins (the helper only installs when `window.route` is not already a function), and a `ziggy` prop you share is merged over Escalated's name by name.
+- **Ticket URLs accept the ticket reference** as well as the id (`/support/agent/tickets/ESC-A1B2C3/`), since the shared pages link tickets by reference. An unknown reference is a 404. Views still receive the ticket's id.
+- **The admin form views take the verbs the shared pages send**: `PUT`/`PATCH` on the edit/update paths (departments, SLA policies, escalation rules, tags, canned responses, macros, statuses, business hours, roles, custom fields, KB articles and categories, capacity, webhooks, automations, custom objects and records, saved views, agent ticket update) and `DELETE` on their delete paths (plus ticket links and plugins). Before, a `PUT` rendered the edit page and saved nothing and a `DELETE` was refused. They are handled exactly as the `POST` they already accepted, which keeps working.
 
 ## [0.7.12] - 2026-10-30
 

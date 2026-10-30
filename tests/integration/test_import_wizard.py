@@ -32,7 +32,7 @@ from tests.fake_import_adapter import (
 )
 
 MANIFEST = Path(__file__).resolve().parent.parent / "fixtures" / "escalated-pages.json"
-SHARED_PROPS = {"errors", "auth", "current_user", "flash", "escalated", "plugin_ui"}
+SHARED_PROPS = {"errors", "auth", "current_user", "flash", "escalated", "plugin_ui", "ziggy"}
 BASE = "/support/admin/import"
 FIELD_MAPPINGS = {"tickets": {"subject": "title", "state": "status"}}
 

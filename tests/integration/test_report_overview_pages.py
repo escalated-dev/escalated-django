@@ -21,7 +21,7 @@ from django.utils import timezone
 from escalated.models import Reply, SatisfactionRating, Ticket
 from tests.factories import DepartmentFactory, SlaPolicyFactory, TicketFactory, UserFactory
 
-MANIFEST_SHARED = {"errors", "auth", "current_user", "flash", "escalated", "plugin_ui"}
+MANIFEST_SHARED = {"errors", "auth", "current_user", "flash", "escalated", "plugin_ui", "ziggy"}
 
 
 def get_page(client, url):
