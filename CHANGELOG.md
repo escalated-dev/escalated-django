@@ -88,6 +88,11 @@ All notable changes to this project will be documented in this file.
   capped at 500 rows.
 
 ### Added
+- **Admin > Users roles picker.** While roles & permissions is on, the users
+  screen sends `roles` (`{id, name, slug}`, by name) and each user's role slugs,
+  and `PUT C:/Program Files/Git/support/admin/users/<id>/roles/` (`{role_ids: [...]}`, needs `role.manage`) replaces a user's
+  roles, as escalated-laravel's `escalated.admin.users.roles`. 404 while the
+  switch is off.
 - **Sign-in through SSO when switched on**, with the provider chosen in Admin >
   Settings > SSO. SAML checks the assertion signature against the configured
   certificate, Issuer, Audience, Destination/Recipient, validity windows,

@@ -179,6 +179,7 @@ ROUTE_PERMISSIONS: list[tuple[str, list[str]]] = [
     # ---- Users -------------------------------------------------------------
     ("admin_users_index", ["user.view"]),
     ("admin_users_role", ["user.manage"]),
+    ("admin_users_roles", ["role.manage"]),
     ("admin_audit_logs_index", ["audit.view"]),
     # ---- Admin resources: index => *.view, everything else => *.manage ------
     *_resource("sla_policies", "sla"),

@@ -4266,10 +4266,28 @@ def users_index(request):
     ]
     rows.sort(key=lambda r: (not r["is_admin"], not r["is_agent"], r["id"]))
 
+    extra = {}
+    # Escalated roles, only while roles & permissions is enforced: each user's
+    # role slugs, and the roles an admin can give them (as Laravel).
+    if feature_enabled("roles_permissions"):
+        roles = list(Role.objects.order_by("name", "pk"))
+        slug_of = {role.pk: role.slug for role in roles}
+        assigned: dict[int, list[str]] = {}
+        through = Role.users.through
+        for user_pk, role_pk in through.objects.filter(user_id__in=page_user_ids).values_list("user_id", "role_id"):
+            if role_pk in slug_of:
+                assigned.setdefault(user_pk, []).append(slug_of[role_pk])
+        for row in rows:
+            row["roles"] = sorted(assigned.get(row["id"], []))
+        extra["roles"] = [{"id": role.pk, "name": role.name, "slug": role.slug} for role in roles]
+
     return render_page(
         request,
         "Escalated/Admin/Users/Index",
         props={
+            **extra,
+            "flash": request.session.pop(USERS_FLASH_SESSION_KEY, {}),
+            "errors": request.session.pop(USERS_ERRORS_SESSION_KEY, {}),
             "users": {
                 "data": rows,
                 "current_page": page.number,
@@ -4283,6 +4301,73 @@ def users_index(request):
             "currentUserId": request.user.pk if request.user.is_authenticated else None,
         },
     )
+
+
+USERS_FLASH_SESSION_KEY = "escalated_users_flash"
+USERS_ERRORS_SESSION_KEY = "escalated_users_errors"
+
+
+def _users_back(request, *, success=None, error=None, errors=None):
+    """Back to the users screen with a flash or field errors, as Laravel's back()."""
+    if errors:
+        request.session[USERS_ERRORS_SESSION_KEY] = errors
+    else:
+        request.session[USERS_FLASH_SESSION_KEY] = {"success": success} if success else {"error": error}
+    return redirect("escalated:admin_users_index")
+
+
+def _role_ids_errors(raw) -> dict:
+    """Laravel's rules: role_ids present, an array, of integers that are roles."""
+    if raw is None:
+        return {"role_ids": _("The role ids field must be present.")}
+    if not isinstance(raw, list):
+        return {"role_ids": _("The role ids field must be an array.")}
+    for index, value in enumerate(raw):
+        if isinstance(value, bool) or not (
+            isinstance(value, int) or (isinstance(value, str) and re_module.fullmatch(r"-?\d+", value))
+        ):
+            return {f"role_ids.{index}": _("The role_ids.%(i)s field must be an integer.") % {"i": index}}
+        if not Role.objects.filter(pk=int(value)).exists():
+            return {f"role_ids.{index}": _("The selected role_ids.%(i)s is invalid.") % {"i": index}}
+    return {}
+
+
+@feature_required("roles_permissions")
+@login_required
+def users_roles(request, user_id):
+    """Replace a user's Escalated roles (roles & permissions on only), as
+    escalated-laravel's UserController::updateRoles."""
+    check = _require_admin(request)
+    if check:
+        return check
+    if request.method not in ("PUT", "POST"):
+        return HttpResponseNotAllowed(["PUT"])
+
+    data = request_data(request)
+    raw = data.raw.get("role_ids") if is_json(request) else data.getlist("role_ids") or None
+    errors = _role_ids_errors(raw)
+    if errors:
+        return _users_back(request, errors=errors)
+    role_ids = list(dict.fromkeys(int(value) for value in raw))
+
+    try:
+        target = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return HttpResponseNotFound(_("User not found"))
+
+    # Taking away your own role management would leave nobody able to undo it.
+    if (
+        str(request.user.pk) == str(target.pk)
+        and not Role.objects.filter(pk__in=role_ids, permissions__slug="role.manage").exists()
+    ):
+        return _users_back(request, error=_("You cannot remove your own role management."))
+
+    with transaction.atomic():
+        through = Role.users.through
+        through.objects.filter(user_id=target.pk).delete()
+        through.objects.bulk_create([through(user_id=target.pk, role_id=role_id) for role_id in role_ids])
+
+    return _users_back(request, success=_("User updated."))
 
 
 @login_required

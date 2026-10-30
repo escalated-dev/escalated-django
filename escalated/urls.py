@@ -340,6 +340,7 @@ admin_patterns = [
     # Users management
     path("admin/users/", admin.users_index, name="admin_users_index"),
     path("admin/users/<int:user_id>/role/", admin.users_role, name="admin_users_role"),
+    path("admin/users/<int:user_id>/roles/", admin.users_roles, name="admin_users_roles"),
     # Workflows
     path("admin/workflows/", workflows.workflow_list, name="admin_workflows"),
     path("admin/workflows/create/", workflows.workflow_create, name="admin_workflow_create"),
