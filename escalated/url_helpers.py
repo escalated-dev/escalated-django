@@ -2,6 +2,9 @@
 
 from functools import wraps
 
+from django.urls import register_converter
+from django.urls.converters import get_converters
+
 
 class TicketConverter:
     """
@@ -28,6 +31,12 @@ class TicketConverter:
 
     def to_url(self, value):
         return str(value)
+
+
+# Registered here, not in escalated.urls: that module is re-imported when the
+# URLconf is reloaded, and Django 5.1+ refuses a second registration.
+if "esc_ticket" not in get_converters():
+    register_converter(TicketConverter, "esc_ticket")
 
 
 def accept_verbs(view, *verbs):

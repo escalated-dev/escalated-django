@@ -1,10 +1,10 @@
-from django.urls import include, register_converter
+from django.urls import include
 from django.urls import path as django_path
 
 from escalated.access import guard_patterns
 from escalated.conf import get_setting
 from escalated.ticket_access import path, ticket_access_view
-from escalated.url_helpers import TicketConverter, delete, put
+from escalated.url_helpers import delete, put
 from escalated.views import (
     admin,
     admin_plugins,
@@ -30,9 +30,9 @@ from escalated.widget_embed import widget_cors
 
 app_name = "escalated"
 
-# Tickets by reference or id: the shared pages link them by reference.
-# put()/delete() let POST-only form views take the verbs those pages send.
-register_converter(TicketConverter, "esc_ticket")
+# <esc_ticket:...> (escalated.url_helpers): a ticket by reference or id, as
+# the shared pages link tickets by reference. put()/delete() let POST-only
+# form views take the verbs those pages send.
 
 # Customer-facing URLs
 customer_patterns = [
