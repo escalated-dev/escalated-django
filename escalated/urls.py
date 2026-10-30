@@ -19,6 +19,7 @@ from escalated.views import (
     import_views,
     inbound,
     mentions,
+    two_factor,
     widget,
     widget_chat,
     workflows,
@@ -295,10 +296,11 @@ admin_patterns = [
     path("admin/settings/email/", admin_settings_pages.settings_email, name="admin_settings_email_update"),
     # Settings - SSO, 2FA
     path("admin/settings/sso/", admin.settings_sso, name="admin_settings_sso"),
-    path("admin/settings/two-factor/", admin.settings_two_factor, name="admin_settings_two_factor"),
-    path("admin/settings/two-factor/setup/", admin.two_factor_setup, name="admin_two_factor_setup"),
-    path("admin/settings/two-factor/confirm/", admin.two_factor_confirm, name="admin_two_factor_confirm"),
-    path("admin/settings/two-factor/disable/", admin.two_factor_disable, name="admin_two_factor_disable"),
+    # Two-factor enrolment, for every staff user; 404 while two-factor is off.
+    path("admin/settings/two-factor/", two_factor.settings_two_factor, name="admin_settings_two_factor"),
+    path("admin/settings/two-factor/setup/", two_factor.two_factor_setup, name="admin_two_factor_setup"),
+    path("admin/settings/two-factor/confirm/", two_factor.two_factor_confirm, name="admin_two_factor_confirm"),
+    path("admin/settings/two-factor/disable/", two_factor.two_factor_disable, name="admin_two_factor_disable"),
     # Custom Objects
     path("admin/custom-objects/", admin.custom_objects_index, name="admin_custom_objects_index"),
     path("admin/custom-objects/create/", admin.custom_objects_create, name="admin_custom_objects_create"),
@@ -528,6 +530,14 @@ guard_patterns(agent_patterns, "agent")
 guard_patterns(chat_patterns, "agent")
 guard_patterns(admin_patterns, "admin")
 guard_patterns(admin_newsletter_patterns, "admin")
+
+# The two-factor challenge after the host's login (ADR 2026-10-29); 404 while
+# two-factor is off.
+two_factor_patterns = guard_patterns(
+    [path("two-factor/challenge/", two_factor.challenge, name="two_factor_challenge")],
+    "staff",
+)
+urlpatterns = list(urlpatterns) + two_factor_patterns
 
 # UI routes (only when UI is enabled)
 if get_setting("UI_ENABLED"):

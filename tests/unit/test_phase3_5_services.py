@@ -1,3 +1,4 @@
+import pyotp
 import pytest
 
 from escalated.models import AgentCapacity, Automation, Reply
@@ -81,7 +82,7 @@ class TestTwoFactorService:
     def test_generate_secret(self):
         secret = self.service.generate_secret()
         assert isinstance(secret, str)
-        assert len(secret) == 16
+        assert len(secret) == 32
 
     def test_generate_qr_uri(self):
         uri = self.service.generate_qr_uri("JBSWY3DPEHPK3PXP", "user@example.com")
@@ -95,7 +96,7 @@ class TestTwoFactorService:
         import time
 
         time_step = int(time.time()) // 30
-        code = self.service._generate_totp(secret, time_step)
+        code = pyotp.TOTP(secret).at(time_step * 30)
         assert self.service.verify(secret, code) is True
 
     def test_verify_invalid_code(self):

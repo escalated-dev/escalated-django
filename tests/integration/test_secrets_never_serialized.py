@@ -329,7 +329,8 @@ class TestInboundEmailSecrets:
 
 @pytest.mark.django_db
 class TestTwoFactorAndApiTokens:
-    def test_two_factor_status_page_carries_no_secret(self, admin_client, admin_user):
+    def test_two_factor_status_page_carries_no_secret(self, admin_client, admin_user, settings):
+        settings.ESCALATED = {**settings.ESCALATED, "ACCESS": {"two_factor": True}}
         TwoFactor.objects.create(user=admin_user, secret=TOTP_SECRET, recovery_codes=[RECOVERY_CODE])
         response = admin_client.get(f"{BASE}/settings/two-factor/", **INERTIA)
         assert_has_no_secrets(response, [TOTP_SECRET, RECOVERY_CODE])

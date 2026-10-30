@@ -99,6 +99,7 @@ class EscalatedInertiaShareMiddleware:
                 pass
 
             data["features"] = {"newsletters": bool(get_setting("enable_newsletters")), **shared_features()}
+            data["two_factor_required"] = _two_factor_enrolment_required(request.user, data)
 
             # Plugin menus, slots and widgets, in the shape the shared
             # frontend's usePluginExtensions() reads (plugin contract).
@@ -182,3 +183,12 @@ class EscalatedCsrfMiddleware:
             httponly=False,
             samesite=settings.CSRF_COOKIE_SAMESITE,
         )
+
+
+def _two_factor_enrolment_required(user, data) -> bool:
+    """Whether the signed-in staff user must enrol in two-factor before going on."""
+    if not user.is_authenticated or not (data.get("is_agent") or data.get("is_admin")):
+        return False
+    from escalated.services.two_factor_service import TwoFactorService
+
+    return TwoFactorService.required() and TwoFactorService.confirmed_for(user) is None

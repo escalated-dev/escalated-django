@@ -2082,66 +2082,6 @@ class Automation(models.Model):
 # ---------------------------------------------------------------------------
 
 
-class TwoFactor(models.Model):
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
-        db_constraint=False,
-        on_delete=models.CASCADE,
-        related_name="escalated_two_factor",
-    )
-    secret = models.TextField()
-    recovery_codes = models.JSONField(null=True, blank=True)
-    confirmed_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = get_table_name("two_factor")
-
-    def __str__(self):
-        return f"2FA for {self.user}"
-
-    def is_confirmed(self) -> bool:
-        return self.confirmed_at is not None
-
-
-class CustomObject(models.Model):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True)
-    fields_schema = models.JSONField(default=list)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = get_table_name("custom_objects")
-
-    def __str__(self):
-        return self.name
-
-
-class CustomObjectRecord(models.Model):
-    object = models.ForeignKey(
-        CustomObject,
-        on_delete=models.CASCADE,
-        related_name="records",
-    )
-    data = models.JSONField(default=dict)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = get_table_name("custom_object_records")
-
-    def __str__(self):
-        return f"Record {self.pk} for {self.object.name}"
-
-
-# ---------------------------------------------------------------------------
-# Import Framework
-# ---------------------------------------------------------------------------
-
-
 class EncryptedJSONField(models.TextField):
     """
     A TextField that transparently encrypts/decrypts a JSON-serialisable
@@ -2196,6 +2136,98 @@ class EncryptedJSONField(models.TextField):
         plaintext = json.dumps(value).encode()
         token = fernet.encrypt(plaintext).decode()
         return self.PREFIX + token
+
+
+class EncryptedTextField(models.TextField):
+    """
+    A TextField sealed at rest with the same Fernet key as EncryptedJSONField
+    (derived from SECRET_KEY). A value stored before sealing is read as is and
+    sealed when next saved.
+    """
+
+    PREFIX = "enc::"
+
+    def _get_fernet(self):
+        return EncryptedJSONField._get_fernet(self)
+
+    def from_db_value(self, value, expression, connection):
+        if isinstance(value, str) and value.startswith(self.PREFIX):
+            return self._get_fernet().decrypt(value[len(self.PREFIX) :].encode()).decode()
+        return value
+
+    def to_python(self, value):
+        return self.from_db_value(value, None, None)
+
+    def get_prep_value(self, value):
+        if value is None:
+            return None
+        value = str(value)
+        if value.startswith(self.PREFIX):
+            return value
+        return self.PREFIX + self._get_fernet().encrypt(value.encode()).decode()
+
+
+class TwoFactor(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
+        on_delete=models.CASCADE,
+        related_name="escalated_two_factor",
+    )
+    # Sealed at rest (ADR 2026-10-29-configurable-access-features).
+    secret = EncryptedTextField()
+    recovery_codes = EncryptedJSONField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    # The TOTP time step last accepted; that step and earlier ones are refused.
+    last_used_step = models.BigIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("two_factor")
+
+    def __str__(self):
+        return f"2FA for {self.user}"
+
+    def is_confirmed(self) -> bool:
+        return self.confirmed_at is not None
+
+
+class CustomObject(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    fields_schema = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("custom_objects")
+
+    def __str__(self):
+        return self.name
+
+
+class CustomObjectRecord(models.Model):
+    object = models.ForeignKey(
+        CustomObject,
+        on_delete=models.CASCADE,
+        related_name="records",
+    )
+    data = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("custom_object_records")
+
+    def __str__(self):
+        return f"Record {self.pk} for {self.object.name}"
+
+
+# ---------------------------------------------------------------------------
+# Import Framework
+# ---------------------------------------------------------------------------
 
 
 class ImportJob(models.Model):

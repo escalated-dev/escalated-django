@@ -14,6 +14,7 @@ environment. No admin screen or stored setting changes them.
 | Feature | Setting | Env var |
 |---|---|---|
 | Roles & permissions | `ESCALATED["ACCESS"]["roles_permissions"]` | `ESCALATED_ROLES_PERMISSIONS` |
+| Two-factor authentication | `ESCALATED["ACCESS"]["two_factor"]` | `ESCALATED_TWO_FACTOR` |
 
 ```python
 ESCALATED = {
@@ -81,3 +82,49 @@ Staff without a role can still reach their personal screens and nothing else.
 Every page gets `escalated.features.roles_permissions` (boolean) and
 `escalated.permissions`: the user's slugs while on, `['*']` for staff while
 off, `[]` for everyone else.
+
+## Two-factor authentication
+
+### What is enforced
+
+With `ESCALATED_TWO_FACTOR=true` (after `python manage.py migrate escalated`):
+
+- TOTP is RFC 6238 (SHA-1, 6 digits, 30 s) through `pyotp`, with one step of
+  drift either side. A code's time step is recorded when it is accepted, and
+  that step or an earlier one is refused afterwards.
+- A staff user with a confirmed enrolment who opens any admin or agent view
+  without having passed the challenge in this session is redirected to
+  `GET /support/two-factor/challenge/` (`Escalated/Auth/TwoFactorChallenge`,
+  props `action` and `error`). JSON requests get
+  `403 {"two_factor_required": true}`.
+- The challenge posts `code` or `recovery_code` to the same URL. Success
+  cycles the session key, marks the session for that user and returns to the
+  page they asked for. Failure is a validation error on the field sent. Five
+  attempts per user per minute (Django's cache); then 429.
+- Every login is challenged again: the mark is cleared on Django's
+  `user_logged_in` and `user_logged_out` signals.
+- Eight single-use recovery codes are issued at setup; a code that signs
+  someone in is removed. Secrets and recovery codes are sealed at rest with a
+  key derived from `SECRET_KEY`; enrolments stored before are read as they are.
+- Enrolment (`/support/admin/settings/two-factor/`, and `setup/`, `confirm/`,
+  `disable/`) is open to every staff user, not only admins, and needs no
+  permission. Confirming marks the session as passed.
+- The token API is not session-based and is not challenged.
+
+### Requiring it
+
+`ESCALATED["TWO_FACTOR"] = {"REQUIRED": True}` (`ESCALATED_TWO_FACTOR_REQUIRED`),
+or the `two_factor_required` setting (posted to `admin/settings/update/`; the
+setting wins once saved). When required, a staff user without an enrolment is
+sent to enrol and can use nothing else until they do. Pages get
+`escalated.two_factor_required`.
+
+### Lost device
+
+`python manage.py reset_two_factor user@example.com` removes a user's
+enrolment.
+
+### While it is off
+
+The enrolment and challenge routes answer 404 and nobody is challenged.
+Enrolments are kept.

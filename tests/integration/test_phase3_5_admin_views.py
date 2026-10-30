@@ -14,7 +14,7 @@ from escalated.models import (
     TwoFactor,
     Webhook,
 )
-from escalated.views import admin
+from escalated.views import admin, two_factor
 from tests.factories import (
     AgentCapacityFactory,
     AutomationFactory,
@@ -339,11 +339,20 @@ class TestAutomationsAdminViews:
 
 @pytest.mark.django_db
 class TestTwoFactorAdminViews:
+    """Enrolment, as API clients call it (JSON); the screens are covered in test_two_factor_enforcement."""
+
+    @pytest.fixture(autouse=True)
+    def _two_factor_on(self, settings):
+        settings.ESCALATED = {**settings.ESCALATED, "ACCESS": {"two_factor": True}}
+
+    def _request(self, rf, path, user, data=None):
+        request = _make_admin_request(rf, "POST", path, data=data or {}, user=user, content_type="application/json")
+        request.META["HTTP_ACCEPT"] = "application/json"
+        return request
+
     def test_setup_creates_two_factor(self, rf):
         user = UserFactory(username="2fa_admin", is_staff=True, is_superuser=True)
-        request = _make_admin_request(rf, "POST", "/admin/settings/two-factor/setup/", user=user)
-
-        response = admin.two_factor_setup(request)
+        response = two_factor.two_factor_setup(self._request(rf, "/admin/settings/two-factor/setup/", user))
         assert response.status_code == 200
         data = json.loads(response.content)
         assert "qr_uri" in data
@@ -352,28 +361,16 @@ class TestTwoFactorAdminViews:
 
     def test_confirm_validates_code(self, rf):
         user = UserFactory(username="2fa_confirm", is_staff=True, is_superuser=True)
-        # First setup
-        setup_request = _make_admin_request(rf, "POST", "/admin/settings/two-factor/setup/", user=user)
-        admin.two_factor_setup(setup_request)
-
-        # Try invalid code
-        confirm_request = _make_admin_request(
-            rf,
-            "POST",
-            "/admin/settings/two-factor/confirm/",
-            data={"code": "000000"},
-            user=user,
-            content_type="application/json",
+        two_factor.two_factor_setup(self._request(rf, "/admin/settings/two-factor/setup/", user))
+        response = two_factor.two_factor_confirm(
+            self._request(rf, "/admin/settings/two-factor/confirm/", user, {"code": "000000"})
         )
-        response = admin.two_factor_confirm(confirm_request)
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_disable_removes_two_factor(self, rf):
         user = UserFactory(username="2fa_disable", is_staff=True, is_superuser=True)
         TwoFactorFactory(user=user)
-
-        request = _make_admin_request(rf, "POST", "/admin/settings/two-factor/disable/", user=user)
-        response = admin.two_factor_disable(request)
+        response = two_factor.two_factor_disable(self._request(rf, "/admin/settings/two-factor/disable/", user))
         assert response.status_code == 200
         assert not TwoFactor.objects.filter(user=user).exists()
 

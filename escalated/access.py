@@ -75,6 +75,7 @@ ROUTE_PERMISSIONS: list[tuple[str, list[str]]] = [
     # ---- Personal ----------------------------------------------------------
     ("admin_settings_two_factor", []),
     ("admin_two_factor_*", []),
+    ("two_factor_challenge", []),
     # ---- Tickets (admin and agent panels, staff API) -----------------------
     ("agent_dashboard", VIEW),
     ("api:dashboard", VIEW),
@@ -324,7 +325,7 @@ def _gate_passes(group: str, request) -> bool:
         return False
     if group == "admin":
         return is_admin(user)
-    if group == "agent":
+    if group in ("agent", "staff"):
         return is_agent(user) or is_admin(user)
     if group == "api":
         return getattr(request, "api_token", None) is not None
@@ -357,17 +358,109 @@ def enforce_route_permissions(request, url_name: str):
     return None
 
 
+# --------------------------------------------------------------------------
+# Two-factor: the challenge between the host's login and the admin and agent
+# areas. The mark lives in the session, holds the user's id, and is cleared on
+# every login and logout (user_logged_in / user_logged_out).
+# --------------------------------------------------------------------------
+
+TWO_FACTOR_PASSED = "escalated_two_factor_passed"
+TWO_FACTOR_INTENDED = "escalated_two_factor_intended"
+
+# URL names that are the two-factor screens themselves.
+TWO_FACTOR_ROUTES = {
+    "two_factor_challenge": "challenge",
+    "admin_settings_two_factor": "enrolment",
+    "admin_two_factor_setup": "enrolment",
+    "admin_two_factor_confirm": "enrolment",
+    "admin_two_factor_disable": "enrolment",
+}
+
+
+def two_factor_passed(request, user) -> bool:
+    session = getattr(request, "session", None)
+    return session is not None and user is not None and session.get(TWO_FACTOR_PASSED) == str(user.pk)
+
+
+def mark_two_factor_passed(request, user) -> None:
+    request.session[TWO_FACTOR_PASSED] = str(user.pk)
+
+
+def forget_two_factor(request) -> None:
+    session = getattr(request, "session", None)
+    if session is not None:
+        session.pop(TWO_FACTOR_PASSED, None)
+
+
+def take_intended_url(request):
+    url = request.session.pop(TWO_FACTOR_INTENDED, None)
+    return url if isinstance(url, str) and url.startswith("/") and not url.startswith("//") else None
+
+
+def _two_factor_redirect(request, url_name: str, message: str):
+    from django.shortcuts import redirect
+    from django.urls import reverse
+
+    if _wants_json(request):
+        return JsonResponse({"message": message, "two_factor_required": True}, status=403)
+    if request.method == "GET":
+        request.session[TWO_FACTOR_INTENDED] = request.get_full_path()
+    response = redirect(reverse(f"escalated:{url_name}"))
+    if request.method != "GET":
+        response.status_code = 303
+    return response
+
+
+def enforce_two_factor(request, url_name: str):
+    """
+    While two-factor is on: a staff user with a confirmed enrolment who has
+    not passed the challenge in this session is sent to it; while it is
+    required, a staff user without one is sent to enrol. API token requests
+    are not session-based and are not challenged. Returns a response or None.
+    """
+    if not feature_enabled("two_factor") or getattr(request, "api_token", None) is not None:
+        return None
+    kind = TWO_FACTOR_ROUTES.get(url_name)
+    if kind == "challenge":
+        return None
+
+    from escalated.services.two_factor_service import TwoFactorService
+
+    user = request.user
+    if TwoFactorService.confirmed_for(user):
+        if two_factor_passed(request, user):
+            return None
+        return _two_factor_redirect(request, "two_factor_challenge", "Two-factor authentication is required.")
+    if kind != "enrolment" and TwoFactorService.required():
+        message = "Set up two-factor authentication to continue."
+        return _two_factor_redirect(request, "admin_settings_two_factor", message)
+    return None
+
+
+def connect_two_factor_signals():
+    """Every login must pass the challenge again."""
+    from django.contrib.auth.signals import user_logged_in, user_logged_out
+
+    def _forget(sender, request=None, **kwargs):
+        if request is not None:
+            forget_two_factor(request)
+
+    user_logged_in.connect(_forget, dispatch_uid="escalated_two_factor_login", weak=False)
+    user_logged_out.connect(_forget, dispatch_uid="escalated_two_factor_logout", weak=False)
+
+
 def staff_view(group: str, url_name: str, view):
     """
-    The host gate (inside the view, as before), then with roles & permissions
-    on the URL's permission from the user's roles. Both must pass. A request
-    the gate refuses goes straight to the view, which refuses it its own way.
+    The host gate (inside the view, as before), then the two-factor challenge
+    and, with roles & permissions on, the URL's permission from the user's
+    roles. All must pass. A request the gate refuses goes straight to the
+    view, which refuses it its own way.
     """
 
     @functools.wraps(view)
     def wrapped(request, *args, **kwargs):
         if _gate_passes(group, request):
-            refused = enforce_route_permissions(request, url_name)
+            refused = enforce_two_factor(request, url_name) or enforce_route_permissions(request, url_name)
             if refused is not None:
                 return refused
         return view(request, *args, **kwargs)
@@ -382,7 +475,10 @@ def guard_patterns(patterns, group: str, prefix: str = "") -> list:
     for pattern in patterns:
         if getattr(pattern, "callback", None) is None or getattr(pattern.callback, "escalated_access_group", None):
             continue
-        pattern.callback = staff_view(group, prefix + (pattern.name or ""), pattern.callback)
+        name = pattern.name or ""
+        # Two-factor screens are the user's own: any staff user reaches them.
+        pattern_group = "staff" if name in TWO_FACTOR_ROUTES else group
+        pattern.callback = staff_view(pattern_group, prefix + name, pattern.callback)
     return patterns
 
 
