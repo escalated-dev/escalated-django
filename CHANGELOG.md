@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Upgrading
+- **Roles & permissions is now an install-level switch, off by default**
+  (`ESCALATED["ACCESS"]["roles_permissions"]`, env
+  `ESCALATED_ROLES_PERMISSIONS`; ADR 2026-10-29-configurable-access-features).
+  Roles were stored but only the newsletter screens checked them, so off is how
+  almost every install already behaved. While it is off the roles screens
+  (`/support/admin/roles/*`) answer 404, and the newsletter screens and plugin
+  item `permission`s no longer check roles (the admin check decides). Installs
+  that relied on those must turn the switch on. To enforce roles: run
+  `python manage.py seed_permissions`, give every staff user a role
+  (`python manage.py assign_role you@example.com admin`), then turn the switch
+  on. An admin without a role is refused everywhere but their own two-factor
+  screen. See `docs/access-control.md`.
+- The shared `escalated.permissions` prop is `['*']` for staff while the switch
+  is off, and `escalated.features` carries `roles_permissions`, `two_factor`
+  and `sso`.
 - With SDK plugins on (`ESCALATED['SDK_ENABLED']`), run
   `python manage.py escalated_plugin_cron` every minute (cron, Celery Beat,
   django-crontab) so SDK plugins' `cron` schedules run. Without it they never
@@ -45,6 +60,14 @@ All notable changes to this project will be documented in this file.
   capped at 500 rows.
 
 ### Added
+- **Roles & permissions are enforced when switched on.** Every admin, agent and
+  staff API view needs its permission from the user's Escalated roles as well
+  as the admin or agent check (map in `escalated/access.py`; unmapped staff URLs
+  are refused and a test checks every one is mapped). Status changes to
+  `resolved`/`closed`/`reopened` also need `ticket.close`, bulk actions need
+  each action's permission, internal API replies need `reply.create_internal`,
+  and API tokens are checked as their owner. Failing answers 403.
+- `python manage.py assign_role <user> <role>`.
 - **SDK plugin cron schedules run.** `python manage.py escalated_plugin_cron`
   (every minute; `--at` picks the minute) sends `cron {plugin, schedule}` to
   the plugin runtime for each schedule in a plugin's manifest `cronSchedules`
