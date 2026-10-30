@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.10] - 2026-10-30
+
 ### Upgrading
 - **Single sign-on is an install-level switch, off by default**
   (`ESCALATED["ACCESS"]["sso"]`, env `ESCALATED_SSO`; ADR
