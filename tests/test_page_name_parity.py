@@ -38,7 +38,6 @@ NOT_YET_RENDERED = {
     # Laravel itself does not render these.
     "Escalated/Admin/Settings/Sandbox",
     "Escalated/Admin/Workflows/Builder",
-    "Escalated/Error",
 }
 
 PAGE_NAME = re.compile(r'"(Escalated/[A-Za-z0-9/_]+)"')

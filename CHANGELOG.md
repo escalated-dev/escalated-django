@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Upgrading
+- **An Inertia visit to an Escalated route that ends in 403, 404, 419, 429, 500 or 503 now gets the shared `Escalated/Error` page** (props `status` and a generic `message`, as Rails and Laravel send them) instead of Django's or the view's own error body, which the Inertia client could only show in a modal. `EscalatedInertiaShareMiddleware` does it, so installs that already list it need no change; installs that do not list it keep the old behaviour. Full page loads, JSON requests (no `X-Inertia`), responses that are already Inertia pages, unmatched URLs and the host's own routes are untouched. A view's or exception's own message never reaches the page (a refused CSRF check is a 403 here, as Django answers it). While `DEBUG` is on, a 500 is left to Django's technical page. Off while `UI_ENABLED` is false.
+
 ## [0.7.12] - 2026-10-30
 
 ### Upgrading
