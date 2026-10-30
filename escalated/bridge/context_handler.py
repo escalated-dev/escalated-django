@@ -470,7 +470,7 @@ class ContextHandler:
         return [self._model_to_dict(t) for t in qs]
 
     def _tickets_create(self, params: dict) -> dict:
-        from escalated.models import Contact, Ticket
+        from escalated.models import Contact
 
         method = "ctx.tickets.create"
         data = _contract_fields(params.get("data"), TICKET_CREATE_FIELDS, method)
@@ -498,7 +498,12 @@ class ContextHandler:
             attributes["guest_email"] = contact.email
             attributes["guest_name"] = contact.name or contact.email
 
-        ticket = Ticket.objects.create(**attributes)
+        # Through the ticket service, like a guest or widget ticket: SLA, the
+        # created activity, ticket.created, workflows and webhooks.
+        from escalated.services.ticket_service import TicketService
+
+        ticket = TicketService().create_for_system(attributes, self._acting_user)
+        ticket.refresh_from_db()
         return self._model_to_dict(ticket)
 
     def _tickets_update(self, params: dict) -> dict:
@@ -511,11 +516,50 @@ class ContextHandler:
         attributes = _ticket_attributes(data, "ctx.tickets.update")
 
         ticket = Ticket.objects.get(pk=ticket_id)
-        for field, value in attributes.items():
-            setattr(ticket, field, value)
-        ticket.save()
+        self._update_ticket(ticket, attributes)
         ticket.refresh_from_db()
         return self._model_to_dict(ticket)
+
+    def _update_ticket(self, ticket, attributes):
+        """
+        Each change goes the way the API makes it, through the ticket
+        service, so it is logged and announced (ticket.updated,
+        ticket.priority_changed, ticket.department_changed,
+        ticket.status_changed).
+        """
+        from escalated.models import Ticket
+        from escalated.services.ticket_service import TicketService
+        from escalated.signals import ticket_updated
+
+        service = TicketService()
+        actor = self._acting_user
+
+        # Fields the service's update does not take: written here, announced
+        # as ticket.updated with the rest.
+        extra = {}
+        if "ticket_type" in attributes and attributes["ticket_type"] != ticket.ticket_type:
+            extra["ticket_type"] = {"old": ticket.ticket_type, "new": attributes["ticket_type"]}
+            ticket.ticket_type = attributes["ticket_type"]
+        if "department" in attributes and attributes["department"] is None and ticket.department_id is not None:
+            extra["department_id"] = {"old": ticket.department_id, "new": None}
+            ticket.department = None
+        if extra:
+            ticket.save()
+
+        details = {key: attributes[key] for key in ("subject", "description", "metadata") if key in attributes}
+        changed = {key for key, value in details.items() if getattr(ticket, key) != value}
+        if changed:
+            service.update(ticket, actor, details)
+        if extra:
+            ticket_updated.send(sender=Ticket, ticket=ticket, user=actor, changes=extra)
+
+        if attributes.get("priority"):
+            service.change_priority(ticket, actor, attributes["priority"])
+        department = attributes.get("department")
+        if department is not None and department.pk != ticket.department_id:
+            service.change_department(ticket, actor, department)
+        if attributes.get("status"):
+            service.change_status(ticket, actor, attributes["status"])
 
     # ------------------------------------------------------------------
     # Replies
@@ -555,14 +599,13 @@ class ContextHandler:
         internal = data.get("is_internal") in (True, 1, "1", "true")
 
         # The author is the acting user (the signed-in user of the request the
-        # plugin is serving), or nobody: a plugin never names it.
-        reply = Reply.objects.create(
-            ticket=ticket,
-            body=body,
-            is_internal_note=internal,
-            type=Reply.Type.NOTE if internal else Reply.Type.REPLY,
-            author=self._acting_user,
-        )
+        # plugin is serving), or nobody: a plugin never names it. Through the
+        # ticket service, like a reply over the API: the status follow-up,
+        # activity log, reply.created / note.created, workflows and webhooks.
+        from escalated.services.ticket_service import TicketService
+
+        reply = TicketService().reply(ticket, self._acting_user, {"body": body, "is_internal_note": internal})
+        reply = Reply.objects.get(pk=reply.pk)
         return self._model_to_dict(reply)
 
     # ------------------------------------------------------------------
@@ -766,7 +809,9 @@ class ContextHandler:
             if is_reserved_hook(hook):
                 logger.warning("Dropped ctx.emit of reserved hook %s from %s", hook, self.current_plugin)
                 return None
-            self._bridge.dispatch_action(hook, data)
+            from escalated.plugin_actions import guard
+
+            guard(hook, lambda: self._bridge.dispatch_action(hook, data))
         return None
 
     def _ctx_log(self, params: dict) -> None:

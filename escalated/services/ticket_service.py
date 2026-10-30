@@ -27,6 +27,31 @@ class TicketService:
 
         return self.driver.create_ticket(user, data)
 
+    def create_for_system(self, data, user=None):
+        """
+        Open a ticket for a system caller (an SDK or native plugin) whose
+        requester is a contact or nobody, never a user it names.
+
+        Written like the guest, widget and inbound-mail tickets: the local
+        row, then ``ticket_created`` (default SLA, the created activity,
+        notifications, workflows, webhooks, plugins). A status other than
+        open is reached through ``change_status`` by ``user``, so it is
+        logged and announced like any status change.
+        """
+        from escalated.models import Ticket
+        from escalated.signals import ticket_created
+
+        fields = dict(data)
+        status = fields.pop("status", None)
+        fields["priority"] = fields.get("priority") or get_setting("DEFAULT_PRIORITY")
+        fields["ticket_type"] = fields.get("ticket_type") or Ticket.TicketType.QUESTION
+        fields["status"] = Ticket.Status.OPEN
+        ticket = Ticket.objects.create(**fields)
+        ticket_created.send(sender=Ticket, ticket=ticket, user=user)
+        if status and status != ticket.status:
+            ticket = self.change_status(ticket, user, status)
+        return ticket
+
     def update(self, ticket, user, data):
         """Update ticket fields (subject, description, metadata)."""
         return self.driver.update_ticket(ticket, user, data)

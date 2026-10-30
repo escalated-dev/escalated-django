@@ -21,6 +21,7 @@ escalated.handlers.
 """
 
 import logging
+import threading
 
 from django.db import transaction
 from django.dispatch import receiver
@@ -32,6 +33,43 @@ from escalated.support.import_context import ImportContext
 logger = logging.getLogger("escalated")
 
 LIFECYCLE_ACTIONS = ("plugin.activated", "plugin.deactivated", "plugin.uninstalling")
+
+# How many plugin actions may nest (see guard).
+MAX_DEPTH = 3
+
+_running = threading.local()
+
+
+def _stack():
+    return list(getattr(_running, "stack", None) or ())
+
+
+def guard(name, deliver, origin=None):
+    """
+    Re-entrancy guard, after the workflow engine's.
+
+    Plugin ctx writes go through the ticket service, so they raise canonical
+    events while the plugin that wrote is still handling its action. While an
+    action is being delivered to plugins, the same action (raised by a
+    plugin's own write, or ctx.emit) is not delivered again, and nesting stops
+    at MAX_DEPTH, so a ticket.created handler that opens a ticket does not
+    trigger itself. Webhooks and workflows still see every event.
+
+    ``origin`` is the chain of actions being delivered when the event was
+    raised: delivery waits for the commit, which may come after the action
+    that raised it has returned. Returns whether ``deliver`` ran.
+    """
+    previous = getattr(_running, "stack", None)
+    chain = list(origin) if origin is not None else _stack()
+    if name in chain or len(chain) >= MAX_DEPTH:
+        logger.debug("Plugin action %s skipped: raised while %s run", name, chain)
+        return False
+    _running.stack = [*chain, name]
+    try:
+        deliver()
+    finally:
+        _running.stack = previous
+    return True
 
 
 def is_reserved_hook(hook):
@@ -114,6 +152,7 @@ def deliver(name, build):
     """Build the payload and deliver ``name`` to plugins once the change commits."""
     if ImportContext.is_importing():
         return
+    origin = _stack()
 
     def run():
         try:
@@ -122,23 +161,27 @@ def deliver(name, build):
             logger.warning("Could not build the plugin payload for %s: %s", name, exc)
             return
 
-        try:
-            from escalated.hooks import do_action
-
-            do_action(name, payload)
-        except Exception as exc:
-            logger.error("Plugin action %s failed: %s", name, exc)
-
-        try:
-            from escalated.bridge.plugin_bridge import get_bridge
-
-            bridge = get_bridge()
-            if bridge.is_booted():
-                bridge.dispatch_action(name, payload)
-        except Exception as exc:
-            logger.warning("SDK plugin action %s failed: %s", name, exc)
+        guard(name, lambda: _deliver_now(name, payload), origin)
 
     transaction.on_commit(run)
+
+
+def _deliver_now(name, payload):
+    try:
+        from escalated.hooks import do_action
+
+        do_action(name, payload)
+    except Exception as exc:
+        logger.error("Plugin action %s failed: %s", name, exc)
+
+    try:
+        from escalated.bridge.plugin_bridge import get_bridge
+
+        bridge = get_bridge()
+        if bridge.is_booted():
+            bridge.dispatch_action(name, payload)
+    except Exception as exc:
+        logger.warning("SDK plugin action %s failed: %s", name, exc)
 
 
 @receiver(signals.ticket_created, dispatch_uid="escalated.plugin_event.ticket_created")
