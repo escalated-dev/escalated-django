@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
 
+from escalated.access import feature_required
 from escalated.event_names import canonical_events
 from escalated.kb_guards import require_kb_enabled
 from escalated.models import (
@@ -2052,6 +2053,7 @@ def business_hours_delete(request, schedule_id):
 # ---------------------------------------------------------------------------
 
 
+@feature_required("roles_permissions")
 @login_required
 def roles_index(request):
     check = _require_admin(request)
@@ -2068,6 +2070,7 @@ def roles_index(request):
     )
 
 
+@feature_required("roles_permissions")
 @login_required
 def roles_create(request):
     check = _require_admin(request)
@@ -2106,6 +2109,7 @@ def roles_create(request):
     )
 
 
+@feature_required("roles_permissions")
 @login_required
 def roles_edit(request, role_id):
     check = _require_admin(request)
@@ -2137,6 +2141,7 @@ def roles_edit(request, role_id):
     )
 
 
+@feature_required("roles_permissions")
 @login_required
 def roles_delete(request, role_id):
     check = _require_admin(request)

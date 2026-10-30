@@ -4,16 +4,18 @@ from __future__ import annotations
 
 from django.http import HttpResponseForbidden
 
-from escalated.models import Role
-from escalated.permissions import is_admin
+from escalated.access import allows
 
 
 def user_has_newsletter_permission(user, slug: str) -> bool:
+    """
+    While roles & permissions is off the admin gate (already passed) decides,
+    like every other admin screen; while it is on the user's roles must grant
+    the slug (ADR 2026-10-29-configurable-access-features).
+    """
     if not user or not user.is_authenticated:
         return False
-    if is_admin(user):
-        return True
-    return Role.objects.filter(users=user, permissions__slug=slug).exists()
+    return allows(user, slug)
 
 
 def require_newsletter_permission(request, slug: str):

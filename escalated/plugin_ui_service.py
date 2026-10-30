@@ -260,7 +260,7 @@ class PluginUIService:
         permissions = set(permissions or ())
 
         def allows(ability):
-            return not ability or is_admin or ability in permissions
+            return not ability or "*" in permissions or ability in permissions
 
         menu_items = []
         for item in self.get_menu_items():

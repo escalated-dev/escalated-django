@@ -2,7 +2,8 @@ from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from escalated.permissions import is_admin, is_agent, user_permissions
+from escalated.access import shared_features, shared_permissions
+from escalated.permissions import is_admin, is_agent, user_permissions  # noqa: F401
 
 
 class EnsureAgentMiddleware:
@@ -87,7 +88,9 @@ class EscalatedInertiaShareMiddleware:
             if request.user.is_authenticated:
                 data["is_agent"] = is_agent(request.user)
                 data["is_admin"] = is_admin(request.user)
-                data["permissions"] = user_permissions(request.user)
+                # ['*'] for staff while roles & permissions is off (the gates
+                # decide); the user's role slugs while it is on.
+                data["permissions"] = shared_permissions(request.user, data["is_agent"] or data["is_admin"])
 
             try:
                 data["guest_tickets_enabled"] = EscalatedSetting.guest_tickets_enabled()
@@ -95,7 +98,7 @@ class EscalatedInertiaShareMiddleware:
             except Exception:
                 pass
 
-            data["features"] = {"newsletters": bool(get_setting("enable_newsletters"))}
+            data["features"] = {"newsletters": bool(get_setting("enable_newsletters")), **shared_features()}
 
             # Plugin menus, slots and widgets, in the shape the shared
             # frontend's usePluginExtensions() reads (plugin contract).

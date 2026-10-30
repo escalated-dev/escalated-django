@@ -255,6 +255,11 @@ class TestBusinessHoursAdminViews:
 
 @pytest.mark.django_db
 class TestRolesAdminViews:
+    @pytest.fixture(autouse=True)
+    def _roles_switched_on(self, settings):
+        # The roles screens exist while roles & permissions is on (ADR 2026-10-29).
+        settings.ESCALATED = {**settings.ESCALATED, "ACCESS": {"roles_permissions": True}}
+
     @patch("escalated.views.admin.render_page")
     def test_index_returns_roles(self, mock_render, rf):
         RoleFactory(slug="test-role-idx")

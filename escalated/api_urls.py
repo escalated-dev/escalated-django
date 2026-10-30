@@ -5,6 +5,7 @@ All routes are mounted under the configured API_PREFIX (default: support/api/v1)
 Authentication and rate limiting are handled by middleware.
 """
 
+from escalated.access import guard_patterns
 from escalated.ticket_access import path
 from escalated.views import admin_api_tokens, api, api_auth, mobile_guest
 
@@ -87,3 +88,18 @@ admin_api_token_patterns = [
 ]
 
 urlpatterns = api_patterns + admin_api_token_patterns
+
+
+# Roles & permissions: staff API views need the token owner's permission too.
+# Mobile guests and the token-less auth endpoints are not staff routes.
+guard_patterns(
+    [
+        p
+        for p in api_patterns
+        if not (p.name or "").startswith("mobile_guest_")
+        and p.name not in ("auth_login", "auth_register", "auth_logout", "auth_refresh")
+    ],
+    "api",
+    prefix="api:",
+)
+guard_patterns(admin_api_token_patterns, "admin")

@@ -32,6 +32,7 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 ## Features
 
 - **Ticket lifecycle** — Create, assign, reply, resolve, close, reopen with configurable status transitions
+- **Access control** — Roles & permissions as an install-level switch, enforced on every admin, agent and staff API view when on and hidden when off; see [access control](docs/access-control.md)
 - **SLA engine** — Per-priority response and resolution targets, business hours calculation, automatic breach detection
 - **Escalation rules** — Condition-based rules that auto-escalate, reprioritize, reassign, or notify
 - **Agent dashboard** — Ticket queue with filters, bulk actions, internal notes, canned responses

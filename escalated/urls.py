@@ -1,6 +1,7 @@
 from django.urls import include
 from django.urls import path as django_path
 
+from escalated.access import guard_patterns
 from escalated.conf import get_setting
 from escalated.ticket_access import path, ticket_access_view
 from escalated.views import (
@@ -519,6 +520,14 @@ from escalated.newsletter_urls import (  # noqa: E402
 )
 
 urlpatterns = list(public_newsletter_patterns) + list(webhook_newsletter_patterns) + urlpatterns
+
+# Roles & permissions (ADR 2026-10-29-configurable-access-features): every
+# admin and agent view also needs its permission (escalated.access) while the
+# switch is on, after the host gate.
+guard_patterns(agent_patterns, "agent")
+guard_patterns(chat_patterns, "agent")
+guard_patterns(admin_patterns, "admin")
+guard_patterns(admin_newsletter_patterns, "admin")
 
 # UI routes (only when UI is enabled)
 if get_setting("UI_ENABLED"):
