@@ -8,6 +8,7 @@ from django.core.paginator import Paginator
 from django.db.models import Avg, Q
 from django.http import HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from escalated.models import (
@@ -20,7 +21,7 @@ from escalated.models import (
     Ticket,
 )
 from escalated.permissions import can_update_ticket, can_view_ticket, is_admin, is_agent
-from escalated.rendering import paginated, render_page
+from escalated.rendering import account_filter_errors, invalid, paginated, render_page
 from escalated.request_data import request_data
 from escalated.serializers import (
     ActivitySerializer,
@@ -126,9 +127,9 @@ def ticket_list(request):
         return check
 
     requested = {key: request.GET.get(key) for key in LIST_FILTER_KEYS if key in request.GET}
-    errors = filter_errors(requested)
+    errors = {**account_filter_errors(request.GET), **(filter_errors(requested) or {})}
     if errors:
-        return JsonResponse({"message": _("The given data was invalid."), "errors": errors}, status=422)
+        return invalid(request, errors, reverse("escalated:agent_ticket_list"))
 
     inbox = AgentInbox(request.user)
     filters = inbox.normalise_filters(requested)

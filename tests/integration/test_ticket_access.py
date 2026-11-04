@@ -326,7 +326,14 @@ def test_account_filter_pair_validation_and_case_sensitivity(client, settings, a
     Ticket.objects.filter(pk=visible.pk).update(account_type="company", account_id="North")
     client.force_login(agent)
     route = reverse("escalated:agent_ticket_list")
-    assert client.get(route, {"account_id": "North"}, HTTP_X_INERTIA="true").status_code == 422
+    refused = client.get(
+        route, {"account_id": "North"}, HTTP_X_INERTIA="true", HTTP_REFERER=f"http://testserver{route}"
+    )
+    assert refused.status_code == 302
+    assert list(client.get(route, HTTP_X_INERTIA="true").json()["props"]["errors"]) == ["account_type"]
+    as_json = client.get(route, {"account_type": "company"}, HTTP_ACCEPT="application/json")
+    assert as_json.status_code == 422
+    assert list(as_json.json()["errors"]) == ["account_id"]
     response = client.get(route, {"account_type": "company", "account_id": "north"}, HTTP_X_INERTIA="true")
     assert response.json()["props"]["tickets"]["data"] == []
     response = client.get(route, {"account_type": "company", "account_id": "North"}, HTTP_X_INERTIA="true")
