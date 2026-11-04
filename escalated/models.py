@@ -626,15 +626,20 @@ class Ticket(models.Model):
     # ----- Snooze helpers -----
 
     @property
+    def latest_public_reply(self):
+        """The latest reply the customer can see. Internal notes are never previewed."""
+        return self.replies.filter(is_deleted=False, is_internal_note=False).order_by("-created_at", "-id").first()
+
+    @property
     def last_reply_at(self):
-        """Return the timestamp of the latest reply, or None."""
-        last = self.replies.filter(is_deleted=False).order_by("-created_at").first()
+        """Return the timestamp of the latest public reply, or None."""
+        last = self.latest_public_reply
         return last.created_at if last else None
 
     @property
     def last_reply_author(self):
-        """Return the name of the latest reply's author, or None."""
-        last = self.replies.filter(is_deleted=False).order_by("-created_at").first()
+        """Return the name of the latest public reply's author, or None."""
+        last = self.latest_public_reply
         if last is None:
             return None
         author = last.author

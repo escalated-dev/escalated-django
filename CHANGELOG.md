@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Upgrading
+- **The agent ticket pages send the agent panel's optional `inbox` and `queue` props** (shared frontend `docs/agent-panel.md`). Each page view runs a few extra count queries (3 counts, 5 built-in views, 4 stats and one per saved view, up to 50 views), cached in Django's cache per agent and queue for `ESCALATED["AGENT_INBOX_CACHE_SECONDS"]` (default 10; 0 turns the cache off), so counts can lag a change by that long. Older frontends ignore the props.
+- **The agent ticket list now leaves snoozed tickets out**, as escalated-laravel's list does, so the list and the counts that label it agree. `snoozed=1` lists only snoozed tickets and `include_snoozed=1` lists both.
+- **A ticket's `last_reply_at` and `last_reply_author` now come from its latest public reply.** They used to include internal notes, so a list (the customer's too) could show a note's time and author. Internal notes are never used.
+
+### Added
+- **`inbox` on `Escalated/Agent/TicketIndex` and `Escalated/Agent/TicketShow`** (not in cloud mode, where tickets are not stored locally): `{ counts: { mine, unassigned, all }, views: [{ id, name, count, filters }], stats: { open, urgent, sla_at_risk, resolved_today } }`. Every number is a count through the ticket list's own filters and the ticket visibility scope (department visibility, account scoping), so it is what the agent sees by opening that list.
+  - `counts` and view counts are of unresolved (not resolved or closed), unsnoozed tickets, unless a view's filters name a status.
+  - `views` are the built-in views `urgent` (`priority=urgent&open=1`), `sla_at_risk` (`sla_at_risk=1`), `waiting_on_me` (assigned to the agent, `status=waiting_on_agent`), `waiting_on_customer` (assigned to the agent, `status=waiting_on_customer`) and `recently_updated` (`open=1&updated_within_hours=24&sort_by=updated_at`), then the agent's own and shared saved views (`SavedView`), by position.
+  - `stats` are for the current queue: the queue's filters plus `status=open`; `priority=urgent` (unresolved); `sla_at_risk=1`; `status=resolved&resolved_today=1`.
+- **`queue` on both pages:** `{ key, title }`, with `key` `mine` (`assigned_to=<agent>`, or `assigned=me` / `assigned_to=me`), `unassigned` (`unassigned=1`), `all`, or `view:<id>` for a view picked with `view=<id>` or by sending exactly its filters. An unknown view id, or another agent's private view, selects nothing. The ticket page gets the queue last opened in the list (kept in the session), or `all`.
+- New agent ticket list filters, under the names the shared frontend sends: `assigned_to`, `unassigned`, `department_id`, `sla_breached`, `sla_at_risk=1` (unresolved, with an SLA breached or a first response still unsent or resolution due within 60 minutes), `resolved_today=1` (resolved since the start of today), `open=1` (not resolved or closed), `updated_within_hours=<1..8760>`, `view=<id>`, and `sort_by` (`created_at`, `updated_at`, `priority`) with `sort_dir`. The list's own `assigned`, `department`, `tag` and `sort` keep working. Malformed values answer 422 with field errors.
+- `latest_reply` (`{ id, body, created_at }`) on agent list rows: the latest public reply, never an internal note, for the list's one-line preview.
+- The queue and built-in view names go through `gettext`; their translations belong in the central `escalated-locale` catalogues.
+
+### Not sent
+- `is_unread` and `requester_online`: Escalated tracks no per-agent read state or customer presence, so the list rows carry neither. Live chat tickets are still marked through `is_live_chat`.
+
 ## [0.7.13] - 2026-10-30
 
 ### Upgrading

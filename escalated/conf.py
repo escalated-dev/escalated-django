@@ -6,6 +6,9 @@ DEFAULTS = {
     "VISIBILITY": "all",
     "ACCOUNTS": {"ENABLED": False, "SCOPE_AGENTS": False, "RESOLVER": None},
     "MODE": "self_hosted",
+    # Seconds the agent panel's inbox counts (the `inbox` prop) are cached per
+    # agent and queue in Django's cache. 0 recomputes them on every request.
+    "AGENT_INBOX_CACHE_SECONDS": 10,
     "USER_MODEL": None,  # Falls back to settings.AUTH_USER_MODEL
     "TABLE_PREFIX": "escalated_",
     # The database alias Escalated's own tables live on, as named in
