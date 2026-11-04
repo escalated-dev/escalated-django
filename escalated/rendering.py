@@ -1,6 +1,13 @@
+from django.http import HttpResponseRedirect, JsonResponse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.module_loading import import_string
+from django.utils.translation import gettext as _
 
 from escalated.conf import get_setting
+
+# Field errors a page visit was sent back with, for the next page's `errors`
+# prop (escalated-laravel's validation errors in the session).
+ERRORS_SESSION_KEY = "escalated_errors"
 
 
 class UiRenderer:
@@ -21,7 +28,13 @@ class InertiaRenderer(UiRenderer):
         # The route() table the shared pages resolve their links with; a
         # ziggy prop the host shared is merged over it name by name.
         share_ziggy(request)
-        return render(request, component, props=props or {})
+        props = dict(props or {})
+        session = getattr(request, "session", None)
+        if session is not None and ERRORS_SESSION_KEY in session:
+            errors = session.pop(ERRORS_SESSION_KEY)
+            if not props.get("errors"):
+                props["errors"] = errors
+        return render(request, component, props=props)
 
 
 _renderer_instance = None
@@ -39,6 +52,53 @@ def get_renderer():
         else:
             raise RuntimeError("Escalated UI is disabled. Set UI_ENABLED=True or provide a custom UI_RENDERER.")
     return _renderer_instance
+
+
+def wants_json(request):
+    """A JSON client rather than a screen visit (Inertia or a browser)."""
+    if request.headers.get("X-Inertia"):
+        return False
+    return "application/json" in request.headers.get("Accept", "")
+
+
+def invalid(request, errors, fallback):
+    """Malformed input, as escalated-laravel's ``$request->validate()``.
+
+    A JSON client gets a 422 with the field errors. A screen visit goes back to
+    the referring page (else ``fallback``) with the errors for the next page's
+    ``errors`` prop -- a raw 422 is what the Inertia client shows as an error
+    modal. ``errors`` maps a field to a message or a list of messages.
+    """
+    if wants_json(request):
+        listed = {field: value if isinstance(value, list) else [value] for field, value in errors.items()}
+        first = next(iter(listed.values()))[0]
+        return JsonResponse({"message": first or _("The given data was invalid."), "errors": listed}, status=422)
+
+    session = getattr(request, "session", None)
+    if session is not None:
+        session[ERRORS_SESSION_KEY] = {
+            field: (value[0] if isinstance(value, list) and value else value) for field, value in errors.items()
+        }
+    referer = request.META.get("HTTP_REFERER")
+    if referer and url_has_allowed_host_and_scheme(
+        referer, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return HttpResponseRedirect(referer)
+    return HttpResponseRedirect(fallback)
+
+
+def account_filter_errors(params):
+    """escalated-laravel's required_with rule on the account_type/account_id pair."""
+    from escalated.ticket_access import account_options
+
+    if not account_options()["ENABLED"] or not ({"account_type", "account_id"} & set(params.keys())):
+        return {}
+    errors = {}
+    if not params.get("account_type"):
+        errors["account_type"] = [_("The account type field is required when account id is present.")]
+    if not params.get("account_id"):
+        errors["account_id"] = [_("The account id field is required when account type is present.")]
+    return errors
 
 
 def render_page(request, component, props=None):

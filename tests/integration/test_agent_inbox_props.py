@@ -279,12 +279,45 @@ def test_filters_the_list_to_the_agent_with_assigned_to_me(client, agent_user, o
         {"updated_within_hours": "9000"},
     ],
 )
-def test_rejects_malformed_values_for_the_new_filters(client, agent_user, query):
+def test_sends_malformed_values_for_the_new_filters_back_with_errors(client, agent_user, query):
+    # escalated-laravel's $request->validate(): a page visit is redirected back
+    # with the errors for the next page's `errors` prop, never a raw 422 (which
+    # the Inertia client shows as an error modal).
     client.force_login(agent_user)
-    response = client.get(reverse("escalated:agent_ticket_list"), query, HTTP_X_INERTIA="true")
+    route = reverse("escalated:agent_ticket_list")
+    origin = f"http://testserver{route}?assigned=me"
+    response = client.get(route, query, HTTP_X_INERTIA="true", HTTP_REFERER=origin)
+
+    assert response.status_code == 302
+    assert response["Location"] == origin
+    following = client.get(f"{route}?assigned=me", HTTP_X_INERTIA="true")
+    errors = following.json()["props"]["errors"]
+    assert list(errors) == list(query)
+    assert all(isinstance(message, str) for message in errors.values())
+    # Shown once.
+    assert not client.get(route, HTTP_X_INERTIA="true").json()["props"].get("errors")
+
+
+@pytest.mark.parametrize(
+    "query",
+    [{"sla_at_risk": "soon"}, {"updated_within_hours": "0"}],
+)
+def test_answers_a_json_clients_malformed_filter_with_a_422(client, agent_user, query):
+    client.force_login(agent_user)
+    response = client.get(reverse("escalated:agent_ticket_list"), query, HTTP_ACCEPT="application/json")
 
     assert response.status_code == 422
     assert list(response.json()["errors"]) == list(query)
+    assert response.json()["message"]
+
+
+def test_sends_a_browser_visit_with_no_referer_back_to_the_list(client, agent_user):
+    client.force_login(agent_user)
+    route = reverse("escalated:agent_ticket_list")
+    response = client.get(route, {"sla_at_risk": "soon"}, HTTP_ACCEPT="text/html")
+
+    assert response.status_code == 302
+    assert response["Location"] == route
 
 
 def test_previews_the_latest_customer_visible_message_never_an_internal_note(client, agent_user):

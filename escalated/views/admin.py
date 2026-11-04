@@ -10,6 +10,7 @@ from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
@@ -50,7 +51,7 @@ from escalated.models import (
     WebhookDelivery,
 )
 from escalated.permissions import is_admin, is_agent
-from escalated.rendering import paginated, render_page
+from escalated.rendering import account_filter_errors, invalid, paginated, render_page
 from escalated.request_data import is_json, request_data
 from escalated.serializers import (
     ActivitySerializer,
@@ -155,6 +156,10 @@ def tickets_index(request):
     check = _require_admin(request)
     if check:
         return check
+
+    account_errors = account_filter_errors(request.GET)
+    if account_errors:
+        return invalid(request, account_errors, reverse("escalated:admin_tickets_index"))
 
     tickets = Ticket.objects.select_related("assigned_to", "department").prefetch_related("tags")
     from escalated.ticket_access import filter_accounts
