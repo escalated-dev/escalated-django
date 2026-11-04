@@ -915,3 +915,42 @@ def ticket_detail(ticket, pinned_notes=(), satisfaction_rating=None):
     data["pinned_notes"] = ReplySerializer.serialize_list(pinned_notes)
     data["satisfaction_rating"] = satisfaction_rating
     return data
+
+
+REQUESTER_TICKETS_LIMIT = 5
+
+
+def requester_tickets(ticket):
+    """
+    The requester's five most recent other tickets, newest first, matched as
+    ``requester_ticket_count`` is (the requester, else a guest's email) and
+    through the ticket visibility scope. ``[]`` when the requester is unknown.
+    """
+    from escalated.models import Ticket as _Ticket
+
+    if ticket.requester_content_type_id and ticket.requester_object_id:
+        others = _Ticket.objects.filter(
+            requester_content_type_id=ticket.requester_content_type_id,
+            requester_object_id=ticket.requester_object_id,
+        )
+    elif ticket.guest_email:
+        others = _Ticket.objects.filter(guest_email=ticket.guest_email)
+    else:
+        return []
+
+    rows = (
+        others.exclude(pk=ticket.pk)
+        .order_by("-created_at", "-pk")
+        .only("pk", "reference", "subject", "status", "created_at", "updated_at")[:REQUESTER_TICKETS_LIMIT]
+    )
+    return [
+        {
+            "id": other.pk,
+            "reference": other.reference,
+            "subject": other.subject,
+            "status": str(other.status),
+            "created_at": _format_dt(other.created_at),
+            "updated_at": _format_dt(other.updated_at),
+        }
+        for other in rows
+    ]

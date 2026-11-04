@@ -85,6 +85,8 @@ ROUTES = {
         pin="agent_ticket_pin",
     ),
     "escalated.agent.tickets.custom-action": r("agent_ticket_custom_action", POST, ticket_id="ticket", action="action"),
+    "escalated.agent.tickets.snooze": r("agent_ticket_snooze", POST, **T),
+    "escalated.agent.tickets.unsnooze": r("agent_ticket_unsnooze", POST, **T),
     # Admin -- tickets
     "escalated.admin.tickets.index": r("admin_tickets_index"),
     "escalated.admin.tickets.bulk": r("admin_tickets_bulk", POST),

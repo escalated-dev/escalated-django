@@ -30,9 +30,6 @@ NAMES = Path(__file__).resolve().parent.parent / "fixtures" / "frontend-route-na
 # Each is a missing feature, not a missing mapping: route() returns '#' for
 # them until the feature is ported.
 NOT_SERVED = {
-    # Agents cannot snooze here; only the admin ticket screen has it.
-    "escalated.agent.tickets.snooze",
-    "escalated.agent.tickets.unsnooze",
     # Only per-workflow logs exist (admin/workflows/<id>/logs/), no global log page.
     "escalated.admin.workflows.logs",
 }

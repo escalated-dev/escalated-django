@@ -246,3 +246,39 @@ class TicketAccessMiddleware:
 
     def __call__(self, request):
         return self.get_response(request)
+
+
+ASSIGNABLE_AGENT_LIMIT = 500
+
+
+def assignable_agents(ticket):
+    """
+    The staff a ticket can be assigned to: active agents (members of an active
+    department) and admins who may see the ticket under department visibility
+    and account scoping. Capped at the first 500 by primary key, as
+    escalated-laravel's AssignableAgents is.
+    """
+    from django.contrib.auth import get_user_model
+    from django.db.models import Q
+
+    from escalated.models import Department
+
+    # Read the package's pivot directly; never join a host user database.
+    relation = Department._meta.get_field("agents")
+    user_column = relation.m2m_reverse_field_name() + "_id"
+    agent_ids = list(
+        Department.agents.through.objects.filter(**{relation.m2m_field_name() + "__is_active": True}).values_list(
+            user_column, flat=True
+        )
+    )
+    users = (
+        get_user_model()
+        .objects.filter(is_active=True)
+        .filter(Q(pk__in=agent_ids) | Q(is_staff=True) | Q(is_superuser=True))
+        .order_by("pk")[:ASSIGNABLE_AGENT_LIMIT]
+    )
+    return [
+        {"id": user.pk, "name": user.get_full_name() or user.get_username()}
+        for user in users
+        if allows_ticket(user, ticket)
+    ]
