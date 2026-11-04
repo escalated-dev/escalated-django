@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from django.contrib.auth import get_user_model
@@ -32,10 +33,12 @@ from escalated.serializers import (
     SatisfactionRatingSerializer,
     TagSerializer,
     TicketSerializer,
+    requester_tickets,
     ticket_detail,
 )
 from escalated.services.agent_inbox import AgentInbox, apply_filters, filter_errors
 from escalated.services.ticket_service import TicketService
+from escalated.ticket_access import assignable_agents
 from escalated.user_keys import user_pk
 
 User = get_user_model()
@@ -236,9 +239,6 @@ def ticket_show(request, ticket_id):
     replies = ticket.replies.filter(is_deleted=False).select_related("author")
     activities = ticket.activities.all()[:50]
 
-    # Available agents for assignment
-    agents = User.objects.filter(escalated_departments__is_active=True).distinct()
-
     canned_responses = CannedResponse.objects.filter(Q(is_shared=True) | Q(created_by=request.user))
 
     # Macros available to this agent (shared + own)
@@ -263,12 +263,16 @@ def ticket_show(request, ticket_id):
         request,
         "Escalated/Agent/TicketShow",
         props={
-            "ticket": ticket_detail(ticket, pinned_notes, satisfaction_data),
+            "ticket": {
+                **ticket_detail(ticket, pinned_notes, satisfaction_data),
+                "requester_tickets": requester_tickets(ticket),
+            },
             "customActions": _custom_actions_for(request, ticket),
             "replies": ReplySerializer.serialize_list(replies),
             "activities": [ActivitySerializer.serialize(a) for a in activities],
             "attachments": AttachmentSerializer.serialize_list(ticket.attachments.all()),
-            "agents": [{"id": a.pk, "name": a.get_full_name() or a.username, "email": a.email} for a in agents],
+            # The staff this ticket can be reassigned to (agents and admins who may see it).
+            "agents": assignable_agents(ticket),
             "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
             "tags": TagSerializer.serialize_list(Tag.objects.all()),
             # The page declares cannedResponses; canned_responses is kept for host overrides.
@@ -797,6 +801,87 @@ def ticket_presence(request, ticket_id):
                 viewers.append(viewer_data)
 
     return JsonResponse({"viewers": viewers})
+
+
+# ---------------------------------------------------------------------------
+# Snooze / Unsnooze
+# ---------------------------------------------------------------------------
+
+
+def _snooze_until(value):
+    """The validated ``snoozed_until``, or an error message: required, a date, in the future."""
+    from django.utils import timezone
+    from django.utils.dateparse import parse_date, parse_datetime
+
+    if value in (None, ""):
+        return None, _("The snoozed until field is required.")
+    until = None
+    if isinstance(value, str):
+        try:
+            until = parse_datetime(value.strip())
+            if until is None:
+                day = parse_date(value.strip())
+                until = datetime.datetime.combine(day, datetime.time.min) if day else None
+        except ValueError:
+            until = None
+    if until is None:
+        return None, _("The snoozed until field must be a valid date.")
+    if timezone.is_naive(until):
+        until = timezone.make_aware(until)
+    if until <= timezone.now():
+        return None, _("The snoozed until field must be a date after now.")
+    return until, None
+
+
+@login_required
+def ticket_snooze(request, ticket_id):
+    """Snooze a ticket from the agent panel until a future date."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    if not can_update_ticket(request.user, ticket):
+        return HttpResponseForbidden(_("You cannot update this ticket."))
+
+    until, error = _snooze_until(request_data(request).get("snoozed_until"))
+    if error:
+        return JsonResponse({"message": error, "errors": {"snoozed_until": [error]}}, status=422)
+
+    ticket.snooze(until=until, user=request.user)
+
+    return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
+
+
+@login_required
+def ticket_unsnooze(request, ticket_id):
+    """Unsnooze a ticket from the agent panel, restoring its previous status."""
+    check = _require_agent(request)
+    if check:
+        return check
+
+    if request.method != "POST":
+        return HttpResponseForbidden(_("Method not allowed"))
+
+    try:
+        ticket = Ticket.objects.get(pk=ticket_id)
+    except Ticket.DoesNotExist:
+        return HttpResponseNotFound(_("Ticket not found"))
+
+    if not can_update_ticket(request.user, ticket):
+        return HttpResponseForbidden(_("You cannot update this ticket."))
+
+    if ticket.snoozed_until is not None:
+        ticket.unsnooze()
+
+    return redirect("escalated:agent_ticket_show", ticket_id=ticket_id)
 
 
 # ---------------------------------------------------------------------------

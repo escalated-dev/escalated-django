@@ -80,6 +80,8 @@ agent_patterns = [
         agent.ticket_custom_action,
         name="agent_ticket_custom_action",
     ),
+    path("agent/tickets/<esc_ticket:ticket_id>/snooze/", agent.ticket_snooze, name="agent_ticket_snooze"),
+    path("agent/tickets/<esc_ticket:ticket_id>/unsnooze/", agent.ticket_unsnooze, name="agent_ticket_unsnooze"),
     path("agent/tickets/<esc_ticket:ticket_id>/follow/", agent.ticket_follow, name="agent_ticket_follow"),
     path("agent/tickets/<esc_ticket:ticket_id>/presence/", agent.ticket_presence, name="agent_ticket_presence"),
     path("agent/tickets/<esc_ticket:ticket_id>/<int:reply_id>/pin/", agent.ticket_pin_reply, name="agent_ticket_pin"),
