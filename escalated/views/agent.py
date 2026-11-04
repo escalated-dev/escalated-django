@@ -34,10 +34,38 @@ from escalated.serializers import (
     TicketSerializer,
     ticket_detail,
 )
+from escalated.services.agent_inbox import AgentInbox, apply_filters, filter_errors
 from escalated.services.ticket_service import TicketService
 from escalated.user_keys import user_pk
 
 User = get_user_model()
+
+# The agent panel's new list filters (shared frontend docs/agent-panel.md).
+NEW_LIST_FILTER_KEYS = (
+    "assigned_to",
+    "unassigned",
+    "department_id",
+    "sla_breached",
+    "sla_at_risk",
+    "resolved_today",
+    "open",
+    "updated_within_hours",
+    "view",
+    "sort_by",
+    "sort_dir",
+)
+
+LIST_FILTER_KEYS = (
+    "status",
+    "priority",
+    "ticket_type",
+    "assigned",
+    "department",
+    "tag",
+    "search",
+    "following",
+    *NEW_LIST_FILTER_KEYS,
+)
 
 
 def _require_agent(request):
@@ -97,48 +125,30 @@ def ticket_list(request):
     if check:
         return check
 
+    requested = {key: request.GET.get(key) for key in LIST_FILTER_KEYS if key in request.GET}
+    errors = filter_errors(requested)
+    if errors:
+        return JsonResponse({"message": _("The given data was invalid."), "errors": errors}, status=422)
+
+    inbox = AgentInbox(request.user)
+    filters = inbox.normalise_filters(requested)
+    queue = inbox.queue_for(filters)
+    inbox.remember(getattr(request, "session", None), queue)
+    filters = inbox.list_filters(filters, queue)
+
     tickets = Ticket.objects.select_related("assigned_to", "department").prefetch_related("tags")
     from escalated.ticket_access import filter_accounts
 
     tickets = filter_accounts(tickets, request.GET)
+    tickets = apply_filters(tickets, filters, request.user)
 
-    # Apply filters
     status = request.GET.get("status")
-    if status:
-        tickets = tickets.filter(status=status)
-
     priority = request.GET.get("priority")
-    if priority:
-        tickets = tickets.filter(priority=priority)
-
     assigned = request.GET.get("assigned")
-    if assigned == "me":
-        tickets = tickets.filter(assigned_to=request.user)
-    elif assigned == "unassigned":
-        tickets = tickets.filter(assigned_to__isnull=True)
-    elif assigned:
-        tickets = tickets.filter(assigned_to_id=assigned)
-
     department = request.GET.get("department")
-    if department:
-        tickets = tickets.filter(department_id=department)
-
     tag = request.GET.get("tag")
-    if tag:
-        tickets = tickets.filter(tags__slug=tag)
-
-    ticket_type = request.GET.get("ticket_type")
-    if ticket_type:
-        tickets = tickets.filter(ticket_type=ticket_type)
-
     search = request.GET.get("search")
-    if search:
-        tickets = tickets.search(search)
-
-    # Following filter
     following = request.GET.get("following")
-    if following:
-        tickets = tickets.filter(ticket_followers__user=request.user)
 
     sort = request.GET.get("sort", "-created_at")
     allowed_sorts = [
@@ -149,8 +159,11 @@ def ticket_list(request):
         "updated_at",
         "-updated_at",
     ]
+    if filters.get("sort_by") in ("created_at", "updated_at", "priority"):
+        direction = "" if str(filters.get("sort_dir", "desc")).lower() == "asc" else "-"
+        sort = f"{direction}{filters['sort_by']}"
     if sort in allowed_sorts:
-        tickets = tickets.order_by(sort)
+        tickets = tickets.order_by(sort, "-id")
 
     paginator = Paginator(tickets, 25)
     page = paginator.get_page(request.GET.get("page", 1))
@@ -159,7 +172,7 @@ def ticket_list(request):
         request,
         "Escalated/Agent/TicketIndex",
         props={
-            "tickets": paginated(request, page, TicketSerializer.serialize_list(page.object_list)),
+            "tickets": paginated(request, page, _list_rows(page.object_list)),
             "filters": {
                 "status": status,
                 "priority": priority,
@@ -169,13 +182,27 @@ def ticket_list(request):
                 "search": search,
                 "sort": sort,
                 "following": following,
+                **{key: request.GET.get(key) for key in NEW_LIST_FILTER_KEYS if key in request.GET},
             },
             "statuses": [{"value": s.value, "label": s.label} for s in Ticket.Status],
             "priorities": [{"value": p.value, "label": p.label} for p in Ticket.Priority],
             "departments": DepartmentSerializer.serialize_list(Department.objects.filter(is_active=True)),
             "tags": TagSerializer.serialize_list(Tag.objects.all()),
+            "queue": inbox.queue_prop(queue),
+            **inbox.inbox_props(queue),
         },
     )
+
+
+def _list_rows(tickets):
+    """List rows, each with its latest public reply for the one-line preview."""
+    rows = TicketSerializer.serialize_list(tickets)
+    for row, ticket in zip(rows, tickets):
+        reply = ticket.latest_public_reply
+        row["latest_reply"] = (
+            {"id": reply.pk, "body": reply.body, "created_at": reply.created_at.isoformat()} if reply else None
+        )
+    return rows
 
 
 @login_required
@@ -229,6 +256,9 @@ def ticket_show(request, ticket_id):
     except SatisfactionRating.DoesNotExist:
         satisfaction_data = None
 
+    inbox = AgentInbox(request.user)
+    queue = inbox.recalled(getattr(request, "session", None))
+
     return render_page(
         request,
         "Escalated/Agent/TicketShow",
@@ -252,6 +282,8 @@ def ticket_show(request, ticket_id):
             "followers_count": ticket.followers_count,
             "pinned_notes": ReplySerializer.serialize_list(pinned_notes),
             "satisfaction_rating": satisfaction_data,
+            "queue": inbox.queue_prop(queue),
+            **inbox.inbox_props(queue),
         },
     )
 
