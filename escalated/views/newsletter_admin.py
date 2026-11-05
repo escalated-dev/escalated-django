@@ -106,7 +106,7 @@ def store(request):
     nl = Newsletter.objects.create(created_by=_user_id(request), **validated)
     if validated["status"] == "sending":
         NewsletterPlanner().plan(nl)
-    return redirect(f"/admin/newsletters/{nl.id}")
+    return redirect("escalated:admin_newsletters_show", newsletter_id=nl.id)
 
 
 @login_required
@@ -257,7 +257,7 @@ def update(request, newsletter_id: int):
     nl.save()
     if validated["status"] == "sending":
         NewsletterPlanner().plan(nl)
-    return redirect(f"/admin/newsletters/{nl.id}")
+    return redirect("escalated:admin_newsletters_show", newsletter_id=nl.id)
 
 
 def destroy(request, newsletter_id: int):
@@ -267,4 +267,4 @@ def destroy(request, newsletter_id: int):
     if nl.status != "draft":
         return abort_422("Only drafts can be deleted")
     nl.delete()
-    return redirect("/admin/newsletters")
+    return redirect("escalated:admin_newsletters_index")

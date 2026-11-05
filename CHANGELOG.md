@@ -5,10 +5,15 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Upgrading
+- **SDK plugin URLs no longer repeat the route prefix.** Plugin pages, endpoints and webhooks are now at `{include}/admin/plugins/...`, `{include}/api/plugins/...` and `{include}/webhooks/plugins/...` (for `path("support/", include("escalated.urls"))`: `/support/admin/plugins/...`), as documented and as escalated-laravel serves them. They were at `/support/support/...`. Update any webhook URL you registered with a third party at the doubled path.
 - **New migration `0039_agent_panel_data`:** `tickets.last_customer_activity_at` and the `ticket_reads`, `customer_presence` and `notifications` tables. Run `python manage.py migrate`. Existing tickets get no activity, so none of them turn unread.
 - **Assigning a ticket to yourself no longer emails you** (and creates no in-app notification). The `ticket.assigned` webhook is unchanged.
 - **Agents get in-app notifications** (`ESCALATED["AGENT_NOTIFICATIONS"] = False` turns them off). A `ticket_reply` notification is sent only for customer-side replies; other agents' replies are not in the feed.
 - **Optional: embed the admin in your own admin panel (off by default; no change unless configured).** With no `ESCALATED["EMBED"]` setting every URL, page, shared prop, template, header and gate is unchanged; a test compares the whole URL table (paths, names, views and Escalated's guards) with the one from before this change. See docs/embedding-admin.md.
+
+### Fixed
+- SDK plugin page, endpoint and webhook URLs were doubled to `/support/support/...` when the admin was not embedded.
+- The newsletter admin redirected to hard-coded `/admin/newsletters/...` paths after saving, deleting or importing, ignoring where `escalated.urls` is included; it now redirects to its named URLs.
 
 ### Added
 - **@mention notifications**, as escalated-laravel: an agent mentioned in an agent's reply or internal note (`@{Full Name}` or `@name`, matched to staff by full name, username or email) gets a `Mention` row, a `mention` notification in the feed and an email (`escalated/emails/mention.html`, while `email` is in `NOTIFICATION_CHANNELS`). The composer's mention picker searches agents at `admin/agents/search/` (`escalated.admin.agents.search`, admin gate, `ticket.view`). `MentionService.search_agents` now lists staff only.

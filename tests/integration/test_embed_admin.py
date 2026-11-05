@@ -655,6 +655,5 @@ def test_sdk_plugin_admin_pages_move_with_the_admin():
 
     assert embedded_url == "/backoffice/helpdesk/plugins/crm/settings"
     assert rows[name]["layers"][0] == "escalated/embed.py:embedded"
-    # Where the standalone admin has always put them (the package's own prefix
-    # inside the include).
-    assert standalone_url == "/support/support/admin/plugins/crm/settings"
+    # Beside the standalone admin, inside the include.
+    assert standalone_url == "/support/admin/plugins/crm/settings"
