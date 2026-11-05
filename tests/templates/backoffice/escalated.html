@@ -1,0 +1,25 @@
+{% load escalated_embed escalated_routes %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Back office</title>
+    {% escalated_route_helper %}
+</head>
+<body>
+    <header class="backoffice-header">Host Back Office</header>
+    <div class="backoffice">
+        <aside>
+            <a href="/backoffice/">Dashboard</a>
+            <p class="menu-heading">Support</p>
+            {% escalated_admin_navigation as support_menu %}
+            <ul>
+                {% for item in support_menu %}
+                    <li><a href="{{ item.url }}"{% if item.active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a></li>
+                {% endfor %}
+            </ul>
+        </aside>
+        <main>{% block inertia %}{% endblock %}</main>
+    </div>
+</body>
+</html>

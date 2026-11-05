@@ -5,7 +5,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 
-from escalated.permissions import is_admin
+from escalated.permissions import passes_admin_gate
 from escalated.rendering import render_page
 from escalated.services import report_pages
 from escalated.services.advanced_reporting_service import AdvancedReportingService
@@ -60,7 +60,7 @@ def _forbidden():
 
 @login_required
 def sla_trends(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     svc, screen, _start, _end, days = _screen(request)
@@ -89,7 +89,7 @@ def sla_trends(request):
 
 @login_required
 def response_times(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     svc, screen, _start, _end, days = _screen(request)
@@ -116,7 +116,7 @@ def response_times(request):
 
 @login_required
 def resolution_times(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     svc, screen, _start, _end, days = _screen(request)
@@ -143,7 +143,7 @@ def resolution_times(request):
 
 @login_required
 def agent_ranking(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     svc, screen, _start, _end, days = _screen(request)
@@ -160,7 +160,7 @@ def agent_ranking(request):
 
 @login_required
 def cohorts(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     svc, screen, _start, _end, days = _screen(request)
@@ -183,7 +183,7 @@ def cohorts(request):
 
 @login_required
 def comparison(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     svc, screen, start, end, days = _screen(request)
@@ -236,7 +236,7 @@ def cohort(request):
 
 @login_required
 def export(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return JsonResponse({"error": "Forbidden"}, status=403)
     start, end = _parse_period(request)
     report_type = request.GET.get("report_type")
@@ -273,7 +273,7 @@ def _days(request):
 
 @login_required
 def agent_metrics(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     return render_page(request, "Escalated/Admin/Reports/AgentMetrics", report_pages.agent_metrics(_days(request)))
@@ -281,7 +281,7 @@ def agent_metrics(request):
 
 @login_required
 def sla_report(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     return render_page(request, "Escalated/Admin/Reports/SlaReport", report_pages.sla_report(_days(request)))
@@ -289,7 +289,7 @@ def sla_report(request):
 
 @login_required
 def csat_report(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     return render_page(request, "Escalated/Admin/Reports/CsatReport", report_pages.csat_report(_days(request)))
@@ -298,7 +298,7 @@ def csat_report(request):
 @login_required
 def agent_detail(request, agent_id):
     """One agent's report, with the props ``Reports/AgentDetail`` declares."""
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return _forbidden()
 
     return render_page(

@@ -50,7 +50,7 @@ from escalated.models import (
     Webhook,
     WebhookDelivery,
 )
-from escalated.permissions import is_admin, is_agent
+from escalated.permissions import is_admin, is_agent, passes_admin_gate
 from escalated.rendering import account_filter_errors, invalid, paginated, render_page
 from escalated.request_data import is_json, request_data
 from escalated.serializers import (
@@ -98,7 +98,7 @@ def _require_admin(request):
     """Return an error response if user is not admin, else None."""
     if not request.user.is_authenticated:
         return redirect("login")
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return HttpResponseForbidden(_("Admin access required."))
     return None
 

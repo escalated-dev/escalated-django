@@ -24,6 +24,26 @@ def is_admin(user):
     return user.is_staff or user.is_superuser
 
 
+def admin_gate_replaced(request) -> bool:
+    """
+    Whether the host replaced Escalated's admin gate for this request: only on
+    an embedded admin view, only with ``ESCALATED["EMBED"]["REPLACE_ADMIN_GATE"]``
+    (ADR 2026-11-05-embeddable-admin), and only for a signed-in user. The
+    host's view decorators already decided who may reach the view.
+    """
+    user = getattr(request, "user", None)
+    if not getattr(request, "escalated_embedded", False) or not user or not user.is_authenticated:
+        return False
+    from escalated import embed
+
+    return embed.enabled() and embed.replaces_admin_gate()
+
+
+def passes_admin_gate(request) -> bool:
+    """Escalated's admin gate for the admin views: is_admin(), unless the host replaced it."""
+    return is_admin(getattr(request, "user", None)) or admin_gate_replaced(request)
+
+
 def user_permissions(user):
     """Return the permission slugs granted to the user via their roles ([] if none/unauth)."""
     if not user or not user.is_authenticated:

@@ -165,12 +165,39 @@ class EscalatedInertiaShareMiddleware:
             except Exception:
                 data["plugins"] = {}
 
+            # Embedding the admin in the host's admin panel (optional; ADR
+            # 2026-11-05-embeddable-admin). Neither key exists while it is off.
+            from escalated import embed
+
+            if embed.enabled():
+                data["embed"] = embed.shared(request, view_func)
+                data["navigation"] = embed.admin_navigation(request.user, request)
+
             # inertia-django takes shared props as keyword arguments.
             share(request, escalated=data)
         except ImportError:
             pass
 
         return None
+
+
+class EscalatedEmbedMiddleware:
+    """
+    iframe mode of the embedded admin (ADR 2026-11-05-embeddable-admin): on
+    embedded admin responses only, sets ``Content-Security-Policy:
+    frame-ancestors 'self' <ESCALATED["EMBED"]["FRAME_ANCESTORS"]>`` and drops
+    ``X-Frame-Options``. Put it **first** in ``MIDDLEWARE``, so it sees the
+    response after every other middleware and none of them can undo it. Does
+    nothing in layout mode or while embedding is off.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from escalated import embed
+
+        return embed.apply_frame_headers(request, self.get_response(request))
 
 
 class EscalatedCsrfMiddleware:
