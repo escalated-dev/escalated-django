@@ -215,7 +215,8 @@ class TestConnectedAtStartup:
         with patch("escalated.broadcasting.broadcast_event") as broadcast:
             getattr(esc_signals, signal_name).send(**kwargs)
 
-        assert _broadcast_types(broadcast) == [event_type]
+        # An assignment also creates the assignee's in-app notification, broadcast on their own channel.
+        assert [t for t in _broadcast_types(broadcast) if t != "notification.created"] == [event_type]
 
 
 @pytest.fixture

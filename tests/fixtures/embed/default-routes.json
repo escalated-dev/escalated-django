@@ -3,6 +3,7 @@
   "path": "support/tickets/",
   "name": "escalated:customer_ticket_list",
   "layers": [
+   "escalated/services/agent_panel.py:wrapped",
    "escalated/ticket_access.py:scoped",
    "escalated.views.customer.ticket_list"
   ],
@@ -15,6 +16,7 @@
   "path": "support/tickets/create/",
   "name": "escalated:customer_ticket_create",
   "layers": [
+   "escalated/services/agent_panel.py:wrapped",
    "escalated/ticket_access.py:scoped",
    "escalated.views.customer.ticket_create"
   ],
@@ -27,6 +29,7 @@
   "path": "support/tickets/store/",
   "name": "escalated:customer_ticket_store",
   "layers": [
+   "escalated/services/agent_panel.py:wrapped",
    "escalated/ticket_access.py:scoped",
    "escalated.views.customer.ticket_store"
   ],
@@ -39,6 +42,7 @@
   "path": "support/tickets/<esc_ticket:ticket_id>/",
   "name": "escalated:customer_ticket_show",
   "layers": [
+   "escalated/services/agent_panel.py:wrapped",
    "escalated/ticket_access.py:scoped",
    "escalated.views.customer.ticket_show"
   ],
@@ -51,6 +55,7 @@
   "path": "support/tickets/<esc_ticket:ticket_id>/reply/",
   "name": "escalated:customer_ticket_reply",
   "layers": [
+   "escalated/services/agent_panel.py:wrapped",
    "escalated/ticket_access.py:scoped",
    "escalated.views.customer.ticket_reply"
   ],
@@ -63,6 +68,7 @@
   "path": "support/tickets/<esc_ticket:ticket_id>/close/",
   "name": "escalated:customer_ticket_close",
   "layers": [
+   "escalated/services/agent_panel.py:wrapped",
    "escalated/ticket_access.py:scoped",
    "escalated.views.customer.ticket_close"
   ],
@@ -75,6 +81,7 @@
   "path": "support/tickets/<esc_ticket:ticket_id>/reopen/",
   "name": "escalated:customer_ticket_reopen",
   "layers": [
+   "escalated/services/agent_panel.py:wrapped",
    "escalated/ticket_access.py:scoped",
    "escalated.views.customer.ticket_reopen"
   ],
@@ -87,6 +94,7 @@
   "path": "support/tickets/<esc_ticket:ticket_id>/rate/",
   "name": "escalated:customer_ticket_rate",
   "layers": [
+   "escalated/services/agent_panel.py:wrapped",
    "escalated/ticket_access.py:scoped",
    "escalated.views.customer.ticket_rate"
   ],
@@ -164,6 +172,101 @@
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
    "escalated.views.agent.ticket_bulk_action"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/status/",
+  "name": "escalated:agent_status",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.agent_panel.status"
+  ],
+  "group": "agent",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/kb/search/",
+  "name": "escalated:agent_kb_search",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent_panel.kb_search"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/notifications/",
+  "name": "escalated:agent_notifications",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent_panel.notification_index"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/notifications/read-all/",
+  "name": "escalated:agent_notifications_read_all",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent_panel.notification_read_all"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/notifications/<str:notification_id>/read/",
+  "name": "escalated:agent_notification_read",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent_panel.notification_read"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/read/",
+  "name": "escalated:agent_ticket_read",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent_panel.ticket_read"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/unread/",
+  "name": "escalated:agent_ticket_unread",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent_panel.ticket_unread"
   ],
   "group": "agent",
   "accepts": [],

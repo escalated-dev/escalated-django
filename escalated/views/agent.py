@@ -37,6 +37,7 @@ from escalated.serializers import (
     requester_tickets,
     ticket_detail,
 )
+from escalated.services import agent_panel
 from escalated.services.agent_inbox import AgentInbox, apply_filters, filter_errors
 from escalated.services.ticket_service import TicketService
 from escalated.ticket_access import assignable_agents
@@ -176,7 +177,7 @@ def ticket_list(request):
         request,
         "Escalated/Agent/TicketIndex",
         props={
-            "tickets": paginated(request, page, _list_rows(page.object_list)),
+            "tickets": paginated(request, page, _list_rows(page.object_list, request.user)),
             "filters": {
                 "status": status,
                 "priority": priority,
@@ -198,10 +199,17 @@ def ticket_list(request):
     )
 
 
-def _list_rows(tickets):
-    """List rows, each with its latest public reply for the one-line preview."""
+def _list_rows(tickets, agent=None):
+    """
+    List rows, each with its latest public reply for the one-line preview and
+    (for the agent) ``is_unread``, ``requester_online`` and
+    ``requester_last_seen_at`` (ADR 2026-11-05-agent-panel-data).
+    """
+    tickets = list(tickets)
     rows = TicketSerializer.serialize_list(tickets)
+    panel = agent_panel.row_fields(agent, tickets) if agent is not None else {}
     for row, ticket in zip(rows, tickets):
+        row.update(panel.get(ticket.pk, {}))
         reply = ticket.latest_public_reply
         row["latest_reply"] = (
             {"id": reply.pk, "body": reply.body, "created_at": reply.created_at.isoformat()} if reply else None
@@ -259,6 +267,9 @@ def ticket_show(request, ticket_id):
 
     inbox = AgentInbox(request.user)
     queue = inbox.recalled(getattr(request, "session", None))
+    # Opening the ticket in the agent panel is reading it.
+    agent_panel.mark_read(request.user, ticket)
+    panel = agent_panel.row_fields(request.user, [ticket])[ticket.pk]
 
     return render_page(
         request,
@@ -266,6 +277,7 @@ def ticket_show(request, ticket_id):
         props={
             "ticket": {
                 **ticket_detail(ticket, pinned_notes, satisfaction_data),
+                **panel,
                 "requester_tickets": requester_tickets(ticket),
             },
             "customActions": _custom_actions_for(request, ticket),
@@ -622,6 +634,11 @@ def ticket_bulk_action(request):
                 service.close(ticket, user)
             elif action == "delete":
                 ticket.delete()
+            elif action in ("mark_read", "mark_unread"):
+                # Per-agent read markers (ADR 2026-11-05-agent-panel-data).
+                if not can_view_ticket(user, ticket):
+                    continue
+                (agent_panel.mark_read if action == "mark_read" else agent_panel.mark_unread)(user, ticket)
             else:
                 continue
             success_count += 1

@@ -412,6 +412,11 @@ class Ticket(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # The last customer-side activity: creation, or a public reply or chat
+    # message from the customer side (ADR 2026-11-05-agent-panel-data). Agents'
+    # own work never moves it, so it drives per-agent unread markers.
+    last_customer_activity_at = models.DateTimeField(null=True, blank=True)
+
     # Generic relation for attachments
     attachments = GenericRelation(
         "escalated.Attachment",
@@ -433,6 +438,7 @@ class Ticket(models.Model):
             models.Index(fields=["assigned_to"], name="escalated_t_assigned_idx"),
             models.Index(fields=["ticket_type"], name="escalated_t_type_idx"),
             models.Index(fields=["created_at"], name="escalated_t_created_idx"),
+            models.Index(fields=["last_customer_activity_at"], name="escalated_t_cust_activity_idx"),
         ]
 
     def __str__(self):
@@ -456,6 +462,13 @@ class Ticket(models.Model):
             raise ValidationError("Ticket accounts require both account_type and account_id.")
         if not self.reference:
             self.reference = self.generate_reference()
+        if self._state.adding and self.last_customer_activity_at is None:
+            from escalated.support.import_context import ImportContext
+
+            # A new ticket is customer activity (unread until an agent opens
+            # it), except while importing.
+            if not ImportContext.is_importing():
+                self.last_customer_activity_at = timezone.now()
         super().save(*args, **kwargs)
 
     @property
@@ -2863,3 +2876,79 @@ class SsoMessageId(models.Model):
         except IntegrityError:
             return False
         return True
+
+
+# ---------------------------------------------------------------------------
+# Agent panel data (ADR 2026-11-05-agent-panel-data)
+# ---------------------------------------------------------------------------
+
+
+class TicketRead(models.Model):
+    """When an agent last read a ticket; ``last_read_at`` None means marked unread."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
+        on_delete=models.CASCADE,
+        related_name="escalated_ticket_reads",
+    )
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="reads")
+    last_read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("ticket_reads")
+        constraints = [models.UniqueConstraint(fields=["user", "ticket"], name="escalated_ticket_read_unique")]
+
+    def __str__(self):
+        return f"Read marker of user {self.user_id} on ticket {self.ticket_id}"
+
+
+class CustomerPresence(models.Model):
+    """When a customer (a requester, or a guest's contact) was last seen. Staff pages only."""
+
+    subject_type = models.CharField(max_length=191)
+    # A string, so it holds integer, UUID and string keys alike.
+    subject_id = models.CharField(max_length=64)
+    last_seen_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = get_table_name("customer_presence")
+        constraints = [
+            models.UniqueConstraint(fields=["subject_type", "subject_id"], name="escalated_presence_unique"),
+        ]
+
+    def __str__(self):
+        return f"{self.subject_type}:{self.subject_id} seen {self.last_seen_at}"
+
+
+class AgentNotification(models.Model):
+    """
+    An in-app notification for an agent. ``data`` holds the ticket id and
+    reference; the ticket is not a column, so a ticket the agent can no longer
+    see redacts the item instead of hiding it.
+    """
+
+    id = models.CharField(primary_key=True, max_length=36, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        # Django cannot constrain across databases; see ESCALATED["DATABASE"].
+        db_constraint=False,
+        on_delete=models.CASCADE,
+        related_name="escalated_agent_notifications",
+    )
+    type = models.CharField(max_length=64)
+    data = models.JSONField(default=dict, blank=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = get_table_name("notifications")
+        indexes = [models.Index(fields=["user", "read_at"], name="escalated_notif_user_idx")]
+
+    def __str__(self):
+        return f"{self.type} for user {self.user_id}"

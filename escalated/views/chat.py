@@ -195,7 +195,8 @@ def update_status(request):
     profile.chat_status = status
     profile.save(update_fields=["chat_status", "updated_at"])
 
-    return JsonResponse({"status": profile.chat_status})
+    # The same field as the agent route (escalated.agent.status); this route is kept as an alias.
+    return JsonResponse({"status": profile.chat_status, "agent_status": profile.chat_status})
 
 
 @login_required

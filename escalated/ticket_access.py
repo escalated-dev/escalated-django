@@ -122,6 +122,9 @@ def can_access_channel(user, channel):
     from escalated.models import Ticket
     from escalated.permissions import can_view_ticket, is_admin, is_agent
 
+    if channel.startswith("escalated.agents."):
+        # An agent's own notifications channel (ADR 2026-11-05-agent-panel-data).
+        return bool(user and user.is_authenticated) and channel == f"escalated.agents.{user.pk}"
     if channel.startswith("ticket."):
         identifier = channel.removeprefix("ticket.")
         if not identifier.isdigit():

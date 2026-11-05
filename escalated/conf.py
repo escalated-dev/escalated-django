@@ -9,6 +9,11 @@ DEFAULTS = {
     # Seconds the agent panel's inbox counts (the `inbox` prop) are cached per
     # agent and queue in Django's cache. 0 recomputes them on every request.
     "AGENT_INBOX_CACHE_SECONDS": 10,
+    # Agent pages show a customer as online when the customer portal or the
+    # widget saw them within this many seconds (ADR 2026-11-05-agent-panel-data).
+    "PRESENCE_ONLINE_WINDOW_SECONDS": int(os.environ.get("ESCALATED_PRESENCE_ONLINE_WINDOW", "120") or 120),
+    # The agents' in-app notifications feed and bell. False turns it off.
+    "AGENT_NOTIFICATIONS": True,
     "USER_MODEL": None,  # Falls back to settings.AUTH_USER_MODEL
     "TABLE_PREFIX": "escalated_",
     # The database alias Escalated's own tables live on, as named in

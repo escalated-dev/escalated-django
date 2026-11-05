@@ -87,6 +87,14 @@ ROUTES = {
     "escalated.agent.tickets.custom-action": r("agent_ticket_custom_action", POST, ticket_id="ticket", action="action"),
     "escalated.agent.tickets.snooze": r("agent_ticket_snooze", POST, **T),
     "escalated.agent.tickets.unsnooze": r("agent_ticket_unsnooze", POST, **T),
+    # The agent panel's data (ADR 2026-11-05-agent-panel-data)
+    "escalated.agent.tickets.read": r("agent_ticket_read", POST, **T),
+    "escalated.agent.tickets.unread": r("agent_ticket_unread", POST, **T),
+    "escalated.agent.status": r("agent_status", ("PUT", "POST")),
+    "escalated.agent.kb.search": r("agent_kb_search"),
+    "escalated.agent.notifications.index": r("agent_notifications"),
+    "escalated.agent.notifications.read-all": r("agent_notifications_read_all", POST),
+    "escalated.agent.notifications.read": r("agent_notification_read", POST, notification_id="notification"),
     # Admin -- tickets
     "escalated.admin.tickets.index": r("admin_tickets_index"),
     "escalated.admin.tickets.bulk": r("admin_tickets_bulk", POST),
