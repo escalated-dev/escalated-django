@@ -77,7 +77,7 @@ def store(request):
         filter_json=filter_json,
         created_by=_user_id(request),
     )
-    return redirect(f"/admin/newsletters/lists/{lst.id}")
+    return redirect("escalated:admin_newsletters_lists_show", list_id=lst.id)
 
 
 @login_required
@@ -146,7 +146,7 @@ def update(request, list_id: int):
                 fj = None
         lst.filter_json = fj
     lst.save()
-    return redirect(f"/admin/newsletters/lists/{lst.id}")
+    return redirect("escalated:admin_newsletters_lists_show", list_id=lst.id)
 
 
 def destroy(request, list_id: int):
@@ -154,7 +154,7 @@ def destroy(request, list_id: int):
         return denied
     lst = get_object_or_404(NewsletterList, pk=list_id)
     lst.delete()
-    return redirect("/admin/newsletters/lists")
+    return redirect("escalated:admin_newsletters_lists_index")
 
 
 @login_required
@@ -178,7 +178,7 @@ def add_member(request, list_id: int):
         contact_id=contact_id,
         defaults={"added_by": _user_id(request)},
     )
-    return redirect(f"/admin/newsletters/lists/{lst.id}")
+    return redirect("escalated:admin_newsletters_lists_show", list_id=lst.id)
 
 
 @login_required
@@ -192,7 +192,7 @@ def remove_member(request, list_id: int, contact_id: int):
     if lst.kind != "static":
         return abort_422("Members can only be removed from static lists")
     NewsletterListMember.objects.filter(list_id=lst.id, contact_id=contact_id).delete()
-    return redirect(f"/admin/newsletters/lists/{lst.id}")
+    return redirect("escalated:admin_newsletters_lists_show", list_id=lst.id)
 
 
 @login_required
@@ -219,4 +219,4 @@ def import_csv(request, list_id: int):
         if created:
             imported += 1
     request.session["status"] = f"Imported {imported} contacts"
-    return redirect(f"/admin/newsletters/lists/{lst.id}")
+    return redirect("escalated:admin_newsletters_lists_show", list_id=lst.id)

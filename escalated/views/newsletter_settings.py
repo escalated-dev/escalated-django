@@ -107,4 +107,4 @@ def update(request):
         stored = str(int(val)) if key == "tracking_enabled" else str(val if val is not None else "")
         EscalatedSetting.set(f"newsletter.{key}", stored)
 
-    return redirect("/admin/newsletters/settings")
+    return redirect("escalated:admin_newsletters_settings_show")

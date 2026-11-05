@@ -70,7 +70,7 @@ def store(request):
         merge_fields_schema=schema,
         created_by=_user_id(request),
     )
-    return redirect("/admin/newsletters/templates")
+    return redirect("escalated:admin_newsletters_templates_index")
 
 
 @login_required
@@ -108,7 +108,7 @@ def update(request, template_id: int):
                 schema = None
         tpl.merge_fields_schema = schema
     tpl.save()
-    return redirect(f"/admin/newsletters/templates/{tpl.id}")
+    return redirect("escalated:admin_newsletters_templates_show", template_id=tpl.id)
 
 
 def destroy(request, template_id: int):
@@ -116,4 +116,4 @@ def destroy(request, template_id: int):
         return denied
     tpl = get_object_or_404(NewsletterTemplate, pk=template_id)
     tpl.delete()
-    return redirect("/admin/newsletters/templates")
+    return redirect("escalated:admin_newsletters_templates_index")

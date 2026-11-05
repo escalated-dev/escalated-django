@@ -50,26 +50,17 @@ class RouteRegistrar:
     # ------------------------------------------------------------------
 
     def _register_plugin(self, plugin_name: str, manifest: dict) -> None:
-        from escalated.conf import get_setting
-
-        prefix = get_setting("ROUTE_PREFIX").strip("/")
-
-        self._register_pages(plugin_name, manifest.get("pages") or [], prefix)
-        self._register_endpoints(plugin_name, manifest.get("endpoints") or {}, prefix)
-        self._register_webhooks(plugin_name, manifest.get("webhooks") or {}, prefix)
+        self._register_pages(plugin_name, manifest.get("pages") or [])
+        self._register_endpoints(plugin_name, manifest.get("endpoints") or {})
+        self._register_webhooks(plugin_name, manifest.get("webhooks") or {})
 
     # ------------------------------------------------------------------
     # Pages — rendered HTML views (Inertia or plain template)
     # ------------------------------------------------------------------
 
-    def _register_pages(self, plugin_name: str, pages: list, prefix: str) -> None:
+    def _register_pages(self, plugin_name: str, pages: list) -> None:
         if not pages:
             return
-
-        from escalated import embed
-
-        # Embedding the admin in the host's admin panel (ADR 2026-11-05).
-        embedded = embed.enabled()
 
         for page in pages:
             route = (page.get("route") or "").lstrip("/")
@@ -85,10 +76,10 @@ class RouteRegistrar:
                 )
                 continue
 
-            url_pattern = f"{prefix}/admin/plugins/{plugin_name}/{route}"
-            if embedded:
-                # Moved under the host's prefix with the admin (escalated.urls).
-                url_pattern = f"admin/plugins/{plugin_name}/{route}"
+            # Inside include("escalated.urls"), which already carries the
+            # prefix; while the admin is embedded, under the host's prefix
+            # with it (escalated.embed_urls).
+            url_pattern = f"admin/plugins/{plugin_name}/{route}"
             view = self._make_page_view(plugin_name, component, layout, capability)
             name = f"escalated.plugin.{plugin_name}.page.{route.replace('/', '.')}"
 
@@ -167,7 +158,7 @@ class RouteRegistrar:
     # Endpoints — authenticated JSON API
     # ------------------------------------------------------------------
 
-    def _register_endpoints(self, plugin_name: str, endpoints: dict, prefix: str) -> None:
+    def _register_endpoints(self, plugin_name: str, endpoints: dict) -> None:
         if not endpoints:
             return
 
@@ -177,7 +168,7 @@ class RouteRegistrar:
                 continue
 
             capability = (definition or {}).get("capability") if isinstance(definition, dict) else None
-            url_pattern = f"{prefix}/api/plugins/{plugin_name}/{ep_path.lstrip('/')}"
+            url_pattern = f"api/plugins/{plugin_name}/{ep_path.lstrip('/')}"
             view = self._make_endpoint_view(plugin_name, http_method, ep_path, capability)
             slug = f"{http_method.lower()}{ep_path.replace('/', '.')}"
             name = f"escalated.plugin.{plugin_name}.endpoint.{slug}"
@@ -252,7 +243,7 @@ class RouteRegistrar:
     # Webhooks — public (no auth)
     # ------------------------------------------------------------------
 
-    def _register_webhooks(self, plugin_name: str, webhooks: dict, prefix: str) -> None:
+    def _register_webhooks(self, plugin_name: str, webhooks: dict) -> None:
         if not webhooks:
             return
 
@@ -261,7 +252,7 @@ class RouteRegistrar:
             if http_method is None:
                 continue
 
-            url_pattern = f"{prefix}/webhooks/plugins/{plugin_name}/{wh_path.lstrip('/')}"
+            url_pattern = f"webhooks/plugins/{plugin_name}/{wh_path.lstrip('/')}"
             view = self._make_webhook_view(plugin_name, http_method, wh_path)
             slug = f"{http_method.lower()}{wh_path.replace('/', '.')}"
             name = f"escalated.plugin.{plugin_name}.webhook.{slug}"
