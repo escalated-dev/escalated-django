@@ -1,7 +1,8 @@
 """
 URL configuration for the Escalated REST API.
 
-All routes are mounted under the configured API_PREFIX (default: support/api/v1).
+All routes are mounted under the configured API_PREFIX, relative to where
+escalated.urls is included (default: api/v1, so /support/api/v1/).
 Authentication and rate limiting are handled by middleware.
 """
 

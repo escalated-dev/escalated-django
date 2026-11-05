@@ -137,7 +137,7 @@ def test_api_token_list_detail_and_mutation(access_setup, rf):
         (hidden.reference + "/status/", "patch", 404),
     ]:
         request = getattr(rf, method)(
-            "/support/support/api/v1/tickets/" + suffix,
+            "/support/api/v1/tickets/" + suffix,
             data=json.dumps({"status": "closed"}) if method != "get" else {},
             content_type="application/json",
             HTTP_AUTHORIZATION="Bearer " + token["plain_text_token"],

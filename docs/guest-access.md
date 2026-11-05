@@ -139,7 +139,7 @@ The canonical contract is
 [mobile-guest-api.md](https://github.com/escalated-dev/escalated-developer-context/blob/main/domain-model/mobile-guest-api.md)
 in escalated-developer-context. The routes are registered with the rest of the
 REST API, only when `ESCALATED["API_ENABLED"]` is on (default off), under
-`<API_PREFIX>/mobile/guest/` (default `support/api/v1/mobile/guest/`):
+`<API_PREFIX>/mobile/guest/` (default `api/v1/mobile/guest/` under the route prefix, so `/support/api/v1/mobile/guest/`):
 
 | Method | Path | Guest bucket |
 | --- | --- | --- |

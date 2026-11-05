@@ -86,4 +86,4 @@ class Command(BaseCommand):
         self.stdout.write(_(f"  Admin panel:     /{prefix}/admin/"))
         self.stdout.write(_(f"  Agent dashboard: /{prefix}/agent/"))
         self.stdout.write(_(f"  Customer portal: /{prefix}/customer/"))
-        self.stdout.write(_(f"  REST API:        /{api_prefix}/"))
+        self.stdout.write(_(f"  REST API:        /{prefix}/{api_prefix}/"))

@@ -656,12 +656,24 @@ except Exception:
 # Conditionally include API URLs when API is enabled
 if get_setting("API_ENABLED"):
     from escalated.api_urls import admin_api_token_patterns, api_patterns
+    from escalated.conf import LEGACY_API_PREFIX, api_prefix_configured
 
+    # API_PREFIX is relative to where escalated.urls is included, which
+    # already carries the route prefix: the default serves the API at
+    # {include}/api/v1/ (/support/api/v1/), as escalated-laravel does.
     api_prefix = get_setting("API_PREFIX").strip("/")
 
     urlpatterns += [
         path(f"{api_prefix}/", include((api_patterns, "escalated_api"))),
     ]
+
+    if not api_prefix_configured():
+        # Deprecated alias: the old default (support/api/v1) put the API at
+        # {include}/support/api/v1/ (/support/support/api/v1/). It still
+        # answers there for one release; reverse() never returns it.
+        urlpatterns += [
+            path(f"{LEGACY_API_PREFIX}/", include((api_patterns, "escalated_api_legacy"))),
+        ]
 
     # Admin API token management (under the main admin prefix)
     if _embedding:
