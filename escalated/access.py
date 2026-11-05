@@ -98,6 +98,7 @@ ROUTE_PERMISSIONS: list[tuple[str, list[str]]] = [
     ("api:realtime_config", VIEW),
     ("api:macros", ["macro.view"]),
     ("agent_mentions*", VIEW),
+    ("admin_agents_search", VIEW),
     ("agent_ticket_list", VIEW),
     ("agent_ticket_show", VIEW),
     ("agent_ticket_follow", VIEW),

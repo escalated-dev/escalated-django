@@ -151,6 +151,20 @@ class NotificationService:
         )
 
     @staticmethod
+    def notify_mentioned(ticket, user, mentioned_by):
+        """Email an agent mentioned in a reply or note (escalated-laravel's MentionNotification)."""
+        if "email" not in get_setting("NOTIFICATION_CHANNELS"):
+            return
+        email = NotificationService._recipient_email(user, ticket)
+        if email:
+            NotificationService._send_email(
+                subject=_("You were mentioned in ticket #%(reference)s") % {"reference": ticket.reference},
+                template="escalated/emails/mention.html",
+                context={"ticket": ticket, "agent": user, "mentioned_by": mentioned_by},
+                recipient=email,
+            )
+
+    @staticmethod
     def notify_status_changed(ticket, old_status, new_status):
         """Send notification when ticket status changes."""
         channels = get_setting("NOTIFICATION_CHANNELS")

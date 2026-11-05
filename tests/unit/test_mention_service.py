@@ -34,10 +34,22 @@ class TestMentionService:
         from django.contrib.auth import get_user_model
 
         User = get_user_model()
-        user = User.objects.create_user(username="testuser", email="test@example.com", password="pass")
+        user = User.objects.create_user(username="testuser", email="test@example.com", password="pass", is_staff=True)
         results = self.service.search_agents("test")
         assert len(results) >= 1
         assert results[0]["id"] == user.pk
+
+    def test_search_agents_leaves_out_non_staff(self):
+        from django.contrib.auth import get_user_model
+
+        get_user_model().objects.create_user(username="plaincustomer", email="plain@example.com", password="pass")
+        assert self.service.search_agents("plain") == []
+
+    def test_extract_braced_full_names(self):
+        assert self.service.extract_mentions("Hey @{John Doe}, and @alice") == ["John Doe", "alice"]
+
+    def test_a_word_inside_braces_is_not_a_simple_mention(self):
+        assert self.service.extract_mentions("@{Mary @Ann Lee}") == ["Mary @Ann Lee"]
 
     def test_search_agents_empty_query(self):
         assert self.service.search_agents("") == []
