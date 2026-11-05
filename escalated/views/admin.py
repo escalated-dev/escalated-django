@@ -151,6 +151,20 @@ def _get_agents():
 
 
 @login_required
+def agents_search(request):
+    """
+    The composer's @mention picker, as escalated-laravel's AgentSearchController:
+    up to 10 agents whose name or email contains ``q``, as ``[{id, name, email}]``.
+    """
+    check = _require_admin(request)
+    if check:
+        return check
+    from escalated.services.mention_service import MentionService
+
+    return JsonResponse(MentionService().search_agents(request.GET.get("q", "")), safe=False)
+
+
+@login_required
 def tickets_index(request):
     """List all tickets with filters for admin."""
     check = _require_admin(request)

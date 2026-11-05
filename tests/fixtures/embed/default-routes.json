@@ -847,6 +847,19 @@
   "kwargs": {}
  },
  {
+  "path": "support/admin/agents/search/",
+  "name": "escalated:admin_agents_search",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.agents_search"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
   "path": "support/admin/reports/",
   "name": "escalated:admin_reports",
   "layers": [

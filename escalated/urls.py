@@ -113,6 +113,7 @@ agent_patterns = [
 
 # Admin-facing URLs
 admin_patterns = [
+    path("admin/agents/search/", admin.agents_search, name="admin_agents_search"),
     path("admin/reports/", admin.reports, name="admin_reports"),
     # Tickets
     path("admin/tickets/", admin.tickets_index, name="admin_tickets_index"),

@@ -30,6 +30,17 @@ def on_reply_saved(sender, instance, created, **kwargs):
         return
     _safely(agent_panel.record_reply_activity, instance)
     _safely(_notify_reply, instance)
+    _safely(_process_mentions, instance)
+
+
+def _process_mentions(reply):
+    """@mentions in an agent's reply or note (escalated-laravel's MentionService); a customer's mention nobody."""
+    from escalated.services.mention_service import MentionService
+    from escalated.support.import_context import ImportContext
+
+    if ImportContext.is_importing() or not reply.body or agent_panel.is_customer_side(reply):
+        return
+    MentionService().process_mentions(reply)
 
 
 def _notify_reply(reply):

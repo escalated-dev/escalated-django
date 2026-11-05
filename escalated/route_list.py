@@ -303,6 +303,7 @@ ROUTES = {
     "escalated.two-factor.challenge": r("two_factor_challenge"),
     "escalated.two-factor.verify": r("two_factor_challenge", POST),
     # Admin -- reports
+    "escalated.admin.agents.search": r("admin_agents_search"),
     "escalated.admin.reports": r("admin_reports"),
     "escalated.admin.reports.dashboard": r("admin_reports_dashboard"),
     "escalated.admin.reports.agents": r("admin_reports_agents"),

@@ -68,11 +68,16 @@ notifications; `ESCALATED["AGENT_NOTIFICATIONS"] = False` turns the feed off
 |---|---|---|
 | `ticket_assigned` | the assignee | someone else assigns them a ticket (self-assignment sends nothing, email included) |
 | `ticket_reply` | the assignee and followers | a customer-side public reply or chat message |
+| `mention` | the mentioned agent | an @mention in an agent's reply or internal note (also emailed while `email` is a notification channel) |
 | `sla_warning` / `sla_breached` | the assignee | the `sla_warning` / `sla_breached` signals |
 | `chat_transferred` | the receiving agent | a chat is transferred to them by someone else |
 
-There is no `mention` notification: this package does not process @mentions in
-replies yet.
+@mentions follow escalated-laravel: `@{Full Name}` (what the composer's picker
+inserts) and `@name` match an active staff user (agent or admin) by full name,
+username or email, ignoring case. Each creates a `Mention` row. A customer's
+reply mentions nobody, and nobody is notified of their own mention. The picker
+searches at `GET {prefix}/admin/agents/search/?q=` (`escalated.admin.agents.search`,
+admin gate, `ticket.view`): up to 10 `{ id, name, email }`.
 
 | Route | Name | Answer |
 |---|---|---|
