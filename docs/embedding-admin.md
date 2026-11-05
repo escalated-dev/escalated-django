@@ -349,7 +349,7 @@ protocol is in the frontend guide.
   ```python
   SESSION_COOKIE_SAMESITE = "None"
   SESSION_COOKIE_SECURE = True
-  CSRF_COOKIE_SAMESITE = "None"   # also used for the XSRF-TOKEN cookie
+  CSRF_COOKIE_SAMESITE = "None"  # also used for the XSRF-TOKEN cookie
   CSRF_COOKIE_SECURE = True
   ```
 
