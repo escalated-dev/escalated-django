@@ -24,7 +24,7 @@ from escalated.models import Attachment, Contact, EscalatedSetting, Reply, Ticke
 from tests.factories import DepartmentFactory, ReplyFactory, TicketFactory, UserFactory
 from tests.guest_proof import grant, proof
 
-MOBILE = "/support/support/api/v1/mobile/guest"
+MOBILE = "/support/api/v1/mobile/guest"
 EMAIL = "ann@example.com"
 
 

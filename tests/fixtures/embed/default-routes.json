@@ -4001,7 +4001,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/auth/validate/",
+  "path": "support/api/v1/auth/validate/",
   "name": "escalated:escalated_api:auth_validate",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4014,7 +4014,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/auth/login/",
+  "path": "support/api/v1/auth/login/",
   "name": "escalated:escalated_api:auth_login",
   "layers": [
    "escalated/ticket_access.py:scoped",
@@ -4026,7 +4026,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/auth/register/",
+  "path": "support/api/v1/auth/register/",
   "name": "escalated:escalated_api:auth_register",
   "layers": [
    "escalated/ticket_access.py:scoped",
@@ -4038,7 +4038,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/auth/logout/",
+  "path": "support/api/v1/auth/logout/",
   "name": "escalated:escalated_api:auth_logout",
   "layers": [
    "escalated/ticket_access.py:scoped",
@@ -4050,7 +4050,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/auth/refresh/",
+  "path": "support/api/v1/auth/refresh/",
   "name": "escalated:escalated_api:auth_refresh",
   "layers": [
    "escalated/ticket_access.py:scoped",
@@ -4062,7 +4062,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/auth/me/",
+  "path": "support/api/v1/auth/me/",
   "name": "escalated:escalated_api:auth_me",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4075,7 +4075,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/auth/profile/",
+  "path": "support/api/v1/auth/profile/",
   "name": "escalated:escalated_api:auth_profile",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4088,7 +4088,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/mobile/guest/verification",
+  "path": "support/api/v1/mobile/guest/verification",
   "name": "escalated:escalated_api:mobile_guest_verification",
   "layers": [
    "escalated/ticket_access.py:scoped",
@@ -4101,7 +4101,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/mobile/guest/lookup",
+  "path": "support/api/v1/mobile/guest/lookup",
   "name": "escalated:escalated_api:mobile_guest_lookup",
   "layers": [
    "escalated/ticket_access.py:scoped",
@@ -4114,7 +4114,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/mobile/guest/tickets",
+  "path": "support/api/v1/mobile/guest/tickets",
   "name": "escalated:escalated_api:mobile_guest_tickets",
   "layers": [
    "escalated/ticket_access.py:scoped",
@@ -4127,7 +4127,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/mobile/guest/tickets/<str:token>",
+  "path": "support/api/v1/mobile/guest/tickets/<str:token>",
   "name": "escalated:escalated_api:mobile_guest_ticket_show",
   "layers": [
    "escalated/ticket_access.py:scoped",
@@ -4140,7 +4140,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/mobile/guest/tickets/<str:token>/replies",
+  "path": "support/api/v1/mobile/guest/tickets/<str:token>/replies",
   "name": "escalated:escalated_api:mobile_guest_ticket_reply",
   "layers": [
    "escalated/ticket_access.py:scoped",
@@ -4153,7 +4153,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/dashboard/",
+  "path": "support/api/v1/dashboard/",
   "name": "escalated:escalated_api:dashboard",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4166,7 +4166,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/",
+  "path": "support/api/v1/tickets/",
   "name": "escalated:escalated_api:ticket_list",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4179,7 +4179,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/create/",
+  "path": "support/api/v1/tickets/create/",
   "name": "escalated:escalated_api:ticket_create",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4192,7 +4192,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/",
+  "path": "support/api/v1/tickets/<str:reference>/",
   "name": "escalated:escalated_api:ticket_show",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4205,7 +4205,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/reply/",
+  "path": "support/api/v1/tickets/<str:reference>/reply/",
   "name": "escalated:escalated_api:ticket_reply",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4218,7 +4218,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/status/",
+  "path": "support/api/v1/tickets/<str:reference>/status/",
   "name": "escalated:escalated_api:ticket_status",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4231,7 +4231,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/priority/",
+  "path": "support/api/v1/tickets/<str:reference>/priority/",
   "name": "escalated:escalated_api:ticket_priority",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4244,7 +4244,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/assign/",
+  "path": "support/api/v1/tickets/<str:reference>/assign/",
   "name": "escalated:escalated_api:ticket_assign",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4257,7 +4257,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/follow/",
+  "path": "support/api/v1/tickets/<str:reference>/follow/",
   "name": "escalated:escalated_api:ticket_follow",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4270,7 +4270,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/macro/",
+  "path": "support/api/v1/tickets/<str:reference>/macro/",
   "name": "escalated:escalated_api:ticket_macro",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4283,7 +4283,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/actions/<str:action>/",
+  "path": "support/api/v1/tickets/<str:reference>/actions/<str:action>/",
   "name": "escalated:escalated_api:ticket_custom_action",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4296,7 +4296,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/tags/",
+  "path": "support/api/v1/tickets/<str:reference>/tags/",
   "name": "escalated:escalated_api:ticket_tags",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4309,7 +4309,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/subjects/",
+  "path": "support/api/v1/tickets/<str:reference>/subjects/",
   "name": "escalated:escalated_api:ticket_subjects_store",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4322,7 +4322,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/subjects/<int:subject_id>/",
+  "path": "support/api/v1/tickets/<str:reference>/subjects/<int:subject_id>/",
   "name": "escalated:escalated_api:ticket_subjects_destroy",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4335,7 +4335,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tickets/<str:reference>/delete/",
+  "path": "support/api/v1/tickets/<str:reference>/delete/",
   "name": "escalated:escalated_api:ticket_destroy",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4348,7 +4348,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/agents/",
+  "path": "support/api/v1/agents/",
   "name": "escalated:escalated_api:agents",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4361,7 +4361,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/departments/",
+  "path": "support/api/v1/departments/",
   "name": "escalated:escalated_api:departments",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4374,7 +4374,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/tags/",
+  "path": "support/api/v1/tags/",
   "name": "escalated:escalated_api:tags",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4387,7 +4387,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/canned-responses/",
+  "path": "support/api/v1/canned-responses/",
   "name": "escalated:escalated_api:canned_responses",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4400,7 +4400,7 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/macros/",
+  "path": "support/api/v1/macros/",
   "name": "escalated:escalated_api:macros",
   "layers": [
    "escalated/access.py:wrapped",
@@ -4413,8 +4413,433 @@
   "kwargs": {}
  },
  {
-  "path": "support/support/api/v1/realtime/config/",
+  "path": "support/api/v1/realtime/config/",
   "name": "escalated:escalated_api:realtime_config",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_realtime_config"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/validate/",
+  "name": "escalated:escalated_api_legacy:auth_validate",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.auth_validate"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/login/",
+  "name": "escalated:escalated_api_legacy:auth_login",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_login"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/register/",
+  "name": "escalated:escalated_api_legacy:auth_register",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_register"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/logout/",
+  "name": "escalated:escalated_api_legacy:auth_logout",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_logout"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/refresh/",
+  "name": "escalated:escalated_api_legacy:auth_refresh",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_refresh"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/me/",
+  "name": "escalated:escalated_api_legacy:auth_me",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_me"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/profile/",
+  "name": "escalated:escalated_api_legacy:auth_profile",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_profile"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/verification",
+  "name": "escalated:escalated_api_legacy:mobile_guest_verification",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.verification"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/lookup",
+  "name": "escalated:escalated_api_legacy:mobile_guest_lookup",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.lookup"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/tickets",
+  "name": "escalated:escalated_api_legacy:mobile_guest_tickets",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.tickets"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/tickets/<str:token>",
+  "name": "escalated:escalated_api_legacy:mobile_guest_ticket_show",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.ticket_show"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/tickets/<str:token>/replies",
+  "name": "escalated:escalated_api_legacy:mobile_guest_ticket_reply",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.ticket_reply"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/dashboard/",
+  "name": "escalated:escalated_api_legacy:dashboard",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.dashboard"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/",
+  "name": "escalated:escalated_api_legacy:ticket_list",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_list"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/create/",
+  "name": "escalated:escalated_api_legacy:ticket_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_create"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/",
+  "name": "escalated:escalated_api_legacy:ticket_show",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_show"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/reply/",
+  "name": "escalated:escalated_api_legacy:ticket_reply",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_reply"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/status/",
+  "name": "escalated:escalated_api_legacy:ticket_status",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_status"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/priority/",
+  "name": "escalated:escalated_api_legacy:ticket_priority",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_priority"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/assign/",
+  "name": "escalated:escalated_api_legacy:ticket_assign",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_assign"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/follow/",
+  "name": "escalated:escalated_api_legacy:ticket_follow",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_follow"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/macro/",
+  "name": "escalated:escalated_api_legacy:ticket_macro",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_apply_macro"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/actions/<str:action>/",
+  "name": "escalated:escalated_api_legacy:ticket_custom_action",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_custom_action"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/tags/",
+  "name": "escalated:escalated_api_legacy:ticket_tags",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_tags"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/subjects/",
+  "name": "escalated:escalated_api_legacy:ticket_subjects_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_subjects_store"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/subjects/<int:subject_id>/",
+  "name": "escalated:escalated_api_legacy:ticket_subjects_destroy",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_subjects_destroy"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/delete/",
+  "name": "escalated:escalated_api_legacy:ticket_destroy",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_destroy"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/agents/",
+  "name": "escalated:escalated_api_legacy:agents",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_agents"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/departments/",
+  "name": "escalated:escalated_api_legacy:departments",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_departments"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tags/",
+  "name": "escalated:escalated_api_legacy:tags",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_tags"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/canned-responses/",
+  "name": "escalated:escalated_api_legacy:canned_responses",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_canned_responses"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/macros/",
+  "name": "escalated:escalated_api_legacy:macros",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_macros"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/realtime/config/",
+  "name": "escalated:escalated_api_legacy:realtime_config",
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",

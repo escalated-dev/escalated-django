@@ -153,7 +153,7 @@ def test_leaves_the_agent_panel_customer_guest_widget_and_api_urls_alone(client,
     assert reverse("escalated:guest_ticket_create") == "/support/guest/create/"
     assert reverse("escalated:widget_config") == "/support/widget/config/"
     assert reverse("escalated:admin_newsletters_index") == "/support/admin/newsletters/"
-    assert reverse("escalated:escalated_api:ticket_list").startswith("/support/support/api/v1/")
+    assert reverse("escalated:escalated_api:ticket_list").startswith("/support/api/v1/")
 
     staff = agent()
     client.force_login(staff)

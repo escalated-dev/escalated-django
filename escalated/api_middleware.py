@@ -107,7 +107,9 @@ class ApiRateLimit:
 
     def process_response(self, request, response):
         # Only add rate-limit headers to API responses
-        if not hasattr(request, "api_token") and not request.path.startswith("/" + get_setting("API_PREFIX")):
+        match = getattr(request, "resolver_match", None)
+        is_api = match is not None and "escalated_api" in match.namespaces
+        if not hasattr(request, "api_token") and not is_api:
             return response
 
         max_attempts = get_setting("API_RATE_LIMIT")

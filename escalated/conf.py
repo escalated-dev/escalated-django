@@ -92,7 +92,10 @@ DEFAULTS = {
     "API_ENABLED": False,
     "API_RATE_LIMIT": 60,
     "API_TOKEN_EXPIRY_DAYS": None,
-    "API_PREFIX": "support/api/v1",
+    # Relative to where escalated.urls is included (which carries the route
+    # prefix): path("support/", include("escalated.urls")) serves the API at
+    # /support/api/v1/.
+    "API_PREFIX": "api/v1",
     # Per-client-IP limits on the unauthenticated guest endpoints (widget and
     # guest-form ticket submission, guest replies). Over the limit: 429 with
     # Retry-After. Tickets and replies are counted separately over a 60s
@@ -164,6 +167,17 @@ DEFAULTS = {
     "newsletter_brand_logo_url": None,
     "newsletter_brand_physical_address": None,
 }
+
+
+# The old default API_PREFIX, which doubled the route prefix
+# (/support/support/api/v1/). Served as an alias for one release while
+# API_PREFIX is not configured.
+LEGACY_API_PREFIX = "support/api/v1"
+
+
+def api_prefix_configured():
+    """Whether the host set ESCALATED["API_PREFIX"] itself."""
+    return "API_PREFIX" in (getattr(settings, "ESCALATED", None) or {})
 
 
 def get_setting(name):

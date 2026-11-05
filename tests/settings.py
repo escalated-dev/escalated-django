@@ -91,7 +91,6 @@ ESCALATED = {
     "API_ENABLED": True,
     "API_RATE_LIMIT": 60,
     "API_TOKEN_EXPIRY_DAYS": None,
-    "API_PREFIX": "support/api/v1",
 }
 
 TEMPLATES = [

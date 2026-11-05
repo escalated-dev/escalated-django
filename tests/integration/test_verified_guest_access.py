@@ -28,9 +28,9 @@ EMAIL = "ann@example.com"
 VERIFICATION_URLS = [
     "/support/guest/verification",
     "/support/widget/verification",
-    "/support/support/api/v1/mobile/guest/verification",
+    "/support/api/v1/mobile/guest/verification",
 ]
-LOOKUP_URLS = ["/support/guest/lookup", "/support/widget/lookup", "/support/support/api/v1/mobile/guest/lookup"]
+LOOKUP_URLS = ["/support/guest/lookup", "/support/widget/lookup", "/support/api/v1/mobile/guest/lookup"]
 
 
 @pytest.fixture(autouse=True)
