@@ -122,11 +122,13 @@ class NotificationService:
         )
 
     @staticmethod
-    def notify_ticket_assigned(ticket, agent):
+    def notify_ticket_assigned(ticket, agent, actor=None):
         """Send notification to an agent when they are assigned a ticket."""
         channels = get_setting("NOTIFICATION_CHANNELS")
+        # Assigning a ticket to yourself tells you nothing (no email).
+        self_assigned = actor is not None and getattr(actor, "pk", None) == getattr(agent, "pk", object())
 
-        if "email" in channels:
+        if "email" in channels and not self_assigned:
             agent_email = NotificationService._recipient_email(agent, ticket)
             if agent_email:
                 NotificationService._send_email(

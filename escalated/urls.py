@@ -3,6 +3,7 @@ from django.urls import path as django_path
 
 from escalated.access import guard_patterns
 from escalated.conf import get_setting
+from escalated.services.agent_panel import record_customer_presence
 from escalated.ticket_access import path, ticket_access_view
 from escalated.url_helpers import delete, put
 from escalated.views import (
@@ -11,6 +12,7 @@ from escalated.views import (
     admin_settings_pages,
     advanced_reports,
     agent,
+    agent_panel,
     attachments,
     chat,
     cloud_webhook,
@@ -50,11 +52,29 @@ customer_patterns = [
     path("kb/<slug:slug>/feedback/", customer_kb.feedback, name="customer_kb_feedback"),
 ]
 
+# The customer is on the site: agent pages show them online (ADR
+# 2026-11-05-agent-panel-data). Staff browsing the portal are skipped.
+for _pattern in customer_patterns:
+    if _pattern.name.startswith("customer_ticket_"):
+        _pattern.callback = record_customer_presence(_pattern.callback)
+
 # Agent-facing URLs
 agent_patterns = [
     path("agent/", agent.dashboard, name="agent_dashboard"),
     path("agent/tickets/", agent.ticket_list, name="agent_ticket_list"),
     path("agent/tickets/bulk/", agent.ticket_bulk_action, name="agent_ticket_bulk"),
+    # The agent panel's data (ADR 2026-11-05-agent-panel-data).
+    path("agent/status/", put(agent_panel.status), name="agent_status"),
+    path("agent/kb/search/", agent_panel.kb_search, name="agent_kb_search"),
+    path("agent/notifications/", agent_panel.notification_index, name="agent_notifications"),
+    path("agent/notifications/read-all/", agent_panel.notification_read_all, name="agent_notifications_read_all"),
+    path(
+        "agent/notifications/<str:notification_id>/read/",
+        agent_panel.notification_read,
+        name="agent_notification_read",
+    ),
+    path("agent/tickets/<esc_ticket:ticket_id>/read/", agent_panel.ticket_read, name="agent_ticket_read"),
+    path("agent/tickets/<esc_ticket:ticket_id>/unread/", agent_panel.ticket_unread, name="agent_ticket_unread"),
     path("agent/tickets/<esc_ticket:ticket_id>/", agent.ticket_show, name="agent_ticket_show"),
     path("agent/tickets/<esc_ticket:ticket_id>/update/", put(agent.ticket_update), name="agent_ticket_update"),
     path("agent/tickets/<esc_ticket:ticket_id>/reply/", agent.ticket_reply, name="agent_ticket_reply"),

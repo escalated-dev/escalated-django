@@ -67,7 +67,7 @@ def test_sends_inbox_counts_built_in_views_stats_and_the_queue(client, agent_use
     assert result["component"] == "Escalated/Agent/TicketIndex"
 
     inbox = result["props"]["inbox"]
-    assert list(inbox) == ["counts", "views", "stats"]
+    assert list(inbox) == ["counts", "unread", "views", "stats"]
     # Unresolved, unsnoozed tickets in each queue.
     assert inbox["counts"] == {"mine": 2, "unassigned": 1, "all": 4}
     assert [v["id"] for v in inbox["views"]] == BUILT_IN_VIEW_IDS
@@ -331,9 +331,9 @@ def test_previews_the_latest_customer_visible_message_never_an_internal_note(cli
 
     assert row["latest_reply"]["body"] == "Customer-visible answer"
     assert row["last_reply_author"] is not None
-    # Escalated tracks no per-agent read state or customer presence, so it sends neither.
-    assert "is_unread" not in row
-    assert "requester_online" not in row
+    # The new ticket is customer activity; the agent's own replies are not.
+    assert row["is_unread"] is True
+    assert row["requester_online"] is False
 
 
 def test_sends_inbox_and_the_queue_the_agent_last_opened_on_the_ticket_page(client, agent_user):
@@ -344,7 +344,7 @@ def test_sends_inbox_and_the_queue_the_agent_last_opened_on_the_ticket_page(clie
     assert result["component"] == "Escalated/Agent/TicketShow"
     assert result["props"]["queue"] == {"key": "all", "title": "All tickets"}
     assert result["props"]["inbox"]["counts"] == {"mine": 1, "unassigned": 1, "all": 2}
-    assert list(result["props"]["inbox"]) == ["counts", "views", "stats"]
+    assert list(result["props"]["inbox"]) == ["counts", "unread", "views", "stats"]
 
     page(client, agent_user, {"assigned_to": str(agent_user.pk)})
 

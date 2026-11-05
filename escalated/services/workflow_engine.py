@@ -224,6 +224,8 @@ class WorkflowEngine:
                         body=self._interpolate(str(value), ticket),
                         is_internal_note=False,
                         type=Reply.Type.REPLY,
+                        # Written by a workflow, not the customer (agent unread markers).
+                        metadata={"workflow_id": getattr(workflow, "pk", None)},
                     )
             elif action_type == "send_webhook":
                 self._send_webhook(action, ticket)

@@ -22,6 +22,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from escalated import chat_tokens, guest_access
 from escalated.models import ChatSession, EscalatedSetting
+from escalated.services import agent_panel
 from escalated.services.chat_availability_service import ChatAvailabilityService
 from escalated.services.chat_routing_service import ChatRoutingService
 from escalated.services.chat_session_service import ChatSessionService
@@ -196,6 +197,7 @@ def _start(request):
 
 
 def _start_payload(ticket, session):
+    agent_panel.quietly(agent_panel.see_ticket_customer, ticket)
     return {
         "session_id": session.visitor_token,
         "expires_at": session.customer_token_expires_at.isoformat(),
@@ -238,7 +240,11 @@ start_chat = chat_start
 
 def _session_for(token):
     """The chat session the guest's unexpired token unlocks, or ``None`` (answered with 404)."""
-    return chat_tokens.find_session(token, ChatSession.objects.select_related("ticket", "agent"))
+    session = chat_tokens.find_session(token, ChatSession.objects.select_related("ticket", "agent"))
+    if session is not None:
+        # The guest is on the site: agent pages show the chat's customer online.
+        agent_panel.quietly(agent_panel.see_ticket_customer, session.ticket)
+    return session
 
 
 def _not_found():

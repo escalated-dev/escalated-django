@@ -113,7 +113,7 @@ def test_fetch_posts_pass_with_the_escalated_middleware():
 
     response = _fetch_post(client, _meta_token(client))
     assert response.status_code == 200, response.content[:300]
-    assert response.json() == {"status": "online"}
+    assert response.json() == {"status": "online", "agent_status": "online"}
 
 
 @pytest.mark.django_db

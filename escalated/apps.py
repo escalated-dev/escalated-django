@@ -12,6 +12,7 @@ class EscalatedConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self):
+        import escalated.agent_panel_handlers  # noqa: F401 - unread activity and agent notifications
         import escalated.checks  # noqa: F401 - registers the system checks
         import escalated.handlers  # noqa: F401 - connects signal handlers
         import escalated.plugin_actions  # noqa: F401 - delivers the canonical events to plugins

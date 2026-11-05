@@ -19,6 +19,7 @@ from django.views.decorators.http import require_GET, require_POST, require_safe
 from escalated import guest_access, guest_throttle, kb_guards
 from escalated.conf import get_setting
 from escalated.models import Article, Contact, Department, EscalatedSetting, Ticket
+from escalated.services import agent_panel
 from escalated.signals import ticket_created
 from escalated.views import guest_verification
 from escalated.widget_embed import WidgetMetadata, embed_script
@@ -415,6 +416,8 @@ def widget_ticket_status(request, reference):
     ticket = guest_access.resolve(header[7:].strip())
     if ticket is None or not hmac.compare_digest(str(ticket.reference), str(reference)):
         return not_found
+    # The customer is on the site (only agent pages ever show it).
+    agent_panel.quietly(agent_panel.see_ticket_customer, ticket)
 
     replies = (
         ticket.replies.filter(is_internal_note=False, is_deleted=False)

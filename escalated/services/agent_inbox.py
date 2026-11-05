@@ -266,6 +266,13 @@ class AgentInbox:
                 "unassigned": self._count_open({"unassigned": 1}),
                 "all": self._count_open({}),
             },
+            # Of the same open tickets, those unread for this agent
+            # (ADR 2026-11-05-agent-panel-data).
+            "unread": {
+                "mine": self._count_open({"assigned_to": self.me}, unread=True),
+                "unassigned": self._count_open({"unassigned": 1}, unread=True),
+                "all": self._count_open({}, unread=True),
+            },
             "views": [
                 {"id": v["id"], "name": v["name"], "count": self._count_open(v["filters"]), "filters": v["filters"]}
                 for v in self.views()
@@ -289,13 +296,17 @@ class AgentInbox:
         filters = {"mine": {"assigned_to": self.me}, "unassigned": {"unassigned": 1}}.get(key, {})
         return {"key": key, "title": str(titles[key]), "filters": filters}
 
-    def _count_open(self, filters):
+    def _count_open(self, filters, unread=False):
         """Unresolved tickets, unless the filters ask for a status themselves."""
         if not filters.get("status"):
             filters = {**filters, "open": 1}
-        return self._count(filters)
+        return self._count(filters, unread)
 
-    def _count(self, filters):
+    def _count(self, filters, unread=False):
         from escalated.models import Ticket
+        from escalated.services.agent_panel import only_unread
 
-        return apply_filters(Ticket.objects.all(), filters, self.agent).distinct().count()
+        tickets = apply_filters(Ticket.objects.all(), filters, self.agent)
+        if unread:
+            tickets = only_unread(tickets, self.agent)
+        return tickets.distinct().count()

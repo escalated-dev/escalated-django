@@ -61,6 +61,9 @@ BULK_ACTIONS = {
     "department": ["ticket.edit"],
     "close": ["ticket.edit", "ticket.close"],
     "delete": ["ticket.delete"],
+    # Personal read markers: viewing is enough.
+    "mark_read": [],
+    "mark_unread": [],
 }
 
 VIEW = ["ticket.view"]
@@ -76,6 +79,12 @@ ROUTE_PERMISSIONS: list[tuple[str, list[str]]] = [
     ("admin_settings_two_factor", []),
     ("admin_two_factor_*", []),
     ("two_factor_challenge", []),
+    # The agent panel's personal routes (ADR 2026-11-05-agent-panel-data).
+    ("agent_status", []),
+    ("agent_notification*", []),
+    ("agent_ticket_read", VIEW),
+    ("agent_ticket_unread", VIEW),
+    ("agent_kb_search", ["kb.view"]),
     # ---- Tickets (admin and agent panels, staff API) -----------------------
     ("agent_dashboard", VIEW),
     ("api:dashboard", VIEW),

@@ -129,7 +129,7 @@ def on_ticket_assigned(sender, ticket, user, agent, **kwargs):
         },
     )
 
-    NotificationService.notify_ticket_assigned(ticket, agent)
+    NotificationService.notify_ticket_assigned(ticket, agent, actor=user)
     logger.info(f"Ticket {ticket.reference} assigned to {agent}")
 
 

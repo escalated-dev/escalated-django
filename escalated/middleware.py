@@ -142,6 +142,8 @@ class EscalatedInertiaShareMiddleware:
                 # ['*'] for staff while roles & permissions is off (the gates
                 # decide); the user's role slugs while it is on.
                 data["permissions"] = shared_permissions(request.user, data["is_agent"] or data["is_admin"])
+                if data["is_agent"] or data["is_admin"]:
+                    data.update(_agent_panel_shared(request.user))
 
             try:
                 data["guest_tickets_enabled"] = EscalatedSetting.guest_tickets_enabled()
@@ -179,6 +181,22 @@ class EscalatedInertiaShareMiddleware:
             pass
 
         return None
+
+
+def _agent_panel_shared(user):
+    """``agent_status``, ``agent_statuses`` and, while the feed is on, ``notifications`` (staff only)."""
+    from escalated.services import agent_panel
+
+    try:
+        data = {
+            "agent_status": agent_panel.agent_status(user),
+            "agent_statuses": list(agent_panel.AGENT_STATUSES),
+        }
+        if agent_panel.notifications_available():
+            data["notifications"] = {"unread_count": agent_panel.unread_count(user)}
+        return data
+    except Exception:  # noqa: BLE001 - the tables may not be migrated yet
+        return {}
 
 
 class EscalatedEmbedMiddleware:
