@@ -598,8 +598,21 @@ urlpatterns += [
     django_path("sso/jwt/callback/", sso.jwt_callback, name="sso_jwt_callback"),
 ]
 
+# Embedding the admin in the host's own admin panel (optional; ADR
+# 2026-11-05-embeddable-admin, escalated.embed). While it is on, the admin
+# URLs below are collected in embedded_admin_patterns instead of urlpatterns:
+# escalated.embed_urls mounts them under the host's prefix with the same
+# names. Off (the default), nothing here changes.
+from escalated import embed as _embed  # noqa: E402
+
+_embedding = _embed.enabled()
+embedded_admin_patterns = []
+
 # UI routes (only when UI is enabled)
 if get_setting("UI_ENABLED"):
+    if _embedding:
+        embedded_admin_patterns += [p for p in admin_patterns if p.name not in _embed.STAYING_ADMIN_URLS]
+        admin_patterns = [p for p in admin_patterns if p.name in _embed.STAYING_ADMIN_URLS]
     admin_patterns = list(admin_newsletter_patterns) + list(admin_patterns)
     urlpatterns = customer_patterns + agent_patterns + chat_patterns + admin_patterns + guest_patterns + urlpatterns
 
@@ -610,6 +623,10 @@ try:
 
     _bridge = _get_bridge()
     _plugin_urls = _bridge.get_plugin_urls()
+    if _plugin_urls and _embedding:
+        # SDK plugin admin pages sit beside the admin, so they move with it.
+        embedded_admin_patterns += [p for p in _plugin_urls if getattr(p, "escalated_admin_page", False)]
+        _plugin_urls = [p for p in _plugin_urls if not getattr(p, "escalated_admin_page", False)]
     if _plugin_urls:
         urlpatterns = list(urlpatterns) + _plugin_urls
 except Exception:
@@ -626,4 +643,10 @@ if get_setting("API_ENABLED"):
     ]
 
     # Admin API token management (under the main admin prefix)
-    urlpatterns += admin_api_token_patterns
+    if _embedding:
+        embedded_admin_patterns += admin_api_token_patterns
+    else:
+        urlpatterns += admin_api_token_patterns
+
+if _embedding:
+    embedded_admin_patterns = _embed.mount_admin(embedded_admin_patterns)

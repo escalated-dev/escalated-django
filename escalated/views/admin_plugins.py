@@ -13,7 +13,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
 
 from escalated.conf import get_setting
-from escalated.permissions import is_admin
+from escalated.permissions import passes_admin_gate
 from escalated.plugin_service import PluginService
 from escalated.rendering import render_page
 
@@ -24,7 +24,7 @@ def _require_admin(request):
     """Return an error response if user is not admin, else None."""
     if not request.user.is_authenticated:
         return redirect("login")
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return HttpResponseForbidden("Admin access required.")
     return None
 

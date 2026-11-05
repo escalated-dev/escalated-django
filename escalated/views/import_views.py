@@ -39,7 +39,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from escalated.models import EncryptedJSONField, ImportJob
-from escalated.permissions import is_admin
+from escalated.permissions import passes_admin_gate
 from escalated.rendering import render_page
 from escalated.request_data import request_data
 from escalated.services import import_runner
@@ -56,7 +56,7 @@ logger = logging.getLogger("escalated.import")
 def _require_admin(request):
     if not request.user.is_authenticated:
         return redirect("login")
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return HttpResponseForbidden(_("Admin access required."))
     return None
 

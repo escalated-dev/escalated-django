@@ -16,7 +16,7 @@ from django.utils import timezone
 from escalated.api_serializers import ApiTokenSerializer
 from escalated.conf import get_setting
 from escalated.models import ApiToken
-from escalated.permissions import is_admin, is_agent
+from escalated.permissions import is_admin, is_agent, passes_admin_gate
 from escalated.rendering import render_page
 
 User = get_user_model()
@@ -26,7 +26,7 @@ def _require_admin(request):
     """Return an error response if user is not admin, else None."""
     if not request.user.is_authenticated:
         return redirect("login")
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return HttpResponseForbidden("Admin access required.")
     return None
 

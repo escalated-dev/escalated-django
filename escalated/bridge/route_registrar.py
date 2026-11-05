@@ -66,6 +66,11 @@ class RouteRegistrar:
         if not pages:
             return
 
+        from escalated import embed
+
+        # Embedding the admin in the host's admin panel (ADR 2026-11-05).
+        embedded = embed.enabled()
+
         for page in pages:
             route = (page.get("route") or "").lstrip("/")
             component = page.get("component", "")
@@ -81,10 +86,15 @@ class RouteRegistrar:
                 continue
 
             url_pattern = f"{prefix}/admin/plugins/{plugin_name}/{route}"
+            if embedded:
+                # Moved under the host's prefix with the admin (escalated.urls).
+                url_pattern = f"admin/plugins/{plugin_name}/{route}"
             view = self._make_page_view(plugin_name, component, layout, capability)
             name = f"escalated.plugin.{plugin_name}.page.{route.replace('/', '.')}"
 
-            self._url_patterns.append(path(url_pattern, view, name=name))
+            pattern = path(url_pattern, view, name=name)
+            pattern.escalated_admin_page = True
+            self._url_patterns.append(pattern)
             logger.debug(
                 "Escalated PluginBridge: registered page route GET /%s (plugin %s)",
                 url_pattern,
@@ -109,7 +119,9 @@ class RouteRegistrar:
 
                 return redirect_to_login(request.get_full_path())
 
-            if not getattr(request.user, "is_staff", False):
+            from escalated.permissions import admin_gate_replaced
+
+            if not getattr(request.user, "is_staff", False) and not admin_gate_replaced(request):
                 return HttpResponseForbidden("Admin access required.")
 
             if capability and not request.user.has_perm(capability):

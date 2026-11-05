@@ -9,7 +9,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from escalated.event_names import canonical_event
-from escalated.permissions import is_admin
+from escalated.permissions import passes_admin_gate
 from escalated.rendering import render_page
 from escalated.services.workflow_engine import ACTION_TYPES, OPERATORS, WorkflowEngine
 from escalated.workflow_models import Workflow, WorkflowLog
@@ -23,7 +23,7 @@ ERRORS_SESSION_KEY = "escalated_workflows_errors"
 
 
 def _require_admin(request):
-    if not is_admin(request.user):
+    if not passes_admin_gate(request):
         return JsonResponse({"error": "Forbidden"}, status=403)
     return None
 

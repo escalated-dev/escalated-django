@@ -23,6 +23,7 @@ class InertiaRenderer(UiRenderer):
     def render(self, request, component, props=None):
         from inertia import render
 
+        from escalated import embed
         from escalated.route_list import share_ziggy
 
         # The route() table the shared pages resolve their links with; a
@@ -34,6 +35,11 @@ class InertiaRenderer(UiRenderer):
             errors = session.pop(ERRORS_SESSION_KEY)
             if not props.get("errors"):
                 props["errors"] = errors
+        # A server-rendered host's admin template, on embedded admin pages
+        # only (ESCALATED["EMBED"]["ROOT_VIEW"]; ADR 2026-11-05).
+        root_view = embed.root_view_for(request)
+        if root_view:
+            return render(request, component, props=props, template_data={"inertia_layout": root_view})
         return render(request, component, props=props)
 
 

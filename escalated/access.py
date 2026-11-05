@@ -319,13 +319,13 @@ def _request_data(request) -> dict:
 
 
 def _gate_passes(group: str, request) -> bool:
-    from escalated.permissions import is_admin, is_agent
+    from escalated.permissions import is_admin, is_agent, passes_admin_gate
 
     user = getattr(request, "user", None)
     if not user or not user.is_authenticated:
         return False
     if group == "admin":
-        return is_admin(user)
+        return passes_admin_gate(request)
     if group in ("agent", "staff"):
         return is_agent(user) or is_admin(user)
     if group == "api":

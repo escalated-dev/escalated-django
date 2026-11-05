@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Upgrading
+- **Optional: embed the admin in your own admin panel (off by default; no change unless configured).** With no `ESCALATED["EMBED"]` setting every URL, page, shared prop, template, header and gate is unchanged; a test compares the whole URL table (paths, names, views and Escalated's guards) with the one from before this change. See docs/embedding-admin.md.
+
+### Added
+- **Embedding the admin in your own admin panel** (optional; ADR 2026-11-05-embeddable-admin). `ESCALATED["EMBED"]` (`ENABLED`, `MODE`, `PREFIX`, `MIDDLEWARE`, `REPLACE_ADMIN_GATE`, `LAYOUT`, `ROOT_VIEW`, `FRAME_ANCESTORS`; env `ESCALATED_EMBED`, `ESCALATED_EMBED_MODE`, `ESCALATED_EMBED_PREFIX`, `ESCALATED_EMBED_FRAME_ANCESTORS`), or `escalated.embed.embed_admin(...)` to build it, with `escalated.embed_urls` included at the site root:
+  - the admin URLs (admin screens, plugin admin, API tokens, import, settings) and SDK plugin admin pages move from `{ROUTE_PREFIX}/admin/` under the host's `PREFIX`, through the host's view decorators (`MIDDLEWARE`), with the same URL names, so the `ziggy` route table follows; the old URLs answer 404. Escalated's admin gate stays unless `REPLACE_ADMIN_GATE` is set (which needs `MIDDLEWARE`); two-factor and route permissions always apply. Agent, customer, guest, widget, API, SSO, two-factor and newsletter URLs do not move;
+  - every Inertia page shares `escalated.embed` (`enabled` on embedded pages only, `mode`, `layout`, `route`, `base_url`, `allowed_origins`) and `escalated.navigation`, the admin menu filtered by the admin gate, feature switches and route permissions, with plugin admin items; `escalated.embed.admin_navigation(user, request)` and `{% escalated_admin_navigation %}` (`{% load escalated_embed %}`) return the same for templates;
+  - `ROOT_VIEW` renders embedded pages in the host's own template;
+  - iframe mode sends `Content-Security-Policy: frame-ancestors 'self' <origins>` and drops `X-Frame-Options` on embedded responses only; `escalated.middleware.EscalatedEmbedMiddleware`, first in `MIDDLEWARE`, re-applies it after every other middleware. System checks `escalated.W001` (admin not mounted) and `escalated.W002` (iframe mode without that middleware first).
+
 ## [0.7.14] - 2026-11-04
 
 ### Upgrading

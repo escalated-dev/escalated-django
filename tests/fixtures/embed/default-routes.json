@@ -1,0 +1,4364 @@
+[
+ {
+  "path": "support/tickets/",
+  "name": "escalated:customer_ticket_list",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer.ticket_list"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/tickets/create/",
+  "name": "escalated:customer_ticket_create",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer.ticket_create"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/tickets/store/",
+  "name": "escalated:customer_ticket_store",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer.ticket_store"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/tickets/<esc_ticket:ticket_id>/",
+  "name": "escalated:customer_ticket_show",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer.ticket_show"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/tickets/<esc_ticket:ticket_id>/reply/",
+  "name": "escalated:customer_ticket_reply",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer.ticket_reply"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/tickets/<esc_ticket:ticket_id>/close/",
+  "name": "escalated:customer_ticket_close",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer.ticket_close"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/tickets/<esc_ticket:ticket_id>/reopen/",
+  "name": "escalated:customer_ticket_reopen",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer.ticket_reopen"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/tickets/<esc_ticket:ticket_id>/rate/",
+  "name": "escalated:customer_ticket_rate",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer.ticket_rate"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/kb/",
+  "name": "escalated:customer_kb_index",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer_kb.index"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/kb/<slug:slug>/",
+  "name": "escalated:customer_kb_show",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer_kb.show"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/kb/<slug:slug>/feedback/",
+  "name": "escalated:customer_kb_feedback",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.customer_kb.feedback"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/",
+  "name": "escalated:agent_dashboard",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.dashboard"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/",
+  "name": "escalated:agent_ticket_list",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_list"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/bulk/",
+  "name": "escalated:agent_ticket_bulk",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_bulk_action"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/",
+  "name": "escalated:agent_ticket_show",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_show"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/update/",
+  "name": "escalated:agent_ticket_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.agent.ticket_update"
+  ],
+  "group": "agent",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/reply/",
+  "name": "escalated:agent_ticket_reply",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_reply"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/note/",
+  "name": "escalated:agent_ticket_note",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_note"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/assign/",
+  "name": "escalated:agent_ticket_assign",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_assign"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/status/",
+  "name": "escalated:agent_ticket_status",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_status"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/priority/",
+  "name": "escalated:agent_ticket_priority",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_priority"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/tags/",
+  "name": "escalated:agent_ticket_tags",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_tags"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/subjects/",
+  "name": "escalated:agent_ticket_subjects_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_subjects_store"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/subjects/<int:subject_id>/",
+  "name": "escalated:agent_ticket_subjects_destroy",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_subjects_destroy"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/department/",
+  "name": "escalated:agent_ticket_department",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_department"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/macro/",
+  "name": "escalated:agent_ticket_macro",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_apply_macro"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/actions/<str:action>/",
+  "name": "escalated:agent_ticket_custom_action",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_custom_action"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/snooze/",
+  "name": "escalated:agent_ticket_snooze",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_snooze"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/unsnooze/",
+  "name": "escalated:agent_ticket_unsnooze",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_unsnooze"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/follow/",
+  "name": "escalated:agent_ticket_follow",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_follow"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/presence/",
+  "name": "escalated:agent_ticket_presence",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_presence"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/tickets/<esc_ticket:ticket_id>/<int:reply_id>/pin/",
+  "name": "escalated:agent_ticket_pin",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.agent.ticket_pin_reply"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/mentions/",
+  "name": "escalated:agent_mentions",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.mentions.mention_list"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/mentions/mark-read/",
+  "name": "escalated:agent_mentions_mark_read",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.mentions.mention_mark_read"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/mentions/search-agents/",
+  "name": "escalated:agent_mentions_search_agents",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.mentions.search_agents"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/chat/active/",
+  "name": "escalated:agent_chat_active",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.chat.active_chats"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/chat/queue/",
+  "name": "escalated:agent_chat_queue",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.chat.chat_queue"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/chat/<int:session_id>/accept/",
+  "name": "escalated:agent_chat_accept",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.chat.accept_chat"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/chat/<int:session_id>/end/",
+  "name": "escalated:agent_chat_end",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.chat.end_chat"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/chat/<int:session_id>/transfer/",
+  "name": "escalated:agent_chat_transfer",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.chat.transfer_chat"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/chat/status/",
+  "name": "escalated:agent_chat_status",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.chat.update_status"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/chat/<int:session_id>/message/",
+  "name": "escalated:agent_chat_message",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.chat.send_message"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/agent/chat/<int:session_id>/typing/",
+  "name": "escalated:agent_chat_typing",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.chat.update_typing"
+  ],
+  "group": "agent",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/",
+  "name": "escalated:admin_newsletters_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/new/",
+  "name": "escalated:admin_newsletters_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/preview/",
+  "name": "escalated:admin_newsletters_preview",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/test/",
+  "name": "escalated:admin_newsletters_test",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/lists/",
+  "name": "escalated:admin_newsletters_lists_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/lists/new/",
+  "name": "escalated:admin_newsletters_lists_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/lists/<int:list_id>/",
+  "name": "escalated:admin_newsletters_lists_show",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/lists/<int:list_id>/members/",
+  "name": "escalated:admin_newsletters_lists_members_add",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/lists/<int:list_id>/members/<int:contact_id>/",
+  "name": "escalated:admin_newsletters_lists_members_remove",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/lists/<int:list_id>/import/",
+  "name": "escalated:admin_newsletters_lists_import",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/templates/",
+  "name": "escalated:admin_newsletters_templates_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/templates/new/",
+  "name": "escalated:admin_newsletters_templates_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/templates/<int:template_id>/",
+  "name": "escalated:admin_newsletters_templates_show",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/settings/",
+  "name": "escalated:admin_newsletters_settings_show",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/<int:newsletter_id>/",
+  "name": "escalated:admin_newsletters_show",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/newsletters/<int:newsletter_id>/edit/",
+  "name": "escalated:admin_newsletters_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/",
+  "name": "escalated:admin_reports",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.reports"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/",
+  "name": "escalated:admin_tickets_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/bulk/",
+  "name": "escalated:admin_tickets_bulk",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_bulk_action"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/merge-search/",
+  "name": "escalated:admin_ticket_merge_search",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.ticket_merge_search"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/",
+  "name": "escalated:admin_tickets_show",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_show"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/reply/",
+  "name": "escalated:admin_tickets_reply",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_reply"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/note/",
+  "name": "escalated:admin_tickets_note",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_note"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/assign/",
+  "name": "escalated:admin_tickets_assign",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_assign"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/status/",
+  "name": "escalated:admin_tickets_status",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_status"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/priority/",
+  "name": "escalated:admin_tickets_priority",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_priority"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/tags/",
+  "name": "escalated:admin_tickets_tags",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_tags"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/subjects/",
+  "name": "escalated:admin_tickets_subjects_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_subjects_store"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/subjects/<int:subject_id>/",
+  "name": "escalated:admin_tickets_subjects_destroy",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_subjects_destroy"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/department/",
+  "name": "escalated:admin_tickets_department",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_department"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/macro/",
+  "name": "escalated:admin_tickets_macro",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_apply_macro"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/follow/",
+  "name": "escalated:admin_tickets_follow",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_follow"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/presence/",
+  "name": "escalated:admin_tickets_presence",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_presence"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/<int:reply_id>/pin/",
+  "name": "escalated:admin_tickets_pin",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tickets_pin_reply"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/links/",
+  "name": "escalated:admin_ticket_links_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.ticket_links_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/links/store/",
+  "name": "escalated:admin_ticket_links_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.ticket_links_store"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/links/<int:link_id>/delete/",
+  "name": "escalated:admin_ticket_links_destroy",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.ticket_links_destroy"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/merge/",
+  "name": "escalated:admin_ticket_merge",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.ticket_merge"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/saved-views/",
+  "name": "escalated:admin_saved_views_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.saved_views_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/saved-views/store/",
+  "name": "escalated:admin_saved_views_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.saved_views_store"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/saved-views/<int:view_id>/update/",
+  "name": "escalated:admin_saved_views_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.saved_views_update"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/saved-views/<int:view_id>/delete/",
+  "name": "escalated:admin_saved_views_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.saved_views_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/saved-views/reorder/",
+  "name": "escalated:admin_saved_views_reorder",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.saved_views_reorder"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/snooze/",
+  "name": "escalated:admin_ticket_snooze",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.ticket_snooze"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/unsnooze/",
+  "name": "escalated:admin_ticket_unsnooze",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.ticket_unsnooze"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/split/",
+  "name": "escalated:admin_ticket_split",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.ticket_split"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/side-conversations/",
+  "name": "escalated:admin_side_conversations_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.side_conversations_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/side-conversations/store/",
+  "name": "escalated:admin_side_conversations_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.side_conversations_store"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/side-conversations/<int:conversation_id>/reply/",
+  "name": "escalated:admin_side_conversations_reply",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.side_conversations_reply"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tickets/<esc_ticket:ticket_id>/side-conversations/<int:conversation_id>/close/",
+  "name": "escalated:admin_side_conversations_close",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.side_conversations_close"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/departments/",
+  "name": "escalated:admin_departments_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.departments_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/departments/create/",
+  "name": "escalated:admin_departments_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.departments_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/departments/<int:department_id>/edit/",
+  "name": "escalated:admin_departments_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.departments_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/departments/<int:department_id>/delete/",
+  "name": "escalated:admin_departments_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.departments_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/sla-policies/",
+  "name": "escalated:admin_sla_policies_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.sla_policies_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/sla-policies/create/",
+  "name": "escalated:admin_sla_policies_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.sla_policies_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/sla-policies/<int:policy_id>/edit/",
+  "name": "escalated:admin_sla_policies_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.sla_policies_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/sla-policies/<int:policy_id>/delete/",
+  "name": "escalated:admin_sla_policies_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.sla_policies_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/escalation-rules/",
+  "name": "escalated:admin_escalation_rules_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.escalation_rules_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/escalation-rules/create/",
+  "name": "escalated:admin_escalation_rules_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.escalation_rules_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/escalation-rules/<int:rule_id>/edit/",
+  "name": "escalated:admin_escalation_rules_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.escalation_rules_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/escalation-rules/<int:rule_id>/delete/",
+  "name": "escalated:admin_escalation_rules_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.escalation_rules_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tags/",
+  "name": "escalated:admin_tags_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tags_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tags/create/",
+  "name": "escalated:admin_tags_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.tags_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tags/<int:tag_id>/edit/",
+  "name": "escalated:admin_tags_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.tags_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/tags/<int:tag_id>/delete/",
+  "name": "escalated:admin_tags_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.tags_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/canned-responses/",
+  "name": "escalated:admin_canned_responses_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.canned_responses_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/canned-responses/create/",
+  "name": "escalated:admin_canned_responses_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.canned_responses_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/canned-responses/<int:response_id>/edit/",
+  "name": "escalated:admin_canned_responses_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.canned_responses_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/canned-responses/<int:response_id>/delete/",
+  "name": "escalated:admin_canned_responses_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.canned_responses_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/macros/",
+  "name": "escalated:admin_macros_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.macros_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/macros/create/",
+  "name": "escalated:admin_macros_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.macros_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/macros/<int:macro_id>/edit/",
+  "name": "escalated:admin_macros_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.macros_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/macros/<int:macro_id>/delete/",
+  "name": "escalated:admin_macros_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.macros_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/",
+  "name": "escalated:admin_settings",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.settings_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/update/",
+  "name": "escalated:admin_settings_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.settings_update"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/audit-logs/",
+  "name": "escalated:admin_audit_logs_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.audit_logs_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/statuses/",
+  "name": "escalated:admin_statuses_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.statuses_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/statuses/create/",
+  "name": "escalated:admin_statuses_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.statuses_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/statuses/<int:status_id>/edit/",
+  "name": "escalated:admin_statuses_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.statuses_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/statuses/<int:status_id>/delete/",
+  "name": "escalated:admin_statuses_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.statuses_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/business-hours/",
+  "name": "escalated:admin_business_hours_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.business_hours_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/business-hours/create/",
+  "name": "escalated:admin_business_hours_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.business_hours_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/business-hours/<int:schedule_id>/edit/",
+  "name": "escalated:admin_business_hours_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.business_hours_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/business-hours/<int:schedule_id>/delete/",
+  "name": "escalated:admin_business_hours_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.business_hours_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/roles/",
+  "name": "escalated:admin_roles_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/access.py:wrapped",
+   "escalated.views.admin.roles_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/roles/create/",
+  "name": "escalated:admin_roles_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/access.py:wrapped",
+   "escalated.views.admin.roles_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/roles/<int:role_id>/edit/",
+  "name": "escalated:admin_roles_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated/access.py:wrapped",
+   "escalated.views.admin.roles_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/roles/<int:role_id>/delete/",
+  "name": "escalated:admin_roles_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated/access.py:wrapped",
+   "escalated.views.admin.roles_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-fields/",
+  "name": "escalated:admin_custom_fields_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.custom_fields_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-fields/create/",
+  "name": "escalated:admin_custom_fields_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.custom_fields_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-fields/<int:field_id>/edit/",
+  "name": "escalated:admin_custom_fields_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.custom_fields_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-fields/<int:field_id>/delete/",
+  "name": "escalated:admin_custom_fields_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.custom_fields_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-fields/reorder/",
+  "name": "escalated:admin_custom_fields_reorder",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.custom_fields_reorder"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/kb/articles/",
+  "name": "escalated:admin_articles_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/kb_guards.py:_wrapped",
+   "escalated.views.admin.articles_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/kb/articles/create/",
+  "name": "escalated:admin_articles_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/kb_guards.py:_wrapped",
+   "escalated.views.admin.articles_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/kb/articles/<int:article_id>/edit/",
+  "name": "escalated:admin_articles_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated/kb_guards.py:_wrapped",
+   "escalated.views.admin.articles_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/kb/articles/<int:article_id>/delete/",
+  "name": "escalated:admin_articles_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated/kb_guards.py:_wrapped",
+   "escalated.views.admin.articles_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/kb/categories/",
+  "name": "escalated:admin_kb_categories_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/kb_guards.py:_wrapped",
+   "escalated.views.admin.kb_categories_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/kb/categories/store/",
+  "name": "escalated:admin_kb_categories_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/kb_guards.py:_wrapped",
+   "escalated.views.admin.kb_categories_store"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/kb/categories/<int:category_id>/update/",
+  "name": "escalated:admin_kb_categories_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated/kb_guards.py:_wrapped",
+   "escalated.views.admin.kb_categories_update"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/kb/categories/<int:category_id>/delete/",
+  "name": "escalated:admin_kb_categories_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated/kb_guards.py:_wrapped",
+   "escalated.views.admin.kb_categories_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/plugins/",
+  "name": "escalated:admin_plugins_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_plugins.plugin_list"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/plugins/upload/",
+  "name": "escalated:admin_plugins_upload",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_plugins.plugin_upload"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/plugins/<slug:slug>/activate/",
+  "name": "escalated:admin_plugins_activate",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_plugins.plugin_activate"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/plugins/<slug:slug>/deactivate/",
+  "name": "escalated:admin_plugins_deactivate",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_plugins.plugin_deactivate"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/plugins/<slug:slug>/delete/",
+  "name": "escalated:admin_plugins_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin_plugins.plugin_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/skills/",
+  "name": "escalated:admin_skills_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.skills_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/skills/create/",
+  "name": "escalated:admin_skills_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.skills_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/skills/store/",
+  "name": "escalated:admin_skills_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.skills_store"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/skills/<int:skill_id>/edit/",
+  "name": "escalated:admin_skills_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.skills_edit"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/skills/<int:skill_id>/update/",
+  "name": "escalated:admin_skills_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.skills_update"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/skills/<int:skill_id>/delete/",
+  "name": "escalated:admin_skills_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.skills_delete"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/skills/<int:skill_id>/",
+  "name": "escalated:admin_skills_destroy",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.skills_destroy"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/capacity/",
+  "name": "escalated:admin_capacity_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.capacity_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/capacity/<int:capacity_id>/update/",
+  "name": "escalated:admin_capacity_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.capacity_update"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/webhooks/",
+  "name": "escalated:admin_webhooks_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.webhooks_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/webhooks/create/",
+  "name": "escalated:admin_webhooks_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.webhooks_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/webhooks/<int:webhook_id>/edit/",
+  "name": "escalated:admin_webhooks_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.webhooks_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/webhooks/<int:webhook_id>/delete/",
+  "name": "escalated:admin_webhooks_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.webhooks_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/webhooks/<int:webhook_id>/deliveries/",
+  "name": "escalated:admin_webhooks_deliveries",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.webhooks_deliveries"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/webhooks/deliveries/<int:delivery_id>/retry/",
+  "name": "escalated:admin_webhooks_retry",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.webhooks_retry"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/automations/",
+  "name": "escalated:admin_automations_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.automations_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/automations/create/",
+  "name": "escalated:admin_automations_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.automations_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/automations/<int:automation_id>/edit/",
+  "name": "escalated:admin_automations_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.automations_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/automations/<int:automation_id>/delete/",
+  "name": "escalated:admin_automations_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.automations_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/csat/",
+  "name": "escalated:admin_settings_csat",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_csat"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/csat/",
+  "name": "escalated:admin_settings_csat_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_csat"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/public-tickets/",
+  "name": "escalated:admin_settings_public_tickets",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_public_tickets"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/public-tickets/",
+  "name": "escalated:admin_settings_public_tickets_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_public_tickets"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/data-retention/",
+  "name": "escalated:admin_settings_data_retention",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_data_retention"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/data-retention/",
+  "name": "escalated:admin_settings_data_retention_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_data_retention"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/database/",
+  "name": "escalated:admin_settings_database",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_database"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/database/",
+  "name": "escalated:admin_settings_database_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_database"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/database/test/",
+  "name": "escalated:admin_settings_database_test",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_database_test"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/email/",
+  "name": "escalated:admin_settings_email",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_email"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/email/",
+  "name": "escalated:admin_settings_email_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_settings_pages.settings_email"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/sso/",
+  "name": "escalated:admin_settings_sso",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/access.py:wrapped",
+   "escalated.views.admin.settings_sso"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/two-factor/",
+  "name": "escalated:admin_settings_two_factor",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/access.py:wrapped",
+   "escalated.views.two_factor.settings_two_factor"
+  ],
+  "group": "staff",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/two-factor/setup/",
+  "name": "escalated:admin_two_factor_setup",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/access.py:wrapped",
+   "escalated.views.two_factor.two_factor_setup"
+  ],
+  "group": "staff",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/two-factor/confirm/",
+  "name": "escalated:admin_two_factor_confirm",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/access.py:wrapped",
+   "escalated.views.two_factor.two_factor_confirm"
+  ],
+  "group": "staff",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/settings/two-factor/disable/",
+  "name": "escalated:admin_two_factor_disable",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/access.py:wrapped",
+   "escalated.views.two_factor.two_factor_disable"
+  ],
+  "group": "staff",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-objects/",
+  "name": "escalated:admin_custom_objects_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.custom_objects_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-objects/create/",
+  "name": "escalated:admin_custom_objects_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.custom_objects_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-objects/<int:object_id>/edit/",
+  "name": "escalated:admin_custom_objects_edit",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.custom_objects_edit"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-objects/<int:object_id>/delete/",
+  "name": "escalated:admin_custom_objects_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.custom_objects_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-objects/<int:object_id>/records/",
+  "name": "escalated:admin_custom_object_records",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.custom_object_records"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-objects/<int:object_id>/records/store/",
+  "name": "escalated:admin_custom_object_records_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.custom_object_records_store"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-objects/<int:object_id>/records/<int:record_id>/update/",
+  "name": "escalated:admin_custom_object_records_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.custom_object_records_update"
+  ],
+  "group": "admin",
+  "accepts": [
+   "PUT",
+   "PATCH"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/custom-objects/<int:object_id>/records/<int:record_id>/delete/",
+  "name": "escalated:admin_custom_object_records_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/url_helpers.py:accepting",
+   "escalated.views.admin.custom_object_records_delete"
+  ],
+  "group": "admin",
+  "accepts": [
+   "DELETE"
+  ],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/dashboard/",
+  "name": "escalated:admin_reports_dashboard",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.reports_dashboard"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/agents/",
+  "name": "escalated:admin_reports_agents",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.agent_metrics"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/sla/",
+  "name": "escalated:admin_reports_sla",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.sla_report"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/csat/",
+  "name": "escalated:admin_reports_csat",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.csat_report"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/agent/<int:agent_id>/detail/",
+  "name": "escalated:admin_reports_agent_detail",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.agent_detail"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/users/",
+  "name": "escalated:admin_users_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.users_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/users/<int:user_id>/role/",
+  "name": "escalated:admin_users_role",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin.users_role"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/users/<int:user_id>/roles/",
+  "name": "escalated:admin_users_roles",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/access.py:wrapped",
+   "escalated.views.admin.users_roles"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/workflows/",
+  "name": "escalated:admin_workflows",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.workflows.workflow_list"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/workflows/create/",
+  "name": "escalated:admin_workflow_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.workflows.workflow_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/workflows/reorder/",
+  "name": "escalated:admin_workflow_reorder",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.workflows.workflow_reorder"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/workflows/<int:workflow_id>/",
+  "name": "escalated:admin_workflow_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.workflows.workflow_update"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/workflows/<int:workflow_id>/delete/",
+  "name": "escalated:admin_workflow_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.workflows.workflow_delete"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/workflows/<int:workflow_id>/toggle/",
+  "name": "escalated:admin_workflow_toggle",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.workflows.workflow_toggle"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/workflows/<int:workflow_id>/logs/",
+  "name": "escalated:admin_workflow_logs",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.workflows.workflow_logs"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/workflows/<int:workflow_id>/dry-run/",
+  "name": "escalated:admin_workflow_dry_run",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.workflows.workflow_dry_run"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/sla-trends/",
+  "name": "escalated:admin_reports_sla_trends",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.sla_trends"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/frt-distribution/",
+  "name": "escalated:admin_reports_frt_distribution",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.frt_distribution"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/frt-trends/",
+  "name": "escalated:admin_reports_frt_trends",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.frt_trends"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/frt-by-agent/",
+  "name": "escalated:admin_reports_frt_by_agent",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.frt_by_agent"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/resolution-distribution/",
+  "name": "escalated:admin_reports_resolution_distribution",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.resolution_distribution"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/resolution-trends/",
+  "name": "escalated:admin_reports_resolution_trends",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.resolution_trends"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/response-times/",
+  "name": "escalated:admin_reports_response_times",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.response_times"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/resolution-times/",
+  "name": "escalated:admin_reports_resolution_times",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.resolution_times"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/cohorts/",
+  "name": "escalated:admin_reports_cohorts",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.cohorts"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/agent-ranking/",
+  "name": "escalated:admin_reports_agent_ranking",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.agent_ranking"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/cohort/",
+  "name": "escalated:admin_reports_cohort",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.cohort"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/comparison/",
+  "name": "escalated:admin_reports_comparison",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.comparison"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/reports/advanced/export/",
+  "name": "escalated:admin_reports_export",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.advanced_reports.export"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/",
+  "name": "escalated:admin_import_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/create/",
+  "name": "escalated:admin_import_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/store/",
+  "name": "escalated:admin_import_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_store"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<uuid:job_uuid>/",
+  "name": "escalated:admin_import_show",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_show"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<uuid:job_uuid>/authenticate/",
+  "name": "escalated:admin_import_authenticate",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_authenticate"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<uuid:job_uuid>/mapping/",
+  "name": "escalated:admin_import_mapping",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_mapping"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<uuid:job_uuid>/mapping/save/",
+  "name": "escalated:admin_import_mapping_save",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_mapping_save"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<uuid:job_uuid>/run/",
+  "name": "escalated:admin_import_run",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_run"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<uuid:job_uuid>/pause/",
+  "name": "escalated:admin_import_pause",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_pause"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<uuid:job_uuid>/progress/",
+  "name": "escalated:admin_import_progress",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_progress"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<uuid:job_uuid>/delete/",
+  "name": "escalated:admin_import_delete",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_delete"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/progress/<uuid:job_uuid>/",
+  "name": "escalated:admin_import_progress_page",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_progress_page"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/status/<uuid:job_uuid>/",
+  "name": "escalated:admin_import_status",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_status"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/pause/<uuid:job_uuid>/",
+  "name": "escalated:admin_import_pause_job",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_pause_job"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/resume/<uuid:job_uuid>/",
+  "name": "escalated:admin_import_resume",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_resume"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/cancel/<uuid:job_uuid>/",
+  "name": "escalated:admin_import_cancel",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_cancel"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<str:platform>/connect/",
+  "name": "escalated:admin_import_connect",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_connect"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<str:platform>/test-connection/",
+  "name": "escalated:admin_import_test_connection",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_test_connection"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<str:platform>/mapping/",
+  "name": "escalated:admin_import_platform_mapping",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_platform_mapping"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<str:platform>/review/",
+  "name": "escalated:admin_import_review",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_review"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/import/<str:platform>/start/",
+  "name": "escalated:admin_import_start",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.import_views.import_start"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/guest/create/",
+  "name": "escalated:guest_ticket_create",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.guest.ticket_create"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/guest/store/",
+  "name": "escalated:guest_ticket_store",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.guest.ticket_store"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/guest/verification",
+  "name": "escalated:guest_verification",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.guest.verification"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/guest/lookup",
+  "name": "escalated:guest_lookup",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.guest.lookup"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/guest/<str:token>/",
+  "name": "escalated:guest_ticket_show",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.guest.ticket_show"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/guest/<str:token>/reply/",
+  "name": "escalated:guest_ticket_reply",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.guest.ticket_reply"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/guest/<str:token>/rate/",
+  "name": "escalated:guest_ticket_rate",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.guest.ticket_rate"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/escalated/n/o/<str:token>/",
+  "name": "escalated:newsletters_public_open",
+  "layers": [
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/escalated/n/c/<str:token>/",
+  "name": "escalated:newsletters_public_click",
+  "layers": [
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/escalated/n/u/<str:token>/",
+  "name": "escalated:newsletters_public_unsubscribe",
+  "layers": [
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/escalated/n/v/<str:token>/",
+  "name": "escalated:newsletters_public_view",
+  "layers": [
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/escalated/webhooks/newsletter/postmark/",
+  "name": "escalated:newsletters_webhook_postmark",
+  "layers": [
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/escalated/webhooks/newsletter/mailgun/",
+  "name": "escalated:newsletters_webhook_mailgun",
+  "layers": [
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/escalated/webhooks/newsletter/ses/",
+  "name": "escalated:newsletters_webhook_ses",
+  "layers": [
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/escalated/webhooks/newsletter/sendgrid/",
+  "name": "escalated:newsletters_webhook_sendgrid",
+  "layers": [
+   "escalated.views.newsletter_utils.newsletters_enabled_view.<locals>.wrapper"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/attachments/<int:attachment_id>/",
+  "name": "escalated:attachment_download",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.attachments.attachment_download"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/inbound/<str:adapter_name>/",
+  "name": "escalated:inbound_webhook",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.inbound.inbound_webhook"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/cloud/webhook/",
+  "name": "escalated:cloud_webhook",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.cloud_webhook.cloud_webhook"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/embed.js",
+  "name": "escalated:widget_embed_script",
+  "layers": [
+   "escalated.views.widget.widget_embed_script"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/config/",
+  "name": "escalated:widget_config",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_config"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/articles/search/",
+  "name": "escalated:widget_article_search",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_article_search"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/articles/<int:article_id>/",
+  "name": "escalated:widget_article_detail",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_article_detail"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/tickets/create/",
+  "name": "escalated:widget_create_ticket",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_create_ticket"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/config",
+  "name": "escalated:widget_contract_config",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_config"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/articles",
+  "name": "escalated:widget_contract_articles",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_article_search"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/articles/<slug:slug>",
+  "name": "escalated:widget_contract_article",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_article_by_slug"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/tickets",
+  "name": "escalated:widget_contract_tickets",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_tickets"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/tickets/<str:reference>",
+  "name": "escalated:widget_contract_ticket_status",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_ticket_status"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/verification",
+  "name": "escalated:widget_verification",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_verification"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/lookup",
+  "name": "escalated:widget_lookup",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget.widget_lookup"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/availability/",
+  "name": "escalated:widget_chat_availability",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget_chat.chat_availability"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/start/",
+  "name": "escalated:widget_chat_start",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.chat_start"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/message/",
+  "name": "escalated:widget_chat_message",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.send_message"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/typing/",
+  "name": "escalated:widget_chat_typing",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.update_typing"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/end/",
+  "name": "escalated:widget_chat_end",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.end_chat"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/rate/",
+  "name": "escalated:widget_chat_rate",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.rate_chat"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/availability",
+  "name": "escalated:widget_contract_chat_availability",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.widget_chat.chat_availability"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/start",
+  "name": "escalated:widget_contract_chat_start",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.chat_start"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/<str:token>/messages",
+  "name": "escalated:widget_contract_chat_messages",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.chat_messages"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/<str:token>/typing",
+  "name": "escalated:widget_contract_chat_typing",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.chat_typing"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/<str:token>/end",
+  "name": "escalated:widget_contract_chat_end",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.chat_end"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/widget/chat/<str:token>/rate",
+  "name": "escalated:widget_contract_chat_rate",
+  "layers": [
+   "escalated/widget_embed.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/widget_chat.py:wrapped",
+   "escalated.views.widget_chat.chat_rate"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/two-factor/challenge/",
+  "name": "escalated:two_factor_challenge",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated/access.py:wrapped",
+   "escalated.views.two_factor.challenge"
+  ],
+  "group": "staff",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/sso/login/",
+  "name": "escalated:sso_login",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.sso.login_view"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/sso/saml/metadata/",
+  "name": "escalated:sso_saml_metadata",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.sso.saml_metadata"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/sso/saml/acs/",
+  "name": "escalated:sso_saml_acs",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.sso.saml_acs"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/sso/oauth/callback/",
+  "name": "escalated:sso_oauth_callback",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.sso.oauth_callback"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/sso/jwt/callback/",
+  "name": "escalated:sso_jwt_callback",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated.views.sso.jwt_callback"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/validate/",
+  "name": "escalated:escalated_api:auth_validate",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.auth_validate"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/login/",
+  "name": "escalated:escalated_api:auth_login",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_login"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/register/",
+  "name": "escalated:escalated_api:auth_register",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_register"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/logout/",
+  "name": "escalated:escalated_api:auth_logout",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_logout"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/refresh/",
+  "name": "escalated:escalated_api:auth_refresh",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_refresh"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/me/",
+  "name": "escalated:escalated_api:auth_me",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_me"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/auth/profile/",
+  "name": "escalated:escalated_api:auth_profile",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api_auth.api_auth_profile"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/verification",
+  "name": "escalated:escalated_api:mobile_guest_verification",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.verification"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/lookup",
+  "name": "escalated:escalated_api:mobile_guest_lookup",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.lookup"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/tickets",
+  "name": "escalated:escalated_api:mobile_guest_tickets",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.tickets"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/tickets/<str:token>",
+  "name": "escalated:escalated_api:mobile_guest_ticket_show",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.ticket_show"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/mobile/guest/tickets/<str:token>/replies",
+  "name": "escalated:escalated_api:mobile_guest_ticket_reply",
+  "layers": [
+   "escalated/ticket_access.py:scoped",
+   "escalated/views/mobile_guest.py:wrapped",
+   "escalated.views.mobile_guest.ticket_reply"
+  ],
+  "group": null,
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/dashboard/",
+  "name": "escalated:escalated_api:dashboard",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.dashboard"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/",
+  "name": "escalated:escalated_api:ticket_list",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_list"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/create/",
+  "name": "escalated:escalated_api:ticket_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_create"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/",
+  "name": "escalated:escalated_api:ticket_show",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_show"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/reply/",
+  "name": "escalated:escalated_api:ticket_reply",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_reply"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/status/",
+  "name": "escalated:escalated_api:ticket_status",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_status"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/priority/",
+  "name": "escalated:escalated_api:ticket_priority",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_priority"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/assign/",
+  "name": "escalated:escalated_api:ticket_assign",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_assign"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/follow/",
+  "name": "escalated:escalated_api:ticket_follow",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_follow"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/macro/",
+  "name": "escalated:escalated_api:ticket_macro",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_apply_macro"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/actions/<str:action>/",
+  "name": "escalated:escalated_api:ticket_custom_action",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_custom_action"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/tags/",
+  "name": "escalated:escalated_api:ticket_tags",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_tags"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/subjects/",
+  "name": "escalated:escalated_api:ticket_subjects_store",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_subjects_store"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/subjects/<int:subject_id>/",
+  "name": "escalated:escalated_api:ticket_subjects_destroy",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_subjects_destroy"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tickets/<str:reference>/delete/",
+  "name": "escalated:escalated_api:ticket_destroy",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.ticket_destroy"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": true,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/agents/",
+  "name": "escalated:escalated_api:agents",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_agents"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/departments/",
+  "name": "escalated:escalated_api:departments",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_departments"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/tags/",
+  "name": "escalated:escalated_api:tags",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_tags"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/canned-responses/",
+  "name": "escalated:escalated_api:canned_responses",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_canned_responses"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/macros/",
+  "name": "escalated:escalated_api:macros",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_macros"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/support/api/v1/realtime/config/",
+  "name": "escalated:escalated_api:realtime_config",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.api.resource_realtime_config"
+  ],
+  "group": "api",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/api-tokens/",
+  "name": "escalated:admin_api_tokens_index",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_api_tokens.api_tokens_index"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/api-tokens/create/",
+  "name": "escalated:admin_api_tokens_create",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_api_tokens.api_tokens_create"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/api-tokens/<int:token_id>/update/",
+  "name": "escalated:admin_api_tokens_update",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_api_tokens.api_tokens_update"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ },
+ {
+  "path": "support/admin/api-tokens/<int:token_id>/delete/",
+  "name": "escalated:admin_api_tokens_destroy",
+  "layers": [
+   "escalated/access.py:wrapped",
+   "escalated/ticket_access.py:scoped",
+   "escalated.views.admin_api_tokens.api_tokens_destroy"
+  ],
+  "group": "admin",
+  "accepts": [],
+  "csrf_exempt": false,
+  "kwargs": {}
+ }
+]
