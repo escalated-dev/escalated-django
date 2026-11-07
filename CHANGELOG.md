@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Upgrading
+- **Django 5.2.17 or newer is now required** (was 4.2). Django 4.2, 5.0 and 5.1 are past end of life and get no security fixes; 5.2.17 and 6.0.8 are the first releases clear of the August 2026 advisories (GHSA-wvqv-fj8w-qmhm and others). CI now runs Django 5.2, 6.0 and 6.1 (6.x on Python 3.12+).
+
+### Security
+- **Raised the other dependency floors past known advisories:** `cryptography>=50.0.0` (GHSA-g6cj-pr64-35w5, GHSA-jwv3-5hgf-82ww, GHSA-537c-gmf6-5ccf), `Authlib>=1.9.1` (GHSA-8m4g-j4wp-wgcg, GHSA-c73q-w75p-j82v), `PyJWT>=2.15.0` (GHSA-pxh4-856f-4h89, GHSA-42vr-xj54-vc7v), `requests>=2.33.0` (GHSA-gc5v-m9x4-r6x2) and `signxml>=4.0.4` (GHSA-6vx8-pcwv-xhf4). Hosts on current releases see no change.
+
 ## [0.7.15] - 2026-11-05
 
 ### Upgrading
