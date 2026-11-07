@@ -18,7 +18,7 @@
 # Escalated for Django
 
 [![Tests](https://github.com/escalated-dev/escalated-django/actions/workflows/run-tests.yml/badge.svg)](https://github.com/escalated-dev/escalated-django/actions/workflows/run-tests.yml)[![Python](https://img.shields.io/badge/python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/django-4.2+-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![Django](https://img.shields.io/badge/django-5.2+-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/escalated-django)](https://pypi.org/project/escalated-django/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Views](https://hits.sh/github.com/escalated-dev/escalated-django.svg?style=flat&label=views&color=007ec6)](https://hits.sh/github.com/escalated-dev/escalated-django/)
@@ -57,7 +57,7 @@ A full-featured, embeddable support ticket system for Django. Drop it into any a
 ## Requirements
 
 - Python 3.10+
-- Django 4.2+
+- Django 5.2+
 - Node.js 18+ (for frontend assets)
 
 ## Quick Start

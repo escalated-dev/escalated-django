@@ -418,7 +418,7 @@ version = "1.0.0"
 description = "Billing plugin for Escalated"
 authors = [{name = "Your Name", email = "you@example.com"}]
 dependencies = [
-    "django>=4.2",
+    "django>=5.2",
     "requests>=2.31.0"
 ]
 requires-python = ">=3.8"
@@ -589,7 +589,7 @@ Example with dependencies:
 ```toml
 [project]
 dependencies = [
-    "django>=4.2",
+    "django>=5.2",
     "requests>=2.31.0",
     "celery>=5.3.0",
     "stripe>=7.0.0"
