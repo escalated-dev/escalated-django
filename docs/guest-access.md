@@ -43,7 +43,7 @@ Browser `verification` and `lookup` keep Django's CSRF protection. The shared
 pages send the token as `X-XSRF-TOKEN` (from an `XSRF-TOKEN` cookie) or
 `X-CSRF-TOKEN` (from a `csrf-token` meta tag), which Django does not read by
 default: add `escalated.middleware.EscalatedCsrfMiddleware` after
-`CsrfViewMiddleware` (see the README's CSRF section). Widget
+`CsrfViewMiddleware` (see the CSRF section of [frontend integration](frontend-integration.md#csrf)). Widget
 requests follow the widget's CORS/CSRF rules (see
 [embedding the widget](embedding-the-widget.md)); the mobile endpoints are
 exempt, since they act on the emailed code and the grant only.

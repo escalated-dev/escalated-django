@@ -1,498 +1,180 @@
-<p align="center">
-  <a href="README.ar.md">العربية</a> •
-  <a href="README.de.md">Deutsch</a> •
-  <a href="../../README.md">English</a> •
-  <a href="README.es.md">Español</a> •
-  <a href="README.fr.md">Français</a> •
-  <a href="README.it.md">Italiano</a> •
-  <a href="README.ja.md">日本語</a> •
-  <a href="README.ko.md">한국어</a> •
-  <a href="README.nl.md">Nederlands</a> •
-  <a href="README.pl.md">Polski</a> •
-  <a href="README.pt-BR.md">Português (BR)</a> •
-  <a href="README.ru.md">Русский</a> •
-  <b>Türkçe</b> •
+<p align="center"><sub>
+  <a href="README.ar.md">العربية</a> ·
+  <a href="README.de.md">Deutsch</a> ·
+  <a href="../../README.md">English</a> ·
+  <a href="README.es.md">Español</a> ·
+  <a href="README.fr.md">Français</a> ·
+  <a href="README.it.md">Italiano</a> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a> ·
+  <a href="README.nl.md">Nederlands</a> ·
+  <a href="README.pl.md">Polski</a> ·
+  <a href="README.pt-BR.md">Português (BR)</a> ·
+  <a href="README.ru.md">Русский</a> ·
+  <b>Türkçe</b> ·
   <a href="README.zh-CN.md">简体中文</a>
+</sub></p>
+
+<p align="center">
+  <a href="https://escalated.dev"><img src="https://raw.githubusercontent.com/escalated-dev/escalated/main/docs/assets/readme/logo.png" width="72" height="72" alt="Escalated"></a>
 </p>
 
-# Escalated for Django
+<h1 align="center">Escalated for Django</h1>
 
-[![Tests](https://github.com/escalated-dev/escalated-django/actions/workflows/run-tests.yml/badge.svg)](https://github.com/escalated-dev/escalated-django/actions/workflows/run-tests.yml)
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B62107%2Fgithub.com%2Fescalated-dev%2Fescalated-django.svg?type=shield)](https://app.fossa.com/projects/custom%2B62107%2Fgithub.com%2Fescalated-dev%2Fescalated-django?ref=badge_shield)
-[![Python](https://img.shields.io/badge/python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/django-4.2+-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  Django uygulamana eksiksiz bir yardım masası ekle.<br>
+  Talepler, SLA'lar, eskalasyon kuralları, temsilci gelen kutusu ve müşteri portalı, hepsi kendi veritabanında çalışır.
+</p>
 
-Django için tam özellikli, gömülebilir bir destek talep sistemi. Herhangi bir uygulamaya ekleyin — SLA takibi, eskalasyon kuralları, temsilci iş akışları ve müşteri portalı ile eksiksiz bir yardım masası elde edin. Harici hizmetler gerekmez.
+<p align="center">
+  <a href="https://escalated.dev"><b>Web sitesi</b></a> ·
+  <a href="https://escalated.dev/docs"><b>Dokümantasyon</b></a> ·
+  <a href="https://escalated.dev/cloud"><b>Cloud</b></a> ·
+  <a href="../../CHANGELOG.md"><b>Değişiklik günlüğü</b></a>
+</p>
 
-> **[escalated.dev](https://escalated.dev)** — Daha fazla bilgi edinin, demoları görüntüleyin ve Bulut ile Kendi Sunucunuzda seçeneklerini karşılaştırın.
+<br>
 
-**Üç barındırma modu.** Tamamen kendi sunucunuzda çalıştırın, çoklu uygulama görünürlüğü için merkezi bir buluta senkronize edin veya her şeyi buluta yönlendirin. Tek bir yapılandırma değişikliğiyle modları değiştirin.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/escalated-dev/escalated/main/docs/assets/readme/inbox-dark.png">
+  <img src="https://raw.githubusercontent.com/escalated-dev/escalated/main/docs/assets/readme/inbox-light.png" alt="Escalated temsilci gelen kutusu: sayaçlı kayıtlı görünümler, her talepte SLA geri sayımları ve öncelikler" width="100%">
+</picture>
+
+## Ne yapar
+
+<table>
+  <tr>
+    <td width="40%">
+      <h3>Temsilcilerinin bütün gün çalışabileceği bir gelen kutusu</h3>
+      Konuşma, dahili notlar, hazır yanıtlar ve SLA sayaçları tek ekranda. Talepler Mailgun, Postmark, SES veya IMAP üzerinden e-postayla da gelir.
+    </td>
+    <td width="60%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/escalated-dev/escalated/main/docs/assets/readme/ticket-dark.png">
+        <img src="https://raw.githubusercontent.com/escalated-dev/escalated/main/docs/assets/readme/ticket-light.png" alt="Temsilci çalışma alanında yanıt düzenleyicisiyle açık bir talep">
+      </picture>
+    </td>
+  </tr>
+  <tr>
+    <td width="60%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/escalated-dev/escalated/main/docs/assets/readme/dashboard-dark.png">
+        <img src="https://raw.githubusercontent.com/escalated-dev/escalated/main/docs/assets/readme/dashboard-light.png" alt="Yanıt süreleri, CSAT ve SLA ihlallerini gösteren yönetici rapor sayfası">
+      </picture>
+    </td>
+    <td width="40%">
+      <h3>Görebildiğin SLA'lar ve eskalasyon kuralları</h3>
+      Mesai saatlerini hesaba katan, önceliğe göre yanıt ve çözüm hedefleri, bir hedef kaçtığında eskale eden veya yeniden atayan kurallar ve ihlal raporları.
+    </td>
+  </tr>
+  <tr>
+    <td width="40%">
+      <h3>Hazır gelen bir müşteri portalı</h3>
+      Müşteriler uygulamanın içinde talep açar, yanıt verir ve durumu takip eder. Widget'ı tek bir script etiketiyle başka sitelere yerleştirebilirsin.
+    </td>
+    <td width="60%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/escalated-dev/escalated/main/docs/assets/readme/portal-dark.png">
+        <img src="https://raw.githubusercontent.com/escalated-dev/escalated/main/docs/assets/readme/portal-light.png" alt="Müşteri portalındaki talep listesi">
+      </picture>
+    </td>
+  </tr>
+</table>
 
 ## Özellikler
 
-- **Bilet yaşam döngüsü** — Yapılandırılabilir durum geçişleri ile oluşturma, atama, yanıtlama, çözme, kapatma, yeniden açma
-- **SLA motoru** — Önceliğe göre yanıt ve çözüm hedefleri, iş saatleri hesaplaması, otomatik ihlal tespiti
-- **Yükseltme kuralları** — Otomatik olarak yükselten, yeniden önceliklendiren, yeniden atayan veya bildirim gönderen koşul tabanlı kurallar
-- **Temsilci paneli** — Filtreler, toplu işlemler, dahili notlar, hazır yanıtlar içeren bilet kuyruğu
-- **Müşteri portalı** — Self-servis bilet oluşturma, yanıtlar ve durum takibi
-- **Yönetim paneli** — Departmanları, SLA politikalarını, yükseltme kurallarını, etiketleri yönetin ve raporları görüntüleyin
-- **Dosya ekleri** — Yapılandırılabilir depolama ve boyut limitleri ile sürükle-bırak yükleme
-- **Etkinlik zaman çizelgesi** — Her biletteki her eylemin tam denetim günlüğü
-- **E-posta bildirimleri** — Webhook desteği ile etkinlik bazında yapılandırılabilir bildirimler
-- **Departman yönlendirme** — Temsilcileri departmanlara organize edin, otomatik atama (round-robin)
-- **Etiketleme sistemi** — Biletleri renkli etiketlerle kategorize edin
-- **Inertia.js + Vue 3 UI** — Paylaşılan frontend [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated) aracılığıyla
-- **Bilet bölme** — Orijinal bağlamı koruyarak bir yanıtı yeni bağımsız bir bilete ayırma
-- **Ticket snooze** — Ön ayarlı erteleme ile talepleri erteleyin (1 saat, 4 saat, yarın, gelecek hafta); yönetim komutu `python manage.py wake_snoozed_tickets` onları programa göre otomatik olarak uyandırır
-- **Kayıtlı görünümler / özel kuyruklar** — Filtre ön ayarlarını yeniden kullanılabilir bilet görünümleri olarak kaydedin, adlandırın ve paylaşın
-- **Gömülebilir destek widget'ı** — KB arama, bilet formu ve durum kontrolü içeren hafif `<script>` widget'ı
-- **E-posta zincirleme** — Giden e-postalar, posta istemcilerinde doğru zincirleme için uygun `In-Reply-To` ve `References` başlıkları içerir
-- **Markalı e-posta şablonları** — Tüm giden e-postalar için yapılandırılabilir logo, birincil renk ve altbilgi metni
-- **Real-time broadcasting** — Django Channels ile isteğe bağlı yayın, otomatik yoklama geri dönüşü ile
-- **Bilgi tabanı açma/kapama** — Yönetim ayarlarından herkese açık bilgi tabanını etkinleştirin veya devre dışı bırakın
+<table>
+<tr>
+<td width="33%" valign="top">
 
-## Gereksinimler
+**Talepler ve gelen kutusu**
+- Durum geçişleriyle tam yaşam döngüsü
+- Kuyruk filtreleri ve toplu işlemler
+- Dahili notlar ve hazır yanıtlar
+- Bir yanıtı yeni bir talebe ayırma
+- Hazır ayarlarla erteleme ve otomatik uyandırma
+- Kayıtlı görünümler ve paylaşılan kuyruklar
 
-- Python 3.10+
-- Django 4.2+
-- Node.js 18+ (frontend varlıkları için)
+</td>
+<td width="33%" valign="top">
 
-## Hızlı Başlangıç
+**SLA'lar ve eskalasyon**
+- Önceliğe göre yanıt ve çözüm hedefleri
+- Mesai saatleri ve ihlal tespiti
+- Eskale eden, yeniden atayan veya bildirim gönderen kurallar
+- Round-robin ile departman yönlendirmesi
+
+</td>
+<td width="33%" valign="top">
+
+**Müşteriler**
+- Self servis müşteri portalı
+- Bilgi bankası aramalı yerleştirilebilir widget
+- Kapatabileceğin herkese açık bilgi bankası
+
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top">
+
+**E-posta**
+- Mailgun, Postmark, SES veya IMAP ile gelen e-posta
+- E-posta istemcilerinde zincirli yanıtlar
+- Markana uygun e-posta şablonları
+- Olay bazında bildirimler ve webhook'lar
+
+</td>
+<td width="33%" valign="top">
+
+**Yönetim ve erişim**
+- Departmanlar, SLA'lar, kurallar, etiketler ve raporlar
+- Kurulum seçeneği olarak roller ve izinler
+- Her talepte etkinlik zaman çizelgesi
+
+</td>
+<td width="33%" valign="top">
+
+**Arka planda**
+- Paylaşılan Vue 3 ve Inertia.js arayüzü
+- Depolama ve boyut sınırlı dosya yüklemeleri
+- Talepleri düzenlemek için renkli etiketler
+- Yedek olarak polling ile Django Channels üzerinden gerçek zamanlı güncellemeler
+
+</td>
+</tr>
+</table>
+
+<p align="center"><sub><a href="../features.md">Tüm özellikler ayrıntılı olarak</a></sub></p>
+
+<p align="center"><b>Kullanılan teknolojiler</b></p>
+
+<p align="center">
+  <a href="https://www.djangoproject.com"><img src="https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white" alt="Django"></a>
+  <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://vuejs.org"><img src="https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white" alt="Vue.js"></a>
+  <a href="https://inertiajs.com"><img src="https://img.shields.io/badge/Inertia-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia"></a>
+</p>
+
+## Hızlı başlangıç
 
 ```bash
 pip install escalated-django
 npm install @escalated-dev/escalated
-```
-
-### 1. Add to INSTALLED_APPS
-
-```python
-INSTALLED_APPS = [
-    # ...
-    "django.contrib.contenttypes",
-    "inertia",
-    "escalated",
-]
-```
-
-### 2. Include URLs
-
-```python
-from django.urls import path, include
-
-urlpatterns = [
-    # ...
-    path("support/", include("escalated.urls")),
-]
-```
-
-### 3. Run migrations
-
-```bash
 python manage.py migrate escalated
 ```
 
-Visit `/support` — you're live.
+Migrate etmeden önce `"inertia"` ve `"escalated"` uygulamalarını `INSTALLED_APPS` listesine ekle ve `escalated.urls` adresini `support/` altına bağla. Ardından `/support` adresini aç. Python 3.10+ ve Django 5.2+ gerekir. [Başlangıç kılavuzu](../getting-started.md) her adımı anlatır.
 
-## Frontend Kurulumu
+## Daha fazla bilgi
 
-Escalated, Inertia.js ile Vue 3 kullanır. Frontend bileşenleri [`@escalated-dev/escalated`](https://github.com/escalated-dev/escalated) npm paketi tarafından sağlanır.
+- [Tüm özellikler](../features.md) · [Başlarken](../getting-started.md) · [Frontend entegrasyonu ve çeviriler](../frontend-integration.md)
+- [Yapılandırma, barındırma modları, komutlar, rotalar ve sinyaller](../operations.md)
+- [Temsilci paneli](../agent-panel.md) · [Erişim kontrolü](../access-control.md) · [Talep erişimi ve yönlendirme](../ticket-access-and-routing.md)
+- [Widget'ı yerleştirme](../embedding-the-widget.md) · [Yönetim panelini yerleştirme](../embedding-admin.md) · [Misafir erişimi](../guest-access.md)
+- [Özel ekler](../private-attachments.md) · [Plugin SDK](../plugin-sdk.md) · [Eklentiler](../plugins.md) · [Bültenler](../newsletters.md)
 
-### Tailwind İçeriği
-
-Escalated paketini Tailwind `content` yapılandırmanıza ekleyin, böylece sınıfları temizlenmez:
-
-```js
-// tailwind.config.js
-content: [
-    // ... your existing paths
-    './node_modules/@escalated-dev/escalated/src/**/*.vue',
-],
-```
-
-### Sayfa Çözümleyici
-
-Escalated sayfalarını Inertia sayfa çözücünüze ekleyin:
-
-```javascript
-// frontend/main.js
-import { createApp, h } from 'vue'
-import { createInertiaApp } from '@inertiajs/vue3'
-
-createInertiaApp({
-  resolve: name => {
-    if (name.startsWith('Escalated/')) {
-      const escalatedPages = import.meta.glob(
-        '../node_modules/@escalated-dev/escalated/src/pages/**/*.vue',
-        { eager: true }
-      )
-      const pageName = name.replace('Escalated/', '')
-      return escalatedPages[`../node_modules/@escalated-dev/escalated/src/pages/${pageName}.vue`]
-    }
-
-    const pages = import.meta.glob('./pages/**/*.vue', { eager: true })
-    return pages[`./pages/${name}.vue`]
-  },
-  setup({ el, App, props, plugin }) {
-    createApp({ render: () => h(App, props) })
-      .use(plugin)
-      .mount(el)
-  },
-})
-```
-
-### Tema (İsteğe Bağlı)
-
-`EscalatedPlugin`'ı kaydedin, Escalated sayfalarını uygulamanızın düzeni içinde oluşturun — sayfa çoğaltması gerekmez:
-
-```javascript
-import { EscalatedPlugin } from '@escalated-dev/escalated'
-import BaseLayout from '@/layouts/BaseLayout.vue'
-
-createInertiaApp({
-  setup({ el, App, props, plugin }) {
-    createApp({ render: () => h(App, props) })
-      .use(plugin)
-      .use(EscalatedPlugin, {
-        layout: BaseLayout,
-        theme: {
-          primary: '#3b82f6',
-          radius: '0.75rem',
-        }
-      })
-      .mount(el)
-  },
-})
-```
-
-Your layout component must accept a `#header` slot and a default slot. Escalated will render its sub-navigation in the header and page content in the default slot. Without the plugin, Escalated uses its own standalone layout.
-
-Tam tema dokümantasyonu ve CSS özel özellikleri için [`@escalated-dev/escalated` README](https://github.com/escalated-dev/escalated) dosyasına bakın.
-
-## Barındırma Modları
-
-### Self-Hosted (varsayılan)
-
-Her şey veritabanınızda kalır. Harici çağrı yok. Tam özerklik.
-
-```python
-ESCALATED = {
-    "MODE": "self_hosted",
-}
-```
-
-### Senkronize
-
-Yerel veritabanı + birden fazla uygulama için birleşik gelen kutusu sağlayan `cloud.escalated.dev` ile otomatik senkronizasyon. Bulut erişilemezse uygulamanız çalışmaya devam eder — olaylar kuyruğa alınır ve yeniden denenir.
-
-```python
-ESCALATED = {
-    "MODE": "synced",
-    "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
-    "HOSTED_API_KEY": "your-api-key",
-}
-```
-
-### Bulut
-
-Tüm talep verileri bulut API'sine yönlendirilir. Uygulamanız kimlik doğrulama ve UI oluşturma işlemlerini yapar, ancak depolama bulutta yaşar.
-
-```python
-ESCALATED = {
-    "MODE": "cloud",
-    "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
-    "HOSTED_API_KEY": "your-api-key",
-}
-```
-
-Her üç mod da aynı görünümleri, arayüzü ve iş mantığını paylaşır. Sürücü kalıbı gerisini halleder.
-
-## Yapılandırma
-
-Add to your `settings.py`:
-
-```python
-ESCALATED = {
-    "MODE": "self_hosted",  # self_hosted | synced | cloud
-    "TABLE_PREFIX": "escalated_",
-    "ROUTE_PREFIX": "support",
-    "DEFAULT_PRIORITY": "medium",
-    # Tickets
-    "ALLOW_CUSTOMER_CLOSE": True,
-    "AUTO_CLOSE_RESOLVED_AFTER_DAYS": 7,
-    "MAX_ATTACHMENTS": 5,
-    "MAX_ATTACHMENT_SIZE_KB": 10240,
-    # SLA
-    "SLA": {
-        "ENABLED": True,
-        "BUSINESS_HOURS_ONLY": False,
-        "BUSINESS_HOURS": {
-            "START": "09:00",
-            "END": "17:00",
-            "TIMEZONE": "UTC",
-            "DAYS": [1, 2, 3, 4, 5],
-        },
-    },
-    # Notifications
-    "NOTIFICATION_CHANNELS": ["email"],
-    "WEBHOOK_URL": None,
-    # Cloud/Synced mode
-    "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
-    "HOSTED_API_KEY": None,
-}
-```
-
-## Yönetim Komutları
-
-```bash
-# Check SLA deadlines and fire breach notifications
-python manage.py check_sla
-
-# Evaluate escalation rules against open tickets
-python manage.py evaluate_escalations
-
-# Auto-close tickets resolved more than N days ago
-python manage.py close_resolved --days 7
-
-# Purge old activity logs
-python manage.py purge_activities --days 90
-```
-
-Schedule these with cron, Celery Beat, or django-crontab for automated enforcement.
-
-## Rotalar
-
-All routes use the configurable prefix (default: `support`).
-
-| Route | Method | Description |
-|-------|--------|-------------|
-| `/support/tickets/` | GET | Customer ticket list |
-| `/support/tickets/create/` | GET | New ticket form |
-| `/support/tickets/<id>/` | GET | Ticket detail |
-| `/support/agent/` | GET | Agent dashboard |
-| `/support/agent/tickets/` | GET | Agent ticket queue |
-| `/support/agent/tickets/<id>/` | GET | Agent ticket view |
-| `/support/admin/reports/` | GET | Admin reports |
-| `/support/admin/departments/` | GET | Department management |
-| `/support/admin/sla-policies/` | GET | SLA policy management |
-| `/support/admin/escalation-rules/` | GET | Escalation rule management |
-| `/support/admin/tags/` | GET | Tag management |
-| `/support/admin/canned-responses/` | GET | Canned response management |
-| `/support/agent/tickets/bulk/` | POST | Bulk actions on multiple tickets |
-| `/support/agent/tickets/<id>/follow/` | POST | Follow/unfollow a ticket |
-| `/support/agent/tickets/<id>/macro/` | POST | Apply a macro to a ticket |
-| `/support/agent/tickets/<id>/presence/` | POST | Update presence on a ticket |
-| `/support/agent/tickets/<id>/pin/<reply_id>/` | POST | Pin/unpin an internal note |
-| `/support/tickets/<id>/rate/` | POST | Submit satisfaction rating |
-
-## Sinyaller
-
-Connect to ticket lifecycle events:
-
-```python
-from escalated.signals import ticket_created, ticket_resolved
-
-
-@receiver(ticket_created)
-def on_ticket_created(sender, ticket, user, **kwargs):
-    print(f"New ticket: {ticket.reference}")
-
-
-@receiver(ticket_resolved)
-def on_ticket_resolved(sender, ticket, user, **kwargs):
-    print(f"Resolved: {ticket.reference}")
-```
-
-Available signals: `ticket_created`, `ticket_updated`, `ticket_status_changed`, `ticket_assigned`, `ticket_unassigned`, `ticket_priority_changed`, `ticket_escalated`, `ticket_resolved`, `ticket_closed`, `ticket_reopened`, `reply_created`, `internal_note_added`, `sla_breached`, `sla_warning`, `tag_added`, `tag_removed`, `department_changed`.
-
-## Eklenti SDK
-
-Escalated, [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk) ile oluşturulan çerçeve bağımsız eklentileri destekler. Eklentiler TypeScript'te bir kez yazılır ve tüm Escalated backend'lerinde çalışır.
-
-### Gereksinimler
-
-- Node.js 20+
-- `@escalated-dev/plugin-runtime` installed in your project
-
-### Eklentileri Yükleme
-
-```bash
-npm install @escalated-dev/plugin-runtime
-npm install @escalated-dev/plugin-slack
-npm install @escalated-dev/plugin-jira
-```
-
-### SDK Eklentilerini Etkinleştirme
-
-```python
-# settings.py
-ESCALATED = {
-    # ... existing config ...
-    "SDK_ENABLED": True,
-}
-```
-
-### Nasıl Çalışır
-
-SDK plugins run as a long-lived Node.js subprocess managed by `@escalated-dev/plugin-runtime`, communicating with Django over JSON-RPC 2.0 via stdio. Every ticket lifecycle signal is dual-dispatched — first to Django signal handlers, then forwarded to the plugin runtime.
-
-### Kendi Eklentinizi Oluşturma
-
-```typescript
-import { definePlugin } from '@escalated-dev/plugin-sdk'
-
-export default definePlugin({
-  name: 'my-plugin',
-  version: '1.0.0',
-  actions: {
-    'ticket.created': async (event, ctx) => {
-      ctx.log.info('New ticket!', event)
-    },
-  },
-})
-```
-
-### Kaynaklar
-
-- [Plugin SDK](https://github.com/escalated-dev/escalated-plugin-sdk) — Eklenti oluşturmak için TypeScript SDK
-- [Plugin Runtime](https://github.com/escalated-dev/escalated-plugin-runtime) — Eklentiler için çalışma zamanı sunucusu
-- [Plugin Development Guide](https://github.com/escalated-dev/escalated-docs) — Tam dokümantasyon
-
-See the detailed [SDK Plugin Bridge](#sdk-plugin-bridge) section below for the full architecture, supported `ctx.*` callbacks, hook event mapping, and resilience documentation.
-
-## SDK Eklenti Köprüsü
-
-The Plugin Bridge connects your Django app to the Node.js
-`@escalated-dev/plugin-runtime` process via JSON-RPC 2.0 over stdio.
-It enables SDK plugins — JavaScript/TypeScript packages that hook into
-ticket lifecycle events, expose custom API endpoints, and persist data
-through the host ORM — without requiring any Node.js code in your Django
-project.
-
-### How it works
-
-1. On startup Django spawns `node @escalated-dev/plugin-runtime` as a
-   long-lived subprocess.
-2. A protocol handshake is performed and plugin manifests are exchanged.
-3. URL patterns for plugin pages, API endpoints, and webhooks are
-   dynamically registered.
-4. Every ticket lifecycle signal (created, replied, resolved, etc.) is
-   dual-dispatched — first to the standard Django signal handlers and then
-   to the bridge, which forwards the event to the runtime.
-5. Plugin code can call back into Django via `ctx.*` methods
-   (`ctx.tickets.find`, `ctx.store.set`, `ctx.config.get`, etc.) over the
-   same bidirectional JSON-RPC channel.
-
-### Gereksinimler
-
-- Node.js 18+
-- `@escalated-dev/plugin-runtime` installed in your project's
-  `node_modules`
-
-### Hızlı başlangıç
-
-**1. Install the runtime**
-
-```bash
-npm install @escalated-dev/plugin-runtime
-```
-
-**2. Enable the bridge in settings**
-
-```python
-ESCALATED = {
-    # ... existing config ...
-    # SDK plugin bridge
-    "SDK_ENABLED": True,
-    # Optional overrides (defaults shown):
-    # "RUNTIME_COMMAND": "node node_modules/@escalated-dev/plugin-runtime/dist/index.js",
-    # "RUNTIME_CWD": BASE_DIR,  # working directory for the Node subprocess
-}
-```
-
-**3. Run the migration**
-
-```bash
-python manage.py migrate escalated
-```
-
-This creates the `escalated_plugin_store` table used by `ctx.store.*` and
-`ctx.config.*` callbacks.
-
-### Routes registered by the bridge
-
-Plugin manifests can declare three types of routes.  All are automatically
-registered under the configured `ROUTE_PREFIX` (default `support`):
-
-| Category | URL pattern | Auth |
-|----------|-------------|------|
-| Pages | `/{prefix}/admin/plugins/{plugin}/{route}` | Admin required |
-| Endpoints | `/{prefix}/api/plugins/{plugin}/{path}` | Admin required |
-| Webhooks | `/{prefix}/webhooks/plugins/{plugin}/{path}` | None (public) |
-
-### Supported `ctx.*` callbacks
-
-| Method | Description |
-|--------|-------------|
-| `ctx.config.all` / `ctx.config.get` / `ctx.config.set` | Per-plugin config blob |
-| `ctx.store.get` / `ctx.store.set` / `ctx.store.query` / `ctx.store.insert` / `ctx.store.update` / `ctx.store.delete` | Per-plugin key/value store |
-| `ctx.tickets.find` / `ctx.tickets.query` / `ctx.tickets.create` / `ctx.tickets.update` | Ticket ORM access |
-| `ctx.replies.find` / `ctx.replies.query` / `ctx.replies.create` | Reply ORM access |
-| `ctx.contacts.find` / `ctx.contacts.findByEmail` / `ctx.contacts.create` | User model access |
-| `ctx.tags.all` / `ctx.tags.create` | Tag access |
-| `ctx.departments.all` / `ctx.departments.find` | Department access |
-| `ctx.agents.all` / `ctx.agents.find` | Agent (user) access |
-| `ctx.broadcast.toChannel` / `ctx.broadcast.toUser` / `ctx.broadcast.toTicket` | Django Channels broadcast (optional) |
-| `ctx.emit` | Fire another action hook from inside a plugin |
-| `ctx.log` | Log to Django's logger |
-
-### Hook events dispatched to the bridge
-
-Every ticket signal fires a corresponding SDK hook:
-
-| Django signal | SDK hook |
-|---------------|----------|
-| `ticket_created` | `ticket.created` |
-| `ticket_updated` | `ticket.updated` |
-| `ticket_status_changed` | `ticket.status_changed` |
-| `ticket_assigned` | `ticket.assigned` |
-| `ticket_priority_changed` | `ticket.priority_changed` |
-| `ticket_resolved` | `ticket.resolved` |
-| `ticket_closed` | `ticket.closed` |
-| `ticket_escalated` | `ticket.escalated` |
-| `reply_created` | `reply.created` |
-| `sla_breached` | `sla.breached` |
-
-### Dayanıklılık
-
-- The bridge is spawned **lazily** on first use — health-check requests are
-  never slowed down.
-- If the Node.js runtime crashes it is automatically restarted with
-  **exponential backoff** (up to 5 minutes between attempts).
-- Action hooks degrade gracefully (drop with a warning) when the runtime is
-  unavailable.  Filter hooks return the unmodified value.
-- The action queue is capped at 1 000 in-flight entries to prevent memory
-  growth.
-
-## Diğer Platformlarda da Mevcut
-
-- **[Escalated for Laravel](https://github.com/escalated-dev/escalated-laravel)** — Laravel Composer paketi
-- **[Escalated for Rails](https://github.com/escalated-dev/escalated-rails)** — Ruby on Rails motoru
-- **[Escalated for Django](https://github.com/escalated-dev/escalated-django)** — Yeniden kullanılabilir Django uygulaması (buradasınız)
-- **[Escalated for AdonisJS](https://github.com/escalated-dev/escalated-adonis)** — AdonisJS v6 paketi
-- **[Escalated for Filament](https://github.com/escalated-dev/escalated-filament)** — Filament v3 yönetim paneli eklentisi
-- **[Shared Frontend](https://github.com/escalated-dev/escalated)** — Vue 3 + Inertia.js UI bileşenleri
-
-Aynı mimari, aynı Vue arayüzü, aynı üç barındırma modu — tüm önemli backend çerçeveleri için.
-
-## Geliştirme
-
-```bash
-pip install -e ".[dev]"
-pytest
-```
+Escalated ayrıca [Laravel](https://github.com/escalated-dev/escalated-laravel), [Rails](https://github.com/escalated-dev/escalated-rails), [NestJS](https://github.com/escalated-dev/escalated-nestjs), [AdonisJS](https://github.com/escalated-dev/escalated-adonis), [Symfony](https://github.com/escalated-dev/escalated-symfony), [Phoenix](https://github.com/escalated-dev/escalated-phoenix), [Go](https://github.com/escalated-dev/escalated-go), [.NET](https://github.com/escalated-dev/escalated-dotnet), [Spring](https://github.com/escalated-dev/escalated-spring), [WordPress](https://github.com/escalated-dev/escalated-wordpress) ve [Filament](https://github.com/escalated-dev/escalated-filament) için de mevcut. Arayüz [escalated](https://github.com/escalated-dev/escalated) deposunda bulunur.
 
 ## Lisans
 
-MIT
+MIT. Copyright (c) 2026 Escalated.dev. Bkz. [LICENSE](../../LICENSE).
