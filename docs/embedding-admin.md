@@ -176,7 +176,7 @@ import AdminLayout from './layouts/AdminLayout.vue'
 import BaseLayout from './layouts/BaseLayout.vue'
 
 createInertiaApp({
-  resolve: name => { /* the Escalated page resolver from the README */ },
+  resolve: name => { /* the Escalated page resolver from frontend-integration.md */ },
   setup({ el, App, props, plugin }) {
     createApp({ render: () => h(App, props) })
       .use(plugin)
@@ -268,7 +268,7 @@ ESCALATED = {
 ```
 
 Add your own `<script>`/`<link>` tags (django-vite, webpack loader...) and the
-`csrf-token` meta tag from the README's CSRF section, as in your
+`csrf-token` meta tag from the CSRF section of [frontend integration](frontend-integration.md#csrf), as in your
 `INERTIA_LAYOUT`. This is the template the test suite renders
 (`tests/templates/backoffice/escalated.html`).
 
