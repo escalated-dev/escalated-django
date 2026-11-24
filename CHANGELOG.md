@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Upgrading
+- **The cloud -> site webhook (`cloud/webhook/`) is registered only once `HOSTED_SIGNING_SECRET` is set**, as escalated-laravel does. Before, it answered 503 without one. Synced installs that set the secret see no change.
+
+### Added
+- **`GUEST_ROUTES_ENABLED`** (default `True`, env `ESCALATED_GUEST_ROUTES`) and **`WIDGET_ENABLED`** (default `True`, env `ESCALATED_WIDGET_ENABLED`): `False` registers none of the guest portal's routes (with the mobile guest API) or none of the widget's routes. The admin's guest-tickets setting still switches the portal at runtime.
+- **`CUSTOMER_ROUTE_DECORATORS`** (default `[]`): view decorators, or their dotted paths, wrapped around every customer and customer knowledge-base view. `escalated.permissions.staff_only` limits the portal to agents and admins. See docs/access-control.md#staff-only-installs.
+- **Recurring-jobs heartbeat.** `check_sla` records when it ran. While that is missing or more than 15 minutes old, Admin > Settings and the admin reports pages send a `scheduler` prop (`{healthy, last_run_at, message, commands}`) the shared frontend shows as a warning, a warning is logged (`escalated.scheduler`), and `manage.py check --database default` reports `escalated.W003`. The docs gain a "Required: schedule the recurring jobs" section.
+- **Setup check.** `python manage.py install` ends by reporting a user model Escalated cannot gate, no admin users, no agents, roles nobody holds while roles & permissions is on, and recurring jobs that are not running.
+
+### Fixed
+- A custom user model with neither `is_staff` nor `is_superuser` failed on the first staff page with a bare `AttributeError`. It now raises `escalated.permissions.UserModelNotSupported`, which names the model and how to fix it, and `manage.py check` warns about it (`escalated.W004`).
+
 ## [0.8.0] - 2026-11-07
 
 ### Upgrading
