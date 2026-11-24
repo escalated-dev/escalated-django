@@ -165,6 +165,10 @@ python manage.py migrate escalated
 
 Before you migrate, add `"inertia"` and `"escalated"` to `INSTALLED_APPS` and include `escalated.urls` at `support/`. Then visit `/support`. Needs Python 3.10+ and Django 5.2+. The [getting started guide](docs/getting-started.md) has each step.
 
+### Required: schedule the recurring jobs
+
+SLA checks, escalation rules, automations and snooze wake-ups run only when you schedule `check_sla` and `wake_snoozed_tickets` (every minute), `evaluate_escalations` and `run_automations` (every 5 minutes), plus the daily and weekly clean-up commands. Until then the admin pages warn that the jobs are not running. The full list and a crontab are in [getting started](docs/getting-started.md#required-schedule-the-recurring-jobs).
+
 ## Learn more
 
 - [All features](docs/features.md) · [Getting started](docs/getting-started.md) · [Frontend integration and translations](docs/frontend-integration.md)

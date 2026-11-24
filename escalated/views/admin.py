@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
 
+from escalated import scheduler
 from escalated.access import feature_enabled, feature_required
 from escalated.event_names import canonical_events
 from escalated.kb_guards import require_kb_enabled
@@ -129,7 +130,11 @@ def reports(request):
     from escalated.services import report_pages
     from escalated.views.advanced_reports import _days
 
-    return render_page(request, "Escalated/Admin/Reports", props=report_pages.overview(_days(request)))
+    return render_page(
+        request,
+        "Escalated/Admin/Reports",
+        props={**report_pages.overview(_days(request)), "scheduler": scheduler.page_prop()},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1160,7 +1165,7 @@ def settings_index(request):
     if check:
         return check
 
-    all_settings = EscalatedSetting.objects.all()
+    all_settings = EscalatedSetting.objects.exclude(key=scheduler.HEARTBEAT_KEY)
     settings_dict = EscalatedSettingSerializer.serialize_as_dict(all_settings)
 
     # The page binds switches and number inputs to these, so send real
@@ -1187,6 +1192,7 @@ def settings_index(request):
             "settings": settings_dict,
             "errors": request.session.pop(SETTINGS_ERRORS_SESSION_KEY, {}),
             "supported_settings": SUPPORTED_SETTINGS,
+            "scheduler": scheduler.page_prop(),
         },
     )
 
@@ -4198,7 +4204,11 @@ def reports_dashboard(request):
     from escalated.services import report_pages
     from escalated.views.advanced_reports import _days
 
-    return render_page(request, "Escalated/Admin/Reports/Dashboard", props=report_pages.dashboard(_days(request)))
+    return render_page(
+        request,
+        "Escalated/Admin/Reports/Dashboard",
+        props={**report_pages.dashboard(_days(request)), "scheduler": scheduler.page_prop()},
+    )
 
 
 # ---------------------------------------------------------------------------

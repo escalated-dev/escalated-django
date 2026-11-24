@@ -176,6 +176,43 @@ Leave `TICKET_SUBJECT_TYPES` empty to disable API attach; programmatic
 Agent/admin routes: `POST /…/tickets/<id>/subjects`, `DELETE /…/tickets/<id>/subjects/<link_id>`.
 REST API: `POST /tickets/<reference>/subjects`, `DELETE /tickets/<reference>/subjects/<link_id>`.
 
+## Required: schedule the recurring jobs
+
+Django has no scheduler of its own, so Escalated's recurring jobs run only
+when you schedule them (cron, Celery beat, a systemd timer, django-crontab...).
+Until you do, SLA timers never breach, escalation rules and automations never
+fire and snoozed tickets never wake.
+
+| Command | Interval |
+|---|---|
+| `python manage.py check_sla` | every minute |
+| `python manage.py wake_snoozed_tickets` | every minute |
+| `python manage.py evaluate_escalations` | every 5 minutes |
+| `python manage.py run_automations` | every 5 minutes |
+| `python manage.py close_resolved` | daily |
+| `python manage.py purge_expired_data` | daily |
+| `python manage.py purge_activities` | weekly |
+| `python manage.py poll_imap` | every minute, with the IMAP inbound adapter |
+| `python manage.py close_idle_chats` and `cleanup_abandoned_chats` | every minute, with live chat on |
+| `python manage.py dispatch_newsletters` | every minute, with newsletters on |
+| `python manage.py escalated_plugin_cron` | every minute, with `SDK_ENABLED` |
+
+For example, in a crontab (run from your project, with its virtualenv):
+
+```cron
+* * * * *   python manage.py check_sla && python manage.py wake_snoozed_tickets
+*/5 * * * * python manage.py evaluate_escalations && python manage.py run_automations
+0 3 * * *   python manage.py close_resolved && python manage.py purge_expired_data
+0 4 * * 0   python manage.py purge_activities
+```
+
+`check_sla` records a heartbeat each time it runs. While the heartbeat is
+missing or more than 15 minutes old, Admin > Settings and the admin reports
+pages warn that the recurring jobs are not running and list these commands
+(the `scheduler` page prop), Escalated logs a warning (logger
+`escalated.scheduler`), and `python manage.py check --database default`
+reports it (`escalated.W003`).
+
 ## Management Commands
 
 ```bash
@@ -203,7 +240,8 @@ Data retention deletes closed tickets outright (this package has no soft
 delete), together with their replies, attachments and stored files. Run
 `purge_expired_data` daily.
 
-Schedule these with cron, Celery Beat, or django-crontab for automated enforcement.
+Schedule these with cron, Celery Beat, or django-crontab: see
+[Required: schedule the recurring jobs](#required-schedule-the-recurring-jobs).
 
 ## Custom Ticket Actions
 
