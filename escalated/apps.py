@@ -16,6 +16,7 @@ class EscalatedConfig(AppConfig):
         import escalated.checks  # noqa: F401 - registers the system checks
         import escalated.handlers  # noqa: F401 - connects signal handlers
         import escalated.plugin_actions  # noqa: F401 - delivers the canonical events to plugins
+        import escalated.setup_checks  # noqa: F401 - the setup system checks
         import escalated.webhook_handlers  # noqa: F401 - delivers admin-configured webhooks
         import escalated.workflow_handlers  # noqa: F401 - connects WorkflowEngine to signals
         from escalated.access import connect_two_factor_signals

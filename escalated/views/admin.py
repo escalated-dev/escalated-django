@@ -2641,7 +2641,7 @@ def saved_views_update(request, view_id):
         return HttpResponseNotFound(_("Saved view not found"))
 
     # Only owner or admin can update
-    if view.user_id != request.user.pk and not request.user.is_superuser:
+    if view.user_id != request.user.pk and not getattr(request.user, "is_superuser", False):
         return HttpResponseForbidden(_("Cannot update this view"))
 
     try:
@@ -2686,7 +2686,7 @@ def saved_views_delete(request, view_id):
     except SavedView.DoesNotExist:
         return HttpResponseNotFound(_("Saved view not found"))
 
-    if view.user_id != request.user.pk and not request.user.is_superuser:
+    if view.user_id != request.user.pk and not getattr(request.user, "is_superuser", False):
         return HttpResponseForbidden(_("Cannot delete this view"))
 
     view.delete()
