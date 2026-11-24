@@ -66,6 +66,10 @@ ESCALATED = {
 
 `python manage.py purge_expired_data` also removes expired codes.
 
+`ESCALATED["GUEST_ROUTES_ENABLED"] = False` (or `ESCALATED_GUEST_ROUTES=false`)
+registers none of the guest portal's routes nor the mobile guest API; it
+defaults to `True`. See [staff-only installs](access-control.md#staff-only-installs).
+
 ## Email proof
 
 Each surface exposes `POST verification` and `POST lookup`:

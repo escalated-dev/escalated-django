@@ -150,6 +150,9 @@ route, for example when you serve the bundle from a CDN or through
 
 ## Configuration
 
+`ESCALATED["WIDGET_ENABLED"] = False` (or `ESCALATED_WIDGET_ENABLED=false`)
+registers none of the widget's routes; it defaults to `True`.
+
 ```python
 ESCALATED = {
     "WIDGET_ALLOWED_ORIGINS": [],  # list or comma-separated string

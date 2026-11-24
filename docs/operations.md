@@ -93,6 +93,12 @@ ESCALATED = {
     # Cloud/Synced mode
     "HOSTED_API_URL": "https://cloud.escalated.dev/api/v1",
     "HOSTED_API_KEY": None,
+    # Set to receive cloud -> site webhooks; the cloud/webhook/ route exists only once it is set
+    "HOSTED_SIGNING_SECRET": None,
+    # Optional public routes and the portal's guards (docs/access-control.md#staff-only-installs)
+    "GUEST_ROUTES_ENABLED": True,  # env ESCALATED_GUEST_ROUTES
+    "WIDGET_ENABLED": True,  # env ESCALATED_WIDGET_ENABLED
+    "CUSTOMER_ROUTE_DECORATORS": [],
 }
 ```
 

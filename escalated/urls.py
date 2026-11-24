@@ -2,7 +2,7 @@ from django.urls import include
 from django.urls import path as django_path
 
 from escalated.access import guard_patterns
-from escalated.conf import get_setting
+from escalated.conf import customer_route_decorators, get_setting
 from escalated.services.agent_panel import record_customer_presence
 from escalated.ticket_access import path, ticket_access_view
 from escalated.url_helpers import delete, put
@@ -57,6 +57,14 @@ customer_patterns = [
 for _pattern in customer_patterns:
     if _pattern.name.startswith("customer_ticket_"):
         _pattern.callback = record_customer_presence(_pattern.callback)
+
+# The host's extra guards for the portal and its knowledge base
+# (ESCALATED["CUSTOMER_ROUTE_DECORATORS"]): outermost, so a refused visitor
+# never counts as present.
+_customer_guards = customer_route_decorators()
+for _pattern in customer_patterns:
+    for _guard in reversed(_customer_guards):
+        _pattern.callback = _guard(_pattern.callback)
 
 # Agent-facing URLs
 agent_patterns = [
@@ -565,10 +573,21 @@ inbound_patterns = [
     path("inbound/<str:adapter_name>/", inbound.inbound_webhook, name="inbound_webhook"),
 ]
 
-# Cloud → site ticket webhook (Synced mode). Verified by X-Escalated-Signature.
-cloud_webhook_patterns = [
-    path("cloud/webhook/", cloud_webhook.cloud_webhook, name="cloud_webhook"),
-]
+# Cloud → site ticket webhook (Synced mode). Verified by X-Escalated-Signature,
+# so it is registered only once HOSTED_SIGNING_SECRET is set: without it there
+# is nothing to verify a request against.
+cloud_webhook_patterns = []
+if get_setting("HOSTED_SIGNING_SECRET"):
+    cloud_webhook_patterns.append(path("cloud/webhook/", cloud_webhook.cloud_webhook, name="cloud_webhook"))
+
+# The widget's public API, only while ESCALATED["WIDGET_ENABLED"] is on.
+if not get_setting("WIDGET_ENABLED"):
+    widget_patterns = []
+    widget_chat_patterns = []
+
+# The guest portal, only while ESCALATED["GUEST_ROUTES_ENABLED"] is on.
+if not get_setting("GUEST_ROUTES_ENABLED"):
+    guest_patterns = []
 
 # Access-checked attachment downloads (always registered, like the widget):
 # serialized attachments link here, so API and guest clients need it too.
@@ -662,6 +681,10 @@ if get_setting("API_ENABLED"):
     # already carries the route prefix: the default serves the API at
     # {include}/api/v1/ (/support/api/v1/), as escalated-laravel does.
     api_prefix = get_setting("API_PREFIX").strip("/")
+
+    # The mobile guest API is the guest portal's, and goes with it.
+    if not get_setting("GUEST_ROUTES_ENABLED"):
+        api_patterns = [p for p in api_patterns if not (p.name or "").startswith("mobile_guest_")]
 
     urlpatterns += [
         path(f"{api_prefix}/", include((api_patterns, "escalated_api"))),
