@@ -87,3 +87,23 @@ class Command(BaseCommand):
         self.stdout.write(_(f"  Agent dashboard: /{prefix}/agent/"))
         self.stdout.write(_(f"  Customer portal: /{prefix}/customer/"))
         self.stdout.write(_(f"  REST API:        /{prefix}/{api_prefix}/"))
+
+        self.report_setup()
+
+    def report_setup(self):
+        """What still stops staff from using Escalated: the user model, admins, agents, roles, scheduled jobs."""
+        from escalated import setup_checks
+
+        issues = []
+        user_model = setup_checks.user_model_issue()
+        if user_model:
+            issues.append(user_model)
+        issues += setup_checks.data_issues()
+
+        self.stdout.write("")
+        if not issues:
+            self.stdout.write(self.style.SUCCESS(_("Setup check: no problems found.")))
+            return
+        self.stdout.write(self.style.WARNING(_("Setup check found problems:")))
+        for issue in issues:
+            self.stdout.write(self.style.WARNING(f"  - {issue}"))

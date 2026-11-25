@@ -3595,18 +3595,6 @@
   "kwargs": {}
  },
  {
-  "path": "support/cloud/webhook/",
-  "name": "escalated:cloud_webhook",
-  "layers": [
-   "escalated/ticket_access.py:scoped",
-   "escalated.views.cloud_webhook.cloud_webhook"
-  ],
-  "group": null,
-  "accepts": [],
-  "csrf_exempt": true,
-  "kwargs": {}
- },
- {
   "path": "support/widget/embed.js",
   "name": "escalated:widget_embed_script",
   "layers": [

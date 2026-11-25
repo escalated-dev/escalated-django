@@ -2,6 +2,15 @@ import os
 
 from django.conf import settings
 
+
+def env_bool(name, default):
+    """A boolean from the environment: 1/true/yes/on, 0/false/no/off; unset or blank is ``default``."""
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 DEFAULTS = {
     "VISIBILITY": "all",
     "ACCOUNTS": {"ENABLED": False, "SCOPE_AGENTS": False, "RESOLVER": None},
@@ -30,6 +39,21 @@ DEFAULTS = {
     "DATABASE": None,
     "ROUTE_PREFIX": "support",
     "UI_ENABLED": True,
+    # Optional public routes (docs/access-control.md#staff-only-installs).
+    # False: none of the guest portal's URLs (guest/...) are registered. The
+    # admin's "guest tickets" setting still switches the portal at runtime
+    # while this is on.
+    "GUEST_ROUTES_ENABLED": env_bool("ESCALATED_GUEST_ROUTES", True),
+    # False: none of the widget's URLs (widget/..., widget/chat/...,
+    # widget/embed.js) are registered.
+    "WIDGET_ENABLED": env_bool("ESCALATED_WIDGET_ENABLED", True),
+    # Extra guards for the customer portal and customer knowledge base
+    # (escalated-laravel's routes.customer_middleware). Each entry is a view
+    # decorator, or its dotted import path, wrapped around every customer and
+    # customer-KB view, first entry outermost. Empty (the default): any
+    # signed-in user may use the portal. "escalated.permissions.staff_only"
+    # limits it to agents and admins.
+    "CUSTOMER_ROUTE_DECORATORS": [],
     "UI_RENDERER": None,
     # Per-name overrides of the route() table shared as the `ziggy` prop
     # (escalated.route_list): {"login": "/accounts/login/", "<name>": None}.
@@ -217,6 +241,31 @@ def get_setting(name):
         return {**DEFAULTS["GUEST_ACCESS"], **value}
 
     return value
+
+
+def customer_route_decorators():
+    """ESCALATED["CUSTOMER_ROUTE_DECORATORS"], each entry resolved to a callable."""
+    from django.core.exceptions import ImproperlyConfigured
+    from django.utils.module_loading import import_string
+
+    configured = get_setting("CUSTOMER_ROUTE_DECORATORS") or []
+    if isinstance(configured, str) or callable(configured):
+        configured = [configured]
+    decorators = []
+    for entry in configured:
+        if isinstance(entry, str):
+            try:
+                entry = import_string(entry)
+            except ImportError as error:
+                raise ImproperlyConfigured(
+                    f'ESCALATED["CUSTOMER_ROUTE_DECORATORS"]: cannot import {entry!r} ({error}).'
+                ) from error
+        if not callable(entry):
+            raise ImproperlyConfigured(
+                f'ESCALATED["CUSTOMER_ROUTE_DECORATORS"] entries must be view decorators; got {entry!r}.'
+            )
+        decorators.append(entry)
+    return decorators
 
 
 def get_table_name(suffix):

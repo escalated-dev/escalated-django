@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils.translation import gettext as _
 
+from escalated import scheduler
 from escalated.services.sla_service import SlaService
 
 
@@ -19,6 +20,9 @@ class Command(BaseCommand):
         self.stdout.write(_("Checking SLA deadlines for all open tickets..."))
 
         breached_count, warned_count = SlaService.check_all_tickets()
+
+        # The admin pages warn while this heartbeat is missing or stale.
+        scheduler.record_heartbeat()
 
         self.stdout.write(
             self.style.SUCCESS(

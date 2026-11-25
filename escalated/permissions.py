@@ -1,7 +1,38 @@
+import functools
+
+from django.contrib.auth.views import redirect_to_login
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ImproperlyConfigured
+from django.http import HttpResponseForbidden
+from django.utils.translation import gettext as _
 
 from escalated.models import Department
 from escalated.ticket_access import allows_ticket
+
+# The attributes Escalated reads from the host's user to decide who is a
+# support admin (the admin gate). AbstractUser has both; AbstractBaseUser has
+# neither, and PermissionsMixin adds only is_superuser.
+ADMIN_GATE_ATTRIBUTES = ("is_staff", "is_superuser")
+
+
+class UserModelNotSupported(ImproperlyConfigured):
+    """The host's user model lacks what Escalated's staff gates read."""
+
+
+def user_model_problem(model):
+    """Why ``model`` (a user model, or a user) cannot pass Escalated's admin gate, or ``None`` when it can."""
+    if any(hasattr(model, attribute) for attribute in ADMIN_GATE_ATTRIBUTES):
+        return None
+    label = getattr(getattr(model, "_meta", None), "label", None)
+    if not label:
+        label = model.__name__ if isinstance(model, type) else type(model).__name__
+    return (
+        f"Escalated cannot tell whether a {label} is a support admin: the user model has neither "
+        "is_staff nor is_superuser. Escalated's admin gate reads these, as "
+        "django.contrib.auth.models.AbstractUser provides them. Subclass AbstractUser, or add "
+        "PermissionsMixin (is_superuser) and an is_staff field or property to the model. Agents are "
+        "the users in an active Department's agents. See docs/access-control.md."
+    )
 
 
 def is_agent(user):
@@ -21,7 +52,30 @@ def is_admin(user):
     """
     if not user or not user.is_authenticated:
         return False
-    return user.is_staff or user.is_superuser
+    problem = user_model_problem(user)
+    if problem:
+        raise UserModelNotSupported(problem)
+    return bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False))
+
+
+def staff_only(view):
+    """
+    A customer-route guard for staff-only installs
+    (``ESCALATED["CUSTOMER_ROUTE_DECORATORS"] = ["escalated.permissions.staff_only"]``):
+    visitors who are not signed in go to the login page, and signed-in users
+    who are neither agents nor admins get 403.
+    """
+
+    @functools.wraps(view)
+    def wrapper(request, *args, **kwargs):
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        if not (is_agent(user) or is_admin(user)):
+            return HttpResponseForbidden(_("Support staff only."))
+        return view(request, *args, **kwargs)
+
+    return wrapper
 
 
 def admin_gate_replaced(request) -> bool:

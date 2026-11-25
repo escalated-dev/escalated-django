@@ -171,3 +171,30 @@ def widget_on(db):
 
     for key in ("widget_enabled", "chat_enabled", "knowledge_base_public"):
         EscalatedSetting.set(key, "1")
+
+
+@pytest.fixture
+def urls_with():
+    """
+    Rebuild the URL conf under the suite's ESCALATED settings plus the given
+    changes; afterwards rebuild it from the suite's own settings, not from
+    whatever an earlier test left in django.conf.settings.
+    """
+    from django.test import override_settings
+
+    from tests import settings as test_settings
+    from tests.embed_host import reload_urls
+
+    overrides = []
+
+    def build(**changes):
+        override = override_settings(ESCALATED={**test_settings.ESCALATED, **changes})
+        override.enable()
+        overrides.append(override)
+        reload_urls()
+
+    yield build
+    while overrides:
+        overrides.pop().disable()
+    with override_settings(ESCALATED=test_settings.ESCALATED):
+        reload_urls()

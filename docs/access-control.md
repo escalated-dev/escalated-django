@@ -24,6 +24,42 @@ ESCALATED = {
 }
 ```
 
+## Staff-only installs
+
+By default the customer portal (`tickets/...`) and the customer knowledge base
+(`kb/...`) accept any signed-in user, and the guest portal and the widget's
+public API are registered for anyone. Where only staff use Escalated, close
+all four:
+
+```python
+ESCALATED = {
+    # ...
+    # Guards around every customer and customer-KB view, first entry outermost.
+    "CUSTOMER_ROUTE_DECORATORS": ["escalated.permissions.staff_only"],
+    "GUEST_ROUTES_ENABLED": False,  # or ESCALATED_GUEST_ROUTES=false
+    "WIDGET_ENABLED": False,  # or ESCALATED_WIDGET_ENABLED=false
+}
+```
+
+- `CUSTOMER_ROUTE_DECORATORS` (default `[]`) is a list of view decorators, or
+  their dotted import paths, wrapped around every customer and customer-KB view
+  (escalated-laravel's `routes.customer_middleware`). The shipped
+  `escalated.permissions.staff_only` sends visitors who are not signed in to the
+  login page (even on a public knowledge base) and answers 403 to signed-in
+  users who are neither agents nor admins. Any decorator of your own works too,
+  such as `user_passes_test(...)` or `permission_required(...)` assigned to a
+  name in your project. An entry that cannot be imported fails at startup.
+- `GUEST_ROUTES_ENABLED` (default `True`): `False` registers none of the guest
+  portal's URLs (`guest/...`) nor the mobile guest API (`api/v1/mobile/guest/...`).
+  While it is on, Admin > Settings > guest tickets still switches the portal
+  off at runtime (404).
+- `WIDGET_ENABLED` (default `True`): `False` registers none of the widget's
+  URLs (`widget/...`, `widget/chat/...`, `widget/embed.js`).
+
+The cloud -> site webhook (`cloud/webhook/`) is registered only once
+`HOSTED_SIGNING_SECRET` is set. The settings are read when the URL conf loads,
+so restart after changing them.
+
 ## Roles & permissions
 
 ### What is enforced
