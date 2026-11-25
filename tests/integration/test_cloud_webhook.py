@@ -5,14 +5,13 @@ Integration tests for the cloud → site webhook receiver (Synced mode).
 import hashlib
 import hmac
 import json
-from importlib import reload
 
 import django
 import pytest
 from django.conf import settings
 from django.core.cache import cache
 from django.test import Client, RequestFactory, override_settings
-from django.urls import NoReverseMatch, clear_url_caches, resolve, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 
 from escalated.models import Ticket, TicketActivity
 from escalated.views import cloud_webhook
@@ -214,22 +213,10 @@ def test_signature_verifies_the_raw_body(rf):
     assert response.status_code == 401
 
 
-def _reload_urls():
-    import escalated.urls
-    import tests.urls
-
-    reload(escalated.urls)
-    reload(tests.urls)
-    clear_url_caches()
-
-
 @pytest.fixture
-def mounted():
+def mounted(urls_with):
     """The URL conf with a signing secret set, which is when the route exists."""
-    with override_settings(ESCALATED=SETTINGS):
-        _reload_urls()
-        yield
-    _reload_urls()
+    urls_with(**SETTINGS)
 
 
 def test_public_route_is_post_only_and_csrf_exempt(mounted):
@@ -245,24 +232,16 @@ def test_public_route_is_post_only_and_csrf_exempt(mounted):
         assert client.post(url, data=b"{}", content_type="application/json").status_code == 401
 
 
-def test_route_is_not_registered_without_a_signing_secret():
-    try:
-        with override_settings(ESCALATED={"MODE": "synced"}):
-            _reload_urls()
-            with pytest.raises(NoReverseMatch):
-                reverse("escalated:cloud_webhook")
-    finally:
-        _reload_urls()
+def test_route_is_not_registered_without_a_signing_secret(urls_with):
+    urls_with(MODE="synced", HOSTED_SIGNING_SECRET=None)
+    with pytest.raises(NoReverseMatch):
+        reverse("escalated:cloud_webhook")
 
 
-def test_route_is_registered_with_ui_disabled():
+def test_route_is_registered_with_ui_disabled(urls_with):
     from escalated import urls
 
-    try:
-        with override_settings(ESCALATED={**SETTINGS, "UI_ENABLED": False}):
-            reload(urls)
-            match = resolve("/cloud/webhook/", urlconf=tuple(urls.urlpatterns))
-            assert match.url_name == "cloud_webhook"
-            assert match.func.__wrapped__ is cloud_webhook.cloud_webhook
-    finally:
-        reload(urls)
+    urls_with(**SETTINGS, UI_ENABLED=False)
+    match = resolve("/cloud/webhook/", urlconf=tuple(urls.urlpatterns))
+    assert match.url_name == "cloud_webhook"
+    assert match.func.__wrapped__ is cloud_webhook.cloud_webhook
