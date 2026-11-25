@@ -2,7 +2,7 @@
 Whether the recurring jobs are running.
 
 Django has no scheduler of its own, so SLA checks, escalation rules,
-automations and snooze wake-ups run only when the host schedules the
+automations, delayed workflow actions and snooze wake-ups run only when the host schedules the
 management commands (cron, Celery beat, systemd timers...). ``check_sla``
 records a heartbeat each time it runs; while the heartbeat is missing or more
 than 15 minutes old, the admin Settings and Reports pages carry a ``scheduler``
@@ -31,6 +31,7 @@ STALE_AFTER = timedelta(minutes=15)
 CORE_COMMANDS = [
     {"command": "python manage.py check_sla", "interval": "every minute"},
     {"command": "python manage.py wake_snoozed_tickets", "interval": "every minute"},
+    {"command": "python manage.py process_delayed_actions", "interval": "every minute"},
     {"command": "python manage.py evaluate_escalations", "interval": "every 5 minutes"},
     {"command": "python manage.py run_automations", "interval": "every 5 minutes"},
     {"command": "python manage.py close_resolved", "interval": "daily"},
@@ -105,9 +106,11 @@ def status(now: datetime | None = None) -> dict | None:
         else:
             since = f"check_sla last ran at {last.isoformat()}"
         message = (
-            f"The recurring jobs are not running ({since}): SLA checks, escalation rules, automations and "
-            "snooze wake-ups do nothing until they are scheduled. Schedule these with cron, Celery beat or "
-            "similar: " + "; ".join(f"{entry['command']} ({entry['interval']})" for entry in needed) + "."
+            f"The recurring jobs are not running ({since}): SLA checks, escalation rules, automations, "
+            "delayed workflow actions and snooze wake-ups do nothing until they are scheduled. "
+            "Schedule these with cron, Celery beat or similar: "
+            + "; ".join(f"{entry['command']} ({entry['interval']})" for entry in needed)
+            + "."
         )
     return {
         "healthy": healthy,

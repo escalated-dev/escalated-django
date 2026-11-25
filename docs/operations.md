@@ -187,12 +187,13 @@ REST API: `POST /tickets/<reference>/subjects`, `DELETE /tickets/<reference>/sub
 Django has no scheduler of its own, so Escalated's recurring jobs run only
 when you schedule them (cron, Celery beat, a systemd timer, django-crontab...).
 Until you do, SLA timers never breach, escalation rules and automations never
-fire and snoozed tickets never wake.
+fire, delayed workflow actions never run and snoozed tickets never wake.
 
 | Command | Interval |
 |---|---|
 | `python manage.py check_sla` | every minute |
 | `python manage.py wake_snoozed_tickets` | every minute |
+| `python manage.py process_delayed_actions` | every minute |
 | `python manage.py evaluate_escalations` | every 5 minutes |
 | `python manage.py run_automations` | every 5 minutes |
 | `python manage.py close_resolved` | daily |
@@ -206,7 +207,7 @@ fire and snoozed tickets never wake.
 For example, in a crontab (run from your project, with its virtualenv):
 
 ```cron
-* * * * *   python manage.py check_sla && python manage.py wake_snoozed_tickets
+* * * * *   python manage.py check_sla && python manage.py wake_snoozed_tickets && python manage.py process_delayed_actions
 */5 * * * * python manage.py evaluate_escalations && python manage.py run_automations
 0 3 * * *   python manage.py close_resolved && python manage.py purge_expired_data
 0 4 * * 0   python manage.py purge_activities
@@ -224,6 +225,9 @@ reports it (`escalated.W003`).
 ```bash
 # Check SLA deadlines and fire breach notifications
 python manage.py check_sla
+
+# Run workflow actions whose delay has passed (every minute)
+python manage.py process_delayed_actions
 
 # Evaluate escalation rules against open tickets
 python manage.py evaluate_escalations

@@ -80,6 +80,7 @@ def test_install_reports_missing_admins_agents_roles_and_jobs(settings):
     assert "No agents" in report
     assert "seed_permissions" in report
     assert "python manage.py check_sla" in report
+    assert "python manage.py process_delayed_actions (every minute)" in report
 
 
 @pytest.mark.django_db

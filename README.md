@@ -167,7 +167,7 @@ Before you migrate, add `"inertia"` and `"escalated"` to `INSTALLED_APPS` and in
 
 ### Required: schedule the recurring jobs
 
-SLA checks, escalation rules, automations and snooze wake-ups run only when you schedule `check_sla` and `wake_snoozed_tickets` (every minute), `evaluate_escalations` and `run_automations` (every 5 minutes), plus the daily and weekly clean-up commands. Until then the admin pages warn that the jobs are not running. The full list and a crontab are in [getting started](docs/getting-started.md#required-schedule-the-recurring-jobs).
+SLA checks, escalation rules, automations, delayed workflow actions and snooze wake-ups run only when you schedule `check_sla`, `wake_snoozed_tickets` and `process_delayed_actions` (every minute), `evaluate_escalations` and `run_automations` (every 5 minutes), plus the daily and weekly clean-up commands. Until then the admin pages warn that the jobs are not running. The full list and a crontab are in [getting started](docs/getting-started.md#required-schedule-the-recurring-jobs).
 
 ## Learn more
 

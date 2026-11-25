@@ -41,11 +41,54 @@ def test_missing_heartbeat_is_unhealthy_and_names_the_commands():
     assert status["healthy"] is False
     assert status["last_run_at"] is None
     commands = [entry["command"] for entry in status["commands"]]
-    for needed in ("check_sla", "evaluate_escalations", "run_automations", "wake_snoozed_tickets"):
+    for needed in (
+        "check_sla",
+        "evaluate_escalations",
+        "run_automations",
+        "wake_snoozed_tickets",
+        "process_delayed_actions",
+    ):
         assert f"python manage.py {needed}" in commands
         assert f"python manage.py {needed}" in status["message"]
     assert all(set(entry) == {"command", "interval"} for entry in status["commands"])
     assert "not running" in status["message"]
+
+
+def test_process_delayed_actions_runs_the_due_ones_only():
+    from escalated.workflow_models import DelayedAction, Workflow
+    from tests.factories import TicketFactory
+
+    ticket = TicketFactory(priority="low")
+    workflow = Workflow.objects.create(name="Bump later", trigger_event="ticket.created", is_active=True)
+    due = DelayedAction.objects.create(
+        workflow=workflow,
+        ticket=ticket,
+        action_data={"type": "change_priority", "value": "urgent"},
+        execute_at=timezone.now() - timedelta(minutes=1),
+    )
+    later = DelayedAction.objects.create(
+        workflow=workflow,
+        ticket=ticket,
+        action_data={"type": "change_status", "value": "closed"},
+        execute_at=timezone.now() + timedelta(hours=1),
+    )
+
+    out = io.StringIO()
+    call_command("process_delayed_actions", stdout=out)
+
+    ticket.refresh_from_db()
+    due.refresh_from_db()
+    later.refresh_from_db()
+    assert ticket.priority == "urgent"
+    assert ticket.status != "closed"
+    assert due.executed is True
+    assert later.executed is False
+    assert "Processed 1 delayed actions." in out.getvalue()
+
+    # Run again: nothing is due twice.
+    out = io.StringIO()
+    call_command("process_delayed_actions", stdout=out)
+    assert "Processed 0 delayed actions." in out.getvalue()
 
 
 def test_heartbeat_older_than_15_minutes_is_unhealthy():

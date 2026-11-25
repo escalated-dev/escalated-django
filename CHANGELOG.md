@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - **Setup check.** `python manage.py install` ends by reporting a user model Escalated cannot gate, no admin users, no agents, roles nobody holds while roles & permissions is on, and recurring jobs that are not running.
 
 ### Fixed
+- **Delayed workflow actions never ran:** nothing called `WorkflowEngine.process_delayed_actions()`. The new `python manage.py process_delayed_actions` command runs the due ones; schedule it every minute (escalated-laravel's `escalated:process-delayed-actions`). It is in the scheduler warning's command list and the docs.
 - A custom user model with neither `is_staff` nor `is_superuser` failed on the first staff page with a bare `AttributeError`. It now raises `escalated.permissions.UserModelNotSupported`, which names the model and how to fix it, and `manage.py check` warns about it (`escalated.W004`).
 
 ## [0.8.0] - 2026-11-07

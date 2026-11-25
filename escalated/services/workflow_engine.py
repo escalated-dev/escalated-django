@@ -67,15 +67,19 @@ class WorkflowEngine:
         return {"matched": matched, "actions": actions_preview}
 
     def process_delayed_actions(self):
+        """Run every due delayed action once; returns how many ran."""
         from escalated.workflow_models import DelayedAction
 
+        processed = 0
         for delayed in DelayedAction.pending():
             try:
                 self._execute_single_action(delayed.action_data, delayed.ticket, delayed.workflow)
                 delayed.executed = True
                 delayed.save()
+                processed += 1
             except Exception as e:
                 logger.error(f"Escalated delayed action failed: {e}")
+        return processed
 
     def evaluate_conditions(self, conditions, ticket):
         # Omitted conditions and an empty group match every ticket. any() of an
