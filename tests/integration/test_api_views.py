@@ -761,7 +761,7 @@ class TestApiTicketMacro:
 @pytest.mark.django_db
 class TestApiTicketDelete:
     def test_ticket_delete_success(self, rf):
-        user = UserFactory(username="delete_user")
+        user = UserFactory(username="delete_user", is_staff=True)
         department = DepartmentFactory()
         department.agents.add(user)
         token = ApiTokenFactory(user=user)
@@ -778,7 +778,7 @@ class TestApiTicketDelete:
         assert not Ticket.objects.filter(pk=ticket_pk).exists()
 
     def test_ticket_delete_not_found(self, rf):
-        user = UserFactory(username="delete_404")
+        user = UserFactory(username="delete_404", is_staff=True)
         department = DepartmentFactory()
         department.agents.add(user)
         token = ApiTokenFactory(user=user)
@@ -815,6 +815,7 @@ class TestApiResources:
 
     def test_resource_departments(self, rf):
         user = UserFactory(username="res_depts")
+        DepartmentFactory().agents.add(user)
         token = ApiTokenFactory(user=user)
 
         DepartmentFactory(name="Support", slug="support")
@@ -829,6 +830,7 @@ class TestApiResources:
 
     def test_resource_tags(self, rf):
         user = UserFactory(username="res_tags")
+        DepartmentFactory().agents.add(user)
         token = ApiTokenFactory(user=user)
 
         TagFactory(name="Bug", slug="bug-res")
@@ -873,6 +875,7 @@ class TestApiResources:
 
     def test_resource_realtime_config(self, rf):
         user = UserFactory(username="res_realtime")
+        DepartmentFactory().agents.add(user)
         token = ApiTokenFactory(user=user)
 
         request = _api_get(rf, "/api/realtime/config/", user, token)

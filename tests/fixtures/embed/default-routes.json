@@ -3994,6 +3994,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.auth_validate"
   ],
   "group": "api",
@@ -4055,6 +4056,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api_auth.api_auth_me"
   ],
   "group": "api",
@@ -4068,6 +4070,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api_auth.api_auth_profile"
   ],
   "group": "api",
@@ -4146,6 +4149,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.dashboard"
   ],
   "group": "api",
@@ -4159,6 +4163,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_list"
   ],
   "group": "api",
@@ -4172,6 +4177,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_create"
   ],
   "group": "api",
@@ -4185,6 +4191,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_show"
   ],
   "group": "api",
@@ -4198,6 +4205,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_reply"
   ],
   "group": "api",
@@ -4211,6 +4219,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_status"
   ],
   "group": "api",
@@ -4224,6 +4233,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_priority"
   ],
   "group": "api",
@@ -4237,6 +4247,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_assign"
   ],
   "group": "api",
@@ -4250,6 +4261,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_follow"
   ],
   "group": "api",
@@ -4263,6 +4275,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_apply_macro"
   ],
   "group": "api",
@@ -4276,6 +4289,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_custom_action"
   ],
   "group": "api",
@@ -4289,6 +4303,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_tags"
   ],
   "group": "api",
@@ -4302,6 +4317,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_subjects_store"
   ],
   "group": "api",
@@ -4315,6 +4331,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_subjects_destroy"
   ],
   "group": "api",
@@ -4328,6 +4345,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_destroy"
   ],
   "group": "api",
@@ -4341,6 +4359,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_agents"
   ],
   "group": "api",
@@ -4354,6 +4373,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_departments"
   ],
   "group": "api",
@@ -4367,6 +4387,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_tags"
   ],
   "group": "api",
@@ -4380,6 +4401,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_canned_responses"
   ],
   "group": "api",
@@ -4393,6 +4415,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_macros"
   ],
   "group": "api",
@@ -4406,6 +4429,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_realtime_config"
   ],
   "group": "api",
@@ -4419,6 +4443,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.auth_validate"
   ],
   "group": "api",
@@ -4480,6 +4505,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api_auth.api_auth_me"
   ],
   "group": "api",
@@ -4493,6 +4519,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api_auth.api_auth_profile"
   ],
   "group": "api",
@@ -4571,6 +4598,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.dashboard"
   ],
   "group": "api",
@@ -4584,6 +4612,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_list"
   ],
   "group": "api",
@@ -4597,6 +4626,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_create"
   ],
   "group": "api",
@@ -4610,6 +4640,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_show"
   ],
   "group": "api",
@@ -4623,6 +4654,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_reply"
   ],
   "group": "api",
@@ -4636,6 +4668,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_status"
   ],
   "group": "api",
@@ -4649,6 +4682,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_priority"
   ],
   "group": "api",
@@ -4662,6 +4696,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_assign"
   ],
   "group": "api",
@@ -4675,6 +4710,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_follow"
   ],
   "group": "api",
@@ -4688,6 +4724,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_apply_macro"
   ],
   "group": "api",
@@ -4701,6 +4738,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_custom_action"
   ],
   "group": "api",
@@ -4714,6 +4752,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_tags"
   ],
   "group": "api",
@@ -4727,6 +4766,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_subjects_store"
   ],
   "group": "api",
@@ -4740,6 +4780,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_subjects_destroy"
   ],
   "group": "api",
@@ -4753,6 +4794,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.ticket_destroy"
   ],
   "group": "api",
@@ -4766,6 +4808,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_agents"
   ],
   "group": "api",
@@ -4779,6 +4822,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_departments"
   ],
   "group": "api",
@@ -4792,6 +4836,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_tags"
   ],
   "group": "api",
@@ -4805,6 +4850,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_canned_responses"
   ],
   "group": "api",
@@ -4818,6 +4864,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_macros"
   ],
   "group": "api",
@@ -4831,6 +4878,7 @@
   "layers": [
    "escalated/access.py:wrapped",
    "escalated/ticket_access.py:scoped",
+   "escalated/api_middleware.py:wrapped",
    "escalated.views.api.resource_realtime_config"
   ],
   "group": "api",

@@ -65,6 +65,9 @@ class TestApiAuthLogout:
 
 
 class TestApiAuthMe:
+    def test_needs_a_token(self, rf):
+        assert api_auth.api_auth_me(rf.get("/auth/me/")).status_code == 401
+
     def test_returns_request_user(self, rf):
         request = rf.get("/auth/me/")
         request.user = type(
@@ -72,6 +75,7 @@ class TestApiAuthMe:
             (),
             {"pk": 7, "email": "u@e.com", "get_full_name": lambda self: "Pat"},
         )()
+        request.api_token = object()  # authenticated, as the token check leaves it
 
         resp = api_auth.api_auth_me(request)
 

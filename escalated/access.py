@@ -470,6 +470,15 @@ def staff_view(group: str, url_name: str, view):
 
     @functools.wraps(view)
     def wrapped(request, *args, **kwargs):
+        if group == "api" and getattr(request, "api_token", None) is None:
+            # The staff API authenticates its own Bearer token when the host
+            # has not installed AuthenticateApiToken, so it never answers
+            # without one and the roles check below sees the token's owner.
+            from escalated.api_middleware import authenticate_bearer
+
+            refused = authenticate_bearer(request)
+            if refused is not None:
+                return refused
         if _gate_passes(group, request):
             refused = enforce_two_factor(request, url_name) or enforce_route_permissions(request, url_name)
             if refused is not None:

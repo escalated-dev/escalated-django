@@ -17,6 +17,7 @@ from django.utils.module_loading import import_string
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from escalated.api_middleware import api_token_required
 from escalated.conf import get_setting
 
 
@@ -91,11 +92,13 @@ def api_auth_logout(request):
     return JsonResponse({"data": {"success": True}})
 
 
+@api_token_required()
 @require_http_methods(["POST", "PATCH"])
 def api_auth_profile(request):
     return _delegate("API_PROFILE_UPDATER", request.user, _json_body(request))
 
 
+@api_token_required()
 @require_GET
 def api_auth_me(request):
     user = request.user
