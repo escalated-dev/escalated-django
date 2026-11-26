@@ -1,9 +1,100 @@
+import functools
+
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.utils import timezone
 
 from escalated.conf import get_setting
 from escalated.models import ApiToken
+
+STAFF_ABILITIES = ("agent", "admin")
+
+
+def authenticate_bearer(request):
+    """
+    Authenticate the request's Bearer token.
+
+    On success sets request.user and request.api_token and returns None;
+    otherwise returns the 401 JsonResponse to send.
+    """
+    auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+    if not auth_header.startswith("Bearer "):
+        return JsonResponse({"message": "Unauthenticated."}, status=401)
+
+    plain_text = auth_header[7:]
+    if not plain_text:
+        return JsonResponse({"message": "Unauthenticated."}, status=401)
+
+    api_token = ApiToken.find_by_plain_text(plain_text)
+    if api_token is None:
+        return JsonResponse({"message": "Invalid token."}, status=401)
+
+    if api_token.is_expired:
+        return JsonResponse({"message": "Token has expired."}, status=401)
+
+    user = api_token.tokenable
+    if user is None:
+        return JsonResponse({"message": "Token owner not found."}, status=401)
+
+    api_token.last_used_at = timezone.now()
+    api_token.last_used_ip = _get_client_ip(request)
+    api_token.save(update_fields=["last_used_at", "last_used_ip", "updated_at"])
+
+    request.user = user
+    request.api_token = api_token
+    return None
+
+
+def check_token_ability(request, ability):
+    """
+    Check an authenticated request's token against a route ability.
+
+    Abilities are not hierarchical: `agent` routes need `agent` or `*`,
+    `admin` routes need `admin` or `*`. For both, the token's owner must still
+    be an agent or admin, and for `admin` routes still an admin. Returns the
+    403 JsonResponse to send, or None.
+    """
+    from escalated.permissions import is_admin, is_agent
+
+    if not ability:
+        return None
+    api_token = request.api_token
+    if not api_token.has_ability(ability):
+        return JsonResponse({"message": "Insufficient permissions."}, status=403)
+    if ability in STAFF_ABILITIES:
+        user = request.user
+        if not (is_agent(user) or is_admin(user)):
+            return JsonResponse({"message": "User no longer has agent access."}, status=403)
+        if ability == "admin" and not is_admin(user):
+            return JsonResponse({"message": "Insufficient permissions."}, status=403)
+    return None
+
+
+def api_token_required(ability=None):
+    """
+    Protect an API view with Bearer-token authentication and an ability.
+
+    Works whether or not the host installed AuthenticateApiToken: when the
+    middleware has not already authenticated the request, the view does it
+    itself, so the API never answers without a valid token.
+    """
+
+    def decorator(view):
+        @functools.wraps(view)
+        def wrapped(request, *args, **kwargs):
+            if getattr(request, "api_token", None) is None:
+                refused = authenticate_bearer(request)
+                if refused is not None:
+                    return refused
+            refused = check_token_ability(request, ability)
+            if refused is not None:
+                return refused
+            return view(request, *args, **kwargs)
+
+        wrapped.escalated_api_ability = ability
+        return wrapped
+
+    return decorator
 
 
 class AuthenticateApiToken:
@@ -12,7 +103,8 @@ class AuthenticateApiToken:
 
     Extracts the token from the Authorization header, hashes it with SHA-256,
     looks up the token in the database, checks expiration, resolves the user,
-    and updates last_used_at / last_used_ip.
+    and updates last_used_at / last_used_ip. The API views check the token
+    themselves too (api_token_required), so installing this is optional.
     """
 
     def __init__(self, get_response):
@@ -27,39 +119,7 @@ class AuthenticateApiToken:
         if getattr(view_func, "_escalated_api_public", False):
             return None
 
-        # Extract Bearer token from Authorization header
-        auth_header = request.META.get("HTTP_AUTHORIZATION", "")
-        if not auth_header.startswith("Bearer "):
-            return JsonResponse({"message": "Unauthenticated."}, status=401)
-
-        plain_text = auth_header[7:]
-        if not plain_text:
-            return JsonResponse({"message": "Unauthenticated."}, status=401)
-
-        # Look up token
-        api_token = ApiToken.find_by_plain_text(plain_text)
-        if api_token is None:
-            return JsonResponse({"message": "Invalid token."}, status=401)
-
-        # Check expiration
-        if api_token.is_expired:
-            return JsonResponse({"message": "Token has expired."}, status=401)
-
-        # Resolve the token's owner
-        user = api_token.tokenable
-        if user is None:
-            return JsonResponse({"message": "Token owner not found."}, status=401)
-
-        # Update last used info
-        api_token.last_used_at = timezone.now()
-        api_token.last_used_ip = _get_client_ip(request)
-        api_token.save(update_fields=["last_used_at", "last_used_ip", "updated_at"])
-
-        # Attach user and token to request
-        request.user = user
-        request.api_token = api_token
-
-        return None
+        return authenticate_bearer(request)
 
 
 class ApiRateLimit:

@@ -83,7 +83,12 @@ users who should have everything the `admin` role.
 - Applying a macro needs `macro.view` and `ticket.edit`; an internal API reply
   needs `reply.create_internal`.
 - API tokens act as their owner, so the staff API checks the owner's
-  permissions as well as the token's abilities.
+  permissions as well as the token's abilities. Whether or not this switch is
+  on, staff API routes need the `agent` ability (or `*`) and deleting a ticket
+  needs `admin` (or `*`); abilities are not hierarchical. The owner must still
+  be an agent or admin, and an admin for admin routes. The API views check the
+  Bearer token themselves, so `escalated.api_middleware.AuthenticateApiToken`
+  is optional.
 - The newsletter screens check `newsletters.manage` and `newsletters.send`, and
   plugin menu items and widgets check their `permission`, only while the switch
   is on.

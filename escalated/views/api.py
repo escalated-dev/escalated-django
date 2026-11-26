@@ -2,7 +2,7 @@
 REST API views for Escalated.
 
 All views return JSON responses and require Bearer token authentication
-(handled by AuthenticateApiToken middleware). Response format matches
+(api_token_required, with or without the AuthenticateApiToken middleware). Response format matches
 the Laravel implementation for cross-framework compatibility.
 """
 
@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from escalated.api_middleware import api_token_required
 from escalated.api_serializers import (
     ApiAgentSerializer,
     ApiCannedResponseSerializer,
@@ -108,6 +109,7 @@ def _resolve_ticket(reference):
 # ---------------------------------------------------------------------------
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_POST
 def auth_validate(request):
@@ -140,6 +142,7 @@ def auth_validate(request):
 # ---------------------------------------------------------------------------
 
 
+@api_token_required("agent")
 @require_GET
 def dashboard(request):
     """
@@ -224,6 +227,7 @@ def dashboard(request):
 # ---------------------------------------------------------------------------
 
 
+@api_token_required("agent")
 @require_GET
 def ticket_list(request):
     """
@@ -315,6 +319,7 @@ def ticket_list(request):
     )
 
 
+@api_token_required("agent")
 @require_GET
 def ticket_show(request, reference):
     """
@@ -332,6 +337,7 @@ def ticket_show(request, reference):
     return JsonResponse({"data": data})
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_POST
 def ticket_create(request):
@@ -375,6 +381,7 @@ def ticket_create(request):
     )
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_POST
 def ticket_reply(request, reference):
@@ -420,6 +427,7 @@ def ticket_reply(request, reference):
     )
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_http_methods(["PATCH"])
 def ticket_status(request, reference):
@@ -445,6 +453,7 @@ def ticket_status(request, reference):
     return JsonResponse({"message": "Status updated.", "status": data["status"]})
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_http_methods(["PATCH"])
 def ticket_priority(request, reference):
@@ -470,6 +479,7 @@ def ticket_priority(request, reference):
     return JsonResponse({"message": "Priority updated.", "priority": data["priority"]})
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_POST
 def ticket_assign(request, reference):
@@ -500,6 +510,7 @@ def ticket_assign(request, reference):
     return JsonResponse({"message": "Ticket assigned."})
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_POST
 def ticket_follow(request, reference):
@@ -522,6 +533,7 @@ def ticket_follow(request, reference):
     return JsonResponse({"message": "Following ticket.", "following": True})
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_POST
 def ticket_apply_macro(request, reference):
@@ -572,6 +584,7 @@ def _custom_actions_for(request, ticket):
     return result
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_POST
 def ticket_custom_action(request, reference, action):
@@ -610,6 +623,7 @@ def ticket_custom_action(request, reference, action):
     return JsonResponse({"message": "Custom action dispatched.", "action": action})
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_POST
 def ticket_tags(request, reference):
@@ -645,6 +659,7 @@ def ticket_tags(request, reference):
     return JsonResponse({"message": "Tags updated."})
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_POST
 def ticket_subjects_store(request, reference):
@@ -671,6 +686,7 @@ def ticket_subjects_store(request, reference):
     return attach_ticket_subject(request, ticket)
 
 
+@api_token_required("agent")
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def ticket_subjects_destroy(request, reference, subject_id):
@@ -688,6 +704,7 @@ def ticket_subjects_destroy(request, reference, subject_id):
     return detach_ticket_subject(request, ticket, subject_id)
 
 
+@api_token_required("admin")
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def ticket_destroy(request, reference):
@@ -710,6 +727,7 @@ def ticket_destroy(request, reference):
 # ---------------------------------------------------------------------------
 
 
+@api_token_required("agent")
 @require_GET
 def resource_agents(request):
     """
@@ -723,6 +741,7 @@ def resource_agents(request):
     return JsonResponse({"data": ApiAgentSerializer.serialize_list(agents)})
 
 
+@api_token_required("agent")
 @require_GET
 def resource_departments(request):
     """
@@ -734,6 +753,7 @@ def resource_departments(request):
     return JsonResponse({"data": ApiDepartmentSerializer.serialize_list(departments)})
 
 
+@api_token_required("agent")
 @require_GET
 def resource_tags(request):
     """
@@ -745,6 +765,7 @@ def resource_tags(request):
     return JsonResponse({"data": ApiTagSerializer.serialize_list(tags)})
 
 
+@api_token_required("agent")
 @require_GET
 def resource_canned_responses(request):
     """
@@ -756,6 +777,7 @@ def resource_canned_responses(request):
     return JsonResponse({"data": ApiCannedResponseSerializer.serialize_list(responses)})
 
 
+@api_token_required("agent")
 @require_GET
 def resource_macros(request):
     """
@@ -767,6 +789,7 @@ def resource_macros(request):
     return JsonResponse({"data": ApiMacroSerializer.serialize_list(macros)})
 
 
+@api_token_required("agent")
 @require_GET
 def resource_realtime_config(request):
     """

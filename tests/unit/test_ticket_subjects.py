@@ -177,7 +177,7 @@ class TestTicketSubjectApi:
         user = UserFactory(username="subj_agent")
         department = DepartmentFactory()
         department.agents.add(user)
-        token = ApiTokenFactory(user=user, abilities=["tickets:update"])
+        token = ApiTokenFactory(user=user, abilities=["agent", "tickets:update"])
 
         ticket = TicketFactory()
         tag = TagFactory(name="Billing", slug="billing")

@@ -234,9 +234,11 @@ def test_checks_each_bulk_action_against_its_own_permission(client, settings):
     assert ticket.priority == "high"
 
 
-def test_checks_the_api_token_owners_permissions(client, settings):
+@pytest.mark.parametrize("with_middleware", [True, False])
+def test_checks_the_api_token_owners_permissions(client, settings, with_middleware):
     enforce(settings)
-    settings.MIDDLEWARE = [*settings.MIDDLEWARE, API]
+    if with_middleware:
+        settings.MIDDLEWARE = [*settings.MIDDLEWARE, API]
     agent = staff("agent", "light_agent")
     token = ApiTokenFactory()
     # The factory's `user` is excluded from the model kwargs: own the token here.

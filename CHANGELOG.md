@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+- **The staff API now checks each token's abilities and owner.** Staff routes need a token with the `agent` ability (or `*`), and deleting a ticket needs `admin` (or `*`); abilities are not hierarchical, as in escalated-laravel. The token's owner must still be an agent or admin, and an admin for admin routes. Before, any valid token could use every staff route, including delete.
+- **The staff API checks the Bearer token itself.** It no longer depends on the host installing `escalated.api_middleware.AuthenticateApiToken`: without it, the API views answer 401 to a request with no valid token instead of running. The middleware still works if installed. `auth/me` and `auth/profile` also need a valid token (any ability).
+
 ## [0.8.1] - 2026-11-25
 
 ### Upgrading
