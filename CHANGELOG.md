@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-25
+
 ### Upgrading
 - **The cloud -> site webhook (`cloud/webhook/`) is registered only once `HOSTED_SIGNING_SECRET` is set**, as escalated-laravel does. Before, it answered 503 without one. Synced installs that set the secret see no change.
 
