@@ -46,6 +46,8 @@ dev = [
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
+# tests/ is not part of the installed package, so import it from the checkout.
+pythonpath = ["."]
 
 [project.urls]
 Homepage = "https://github.com/escalated-dev/escalated-django"
